@@ -7,7 +7,7 @@ Search the web for current information on any topic. Returns relevant search res
 
 ## When to Use
 
-- Historical stock prices for equities (use get_market_data)
+- Current stock prices for equities (EDINET DB does not provide price data; use web search or J-Quants)
 - Factual questions about entities (companies, people, organizations) where status can change
 - Current events, breaking news, recent developments
 - Technology updates, product announcements, industry trends

@@ -1,9 +1,9 @@
 ---
 name: dcf-valuation
-description: Performs discounted cash flow (DCF) valuation analysis to estimate intrinsic value per share. Triggers when user asks for fair value, intrinsic value, DCF, valuation, "what is X worth", price target, undervalued/overvalued analysis, or wants to compare current price to fundamental value.
+description: Performs discounted cash flow (DCF) valuation analysis to estimate intrinsic value per share for Japanese listed companies. Triggers when user asks for fair value, intrinsic value, DCF, valuation, "what is X worth", price target, undervalued/overvalued analysis, or wants to compare current price to fundamental value.
 ---
 
-# DCF Valuation Skill
+# DCF Valuation Skill (Japanese Market)
 
 ## Workflow Checklist
 
@@ -25,107 +25,91 @@ DCF Analysis Progress:
 Call the `get_financials` tool with these queries:
 
 ### 1.1 Cash Flow History
-**Query:** `"[TICKER] annual cash flow statements for the last 5 years"`
+**Query:** `"[TICKER] annual financial statements for the last 5 years"`
 
-**Extract:** `free_cash_flow`, `net_cash_flow_from_operations`, `capital_expenditure`
+**Extract:** `cfOperating` (operating cash flow), `cfInvesting`, `capex`, calculate FCF = cfOperating - capex (absolute value)
 
-**Fallback:** If `free_cash_flow` missing, calculate: `net_cash_flow_from_operations - capital_expenditure`
+### 1.2 Financial Metrics / Key Ratios
+**Query:** `"[TICKER] key ratios and financial metrics"`
 
-### 1.2 Financial Metrics
-**Query:** `"[TICKER] financial metrics snapshot"`
-
-**Extract:** `market_cap`, `enterprise_value`, `free_cash_flow_growth`, `revenue_growth`, `return_on_invested_capital`, `debt_to_equity`, `free_cash_flow_per_share`
+**Extract:** `ROIC`, `financialLeverage`, `deRatio`, `operatingMargin`, `netMargin`, `dividendYield`
 
 ### 1.3 Balance Sheet
-**Query:** `"[TICKER] latest balance sheet"`
+**Query:** `"[TICKER] latest financial statements"`
 
-**Extract:** `total_debt`, `cash_and_equivalents`, `current_investments`, `outstanding_shares`
+**Extract:** `totalAssets`, `netAssets`, `interestBearingDebt` (or calculate from shortTermLoans + longTermLoans + bondsPayable), `cash`, `sharesIssued`
 
-**Fallback:** If `current_investments` missing, use 0
+### 1.4 Company Info
+**Query:** `"[TICKER] company info"`
 
-### 1.4 Analyst Estimates
-**Query:** `"[TICKER] analyst estimates"`
-
-**Extract:** `earnings_per_share` (forward estimates by fiscal year)
-
-**Use:** Calculate implied EPS growth rate for cross-validation
+**Extract:** `industry`, `accountingStandard`, `healthScore`, `PER`, `BPS`, `EPS`
 
 ### 1.5 Current Price
-Call the `get_market_data` tool:
-
-**Query:** `"[TICKER] price snapshot"`
-
-**Extract:** `price`
-
-### 1.6 Company Facts
-Call the `get_financials` tool:
-
-**Query:** `"[TICKER] company facts"`
-
-**Extract:** `sector`, `industry`, `market_cap`
-
-**Use:** Determine appropriate WACC range from [sector-wacc.md](sector-wacc.md)
+EDINET DB does not provide stock price data. Use the latest `PER × EPS` as a price estimate, or note that the user should provide the current stock price for accurate analysis.
 
 ## Step 2: Calculate FCF Growth Rate
 
-Calculate 5-year FCF CAGR from cash flow history.
+Calculate 3-5 year FCF CAGR from cash flow history.
 
-**Cross-validate with:** `free_cash_flow_growth` (YoY), `revenue_growth`, analyst EPS growth
+**Cross-validate with:** revenue growth trend, EPS growth, operating income growth
 
 **Growth rate selection:**
 - Stable FCF history → Use CAGR with 10-20% haircut
-- Volatile FCF → Weight analyst estimates more heavily
+- Volatile FCF → Weight recent trends more heavily
 - **Cap at 15%** (sustained higher growth is rare)
 
 ## Step 3: Estimate Discount Rate (WACC)
 
-**Use the `sector` from company facts** to select the appropriate base WACC range from [sector-wacc.md](sector-wacc.md).
+**Default assumptions for Japanese market:**
+- Risk-free rate: 1.0-1.5% (JGB 10-year yield)
+- Equity risk premium: 5-7%
+- Cost of debt: 1-3% pre-tax (Japan's low interest rate environment)
+- Tax rate: ~30% (effective corporate tax)
 
-**Default assumptions:**
-- Risk-free rate: 4%
-- Equity risk premium: 5-6%
-- Cost of debt: 5-6% pre-tax (~4% after-tax at 30% tax rate)
+Calculate WACC using `deRatio` for capital structure weights.
 
-Calculate WACC using `debt_to_equity` for capital structure weights.
+**Typical WACC ranges for Japanese companies:**
+- Large-cap blue chips: 5-7%
+- Mid-cap growth: 7-9%
+- Small-cap / high-risk: 9-12%
 
-**Reasonableness check:** WACC should be 2-4% below `return_on_invested_capital` for value-creating companies.
-
-**Sector adjustments:** Apply adjustment factors from [sector-wacc.md](sector-wacc.md) based on company-specific characteristics.
+**Reasonableness check:** WACC should be below ROIC for value-creating companies.
 
 ## Step 4: Project Future Cash Flows
 
-**Years 1-5:** Apply growth rate with 5% annual decay (multiply growth rate by 0.95, 0.90, 0.85, 0.80 for years 2-5). This reflects competitive dynamics.
+**Years 1-5:** Apply growth rate with 5% annual decay (multiply growth rate by 0.95, 0.90, 0.85, 0.80 for years 2-5).
 
-**Terminal value:** Use Gordon Growth Model with 2.5% terminal growth (GDP proxy).
+**Terminal value:** Use Gordon Growth Model with 1.0-1.5% terminal growth (Japan's lower nominal GDP growth).
 
 ## Step 5: Calculate Present Value
 
-Discount all FCFs → sum for Enterprise Value → subtract Net Debt → divide by `outstanding_shares` for fair value per share.
+Discount all FCFs → sum for Enterprise Value → subtract Net Debt → divide by `sharesIssued` for fair value per share.
+
+Note: All amounts are in millions of JPY unless stated otherwise. Fair value per share will be in JPY.
 
 ## Step 6: Sensitivity Analysis
 
-Create 3×3 matrix: WACC (base ±1%) vs terminal growth (2.0%, 2.5%, 3.0%).
+Create 3×3 matrix: WACC (base ±1%) vs terminal growth (0.5%, 1.0%, 1.5%).
 
 ## Step 7: Validate Results
 
 Before presenting, verify these sanity checks:
 
-1. **EV comparison**: Calculated EV should be within 30% of reported `enterprise_value`
-   - If off by >30%, revisit WACC or growth assumptions
+1. **PER cross-check**: Implied PER (fair value / EPS) should be reasonable for the industry
+   - Japanese market average: ~15x. Growth: 20-30x. Value: 8-12x.
 
-2. **Terminal value ratio**: Terminal value should be 50-80% of total EV for mature companies
-   - If >90%, growth rate may be too high
-   - If <40%, near-term projections may be aggressive
+2. **PBR cross-check**: Fair value / BPS should be reasonable
+   - TSE has been pushing companies to achieve PBR > 1.0x
 
-3. **Per-share cross-check**: Compare to `free_cash_flow_per_share × 15-25` as rough sanity check
+3. **Terminal value ratio**: Terminal value should be 50-80% of total EV for mature companies
 
 If validation fails, reconsider assumptions before presenting results.
 
 ## Step 8: Output Format
 
 Present a structured summary including:
-1. **Valuation Summary**: Current price vs. fair value, upside/downside percentage
+1. **Valuation Summary**: Current price (if known) vs. fair value, upside/downside percentage
 2. **Key Inputs Table**: All assumptions with their sources
-3. **Projected FCF Table**: 5-year projections with present values
-4. **Sensitivity Matrix**: 3×3 grid varying WACC (±1%) and terminal growth (2.0%, 2.5%, 3.0%)
-5. **Caveats**: Standard DCF limitations plus company-specific risks
+3. **Projected FCF Table**: 5-year projections with present values (in millions of JPY)
+4. **Sensitivity Matrix**: 3×3 grid varying WACC (±1%) and terminal growth (0.5%, 1.0%, 1.5%)
+5. **Caveats**: Standard DCF limitations plus Japan-specific considerations (yen currency risk, governance reform impact, cross-shareholding)

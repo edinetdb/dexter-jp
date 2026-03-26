@@ -1,22 +1,31 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { api } from './api.js';
+import { resolveEdinetCode } from './resolver.js';
 import { formatToolResult } from '../types.js';
 
 const EarningsInputSchema = z.object({
   ticker: z
     .string()
-    .describe("The stock ticker symbol to fetch the latest earnings for. For example, 'AAPL' for Apple."),
+    .describe(
+      "Securities code (e.g. '7203') or EDINET code (e.g. 'E02144'). Company names also work."
+    ),
+  limit: z
+    .number()
+    .default(8)
+    .describe('Number of earnings disclosures to return (default: 8, max: 30).'),
 });
 
 export const getEarnings = new DynamicStructuredTool({
   name: 'get_earnings',
-  description:
-    'Fetches the most recent earnings snapshot for a company, including key income statement, balance sheet, and cash flow figures from the 8-K earnings release, plus analyst estimate comparisons (revenue and EPS surprise) when available.',
+  description: `Fetches recent TDNet earnings disclosures (決算短信) for a company. Returns quarterly/annual results including: disclosure date, revenue, operating income, net income, EPS, and YoY change rates. Full-year results also include balance sheet and cash flow data. May include full-year forecasts. TDNet data covers the last ~30 days of disclosures. Useful for tracking when companies disclosed results and earnings surprises.`,
   schema: EarningsInputSchema,
   func: async (input) => {
-    const ticker = input.ticker.trim().toUpperCase();
-    const { data, url } = await api.get('/earnings', { ticker });
-    return formatToolResult(data.earnings || {}, [url]);
+    const edinetCode = await resolveEdinetCode(input.ticker);
+    const params: Record<string, string | number> = {
+      limit: input.limit,
+    };
+    const { data, url } = await api.get(`/companies/${edinetCode}/earnings`, params);
+    return formatToolResult(data.earnings || data, [url]);
   },
 });

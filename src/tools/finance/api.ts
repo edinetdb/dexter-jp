@@ -1,7 +1,7 @@
 import { readCache, writeCache, describeRequest } from '../../utils/cache.js';
 import { logger } from '../../utils/logger.js';
 
-const BASE_URL = 'https://api.financialdatasets.ai';
+const BASE_URL = 'https://edinetdb.jp/api/v1';
 
 export interface ApiResponse {
   data: Record<string, unknown>;
@@ -41,7 +41,7 @@ export function stripFieldsDeep(value: unknown, fields: readonly string[]): unkn
 }
 
 function getApiKey(): string {
-  return process.env.FINANCIAL_DATASETS_API_KEY || '';
+  return process.env.EDINETDB_API_KEY || '';
 }
 
 /**
@@ -55,7 +55,7 @@ async function executeRequest(
   const apiKey = getApiKey();
 
   if (!apiKey) {
-    logger.warn(`[Financial Datasets API] call without key: ${label}`);
+    logger.warn(`[EDINET DB API] call without key: ${label}`);
   }
 
   let response: Response;
@@ -63,26 +63,26 @@ async function executeRequest(
     response = await fetch(url, {
       ...init,
       headers: {
-        'x-api-key': apiKey,
+        'X-API-Key': apiKey,
         ...init.headers,
       },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error(`[Financial Datasets API] network error: ${label} — ${message}`);
-    throw new Error(`[Financial Datasets API] request failed for ${label}: ${message}`);
+    logger.error(`[EDINET DB API] network error: ${label} — ${message}`);
+    throw new Error(`[EDINET DB API] request failed for ${label}: ${message}`);
   }
 
   if (!response.ok) {
     const detail = `${response.status} ${response.statusText}`;
-    logger.error(`[Financial Datasets API] error: ${label} — ${detail}`);
-    throw new Error(`[Financial Datasets API] request failed: ${detail}`);
+    logger.error(`[EDINET DB API] error: ${label} — ${detail}`);
+    throw new Error(`[EDINET DB API] request failed: ${detail}`);
   }
 
   const data = await response.json().catch(() => {
     const detail = `invalid JSON (${response.status} ${response.statusText})`;
-    logger.error(`[Financial Datasets API] parse error: ${label} — ${detail}`);
-    throw new Error(`[Financial Datasets API] request failed: ${detail}`);
+    logger.error(`[EDINET DB API] parse error: ${label} — ${detail}`);
+    throw new Error(`[EDINET DB API] request failed: ${detail}`);
   });
 
   return data as Record<string, unknown>;

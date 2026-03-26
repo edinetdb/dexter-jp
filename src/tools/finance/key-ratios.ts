@@ -1,90 +1,55 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { api, stripFieldsDeep } from './api.js';
+import { api } from './api.js';
+import { resolveEdinetCode } from './resolver.js';
 import { formatToolResult } from '../types.js';
-
-const REDUNDANT_FINANCIAL_FIELDS = ['accession_number', 'currency', 'period'] as const;
 
 const KeyRatiosInputSchema = z.object({
   ticker: z
     .string()
-    .describe("The stock ticker symbol to fetch key ratios for. For example, 'AAPL' for Apple."),
+    .describe(
+      "Securities code (e.g. '7203') or EDINET code (e.g. 'E02144'). Company names also work."
+    ),
 });
 
 export const getKeyRatios = new DynamicStructuredTool({
   name: 'get_key_ratios',
   description:
-    'Fetches the latest financial metrics snapshot for a company, including valuation ratios (P/E, P/B, P/S, EV/EBITDA, PEG), profitability (margins, ROE, ROA, ROIC), liquidity (current/quick/cash ratios), leverage (debt/equity, debt/assets), per-share metrics (EPS, book value, FCF), and growth rates (revenue, earnings, EPS, FCF, EBITDA).',
+    'Fetches the latest financial metrics snapshot for a Japanese company, including key ratios (ROIC, financial leverage, asset turnover, net/operating margin, D/E ratio, dividend yield), latest financials (revenue, operating income, net income, ROE, equity ratio, EPS, PER, BPS), and financial health score (0-100).',
   schema: KeyRatiosInputSchema,
   func: async (input) => {
-    const ticker = input.ticker.trim().toUpperCase();
-    const params = { ticker };
-    const { data, url } = await api.get('/financial-metrics/snapshot/', params);
-    return formatToolResult(data.snapshot || {}, [url]);
+    const edinetCode = await resolveEdinetCode(input.ticker);
+    const { data, url } = await api.get(`/companies/${edinetCode}`, {});
+    // Extract key ratios and latest financials from the company endpoint
+    const company = data as Record<string, unknown>;
+    const snapshot: Record<string, unknown> = {};
+    if (company.keyRatios) snapshot.keyRatios = company.keyRatios;
+    if (company.latestFinancials) snapshot.latestFinancials = company.latestFinancials;
+    if (company.healthScore !== undefined) snapshot.healthScore = company.healthScore;
+    if (company.name) snapshot.name = company.name;
+    if (company.industry) snapshot.industry = company.industry;
+    if (company.secCode) snapshot.secCode = company.secCode;
+    if (company.accountingStandard) snapshot.accountingStandard = company.accountingStandard;
+    return formatToolResult(snapshot, [url]);
   },
 });
 
-const HistoricalKeyRatiosInputSchema = z.object({
+const AnalysisInputSchema = z.object({
   ticker: z
     .string()
     .describe(
-      "The stock ticker symbol to fetch historical key ratios for. For example, 'AAPL' for Apple."
-    ),
-  period: z
-    .enum(['annual', 'quarterly', 'ttm'])
-    .default('ttm')
-    .describe(
-      "The reporting period. 'annual' for yearly, 'quarterly' for quarterly, and 'ttm' for trailing twelve months."
-    ),
-  limit: z
-    .number()
-    .default(4)
-    .describe('The number of past financial statements to retrieve.'),
-  report_period: z
-    .string()
-    .optional()
-    .describe('Filter for key ratios with an exact report period date (YYYY-MM-DD).'),
-  report_period_gt: z
-    .string()
-    .optional()
-    .describe('Filter for key ratios with report periods after this date (YYYY-MM-DD).'),
-  report_period_gte: z
-    .string()
-    .optional()
-    .describe(
-      'Filter for key ratios with report periods on or after this date (YYYY-MM-DD).'
-    ),
-  report_period_lt: z
-    .string()
-    .optional()
-    .describe('Filter for key ratios with report periods before this date (YYYY-MM-DD).'),
-  report_period_lte: z
-    .string()
-    .optional()
-    .describe(
-      'Filter for key ratios with report periods on or before this date (YYYY-MM-DD).'
+      "Securities code (e.g. '7203') or EDINET code (e.g. 'E02144'). Company names also work."
     ),
 });
 
-export const getHistoricalKeyRatios = new DynamicStructuredTool({
-  name: 'get_historical_key_ratios',
-  description: `Retrieves historical key ratios for a company, such as P/E ratio, revenue per share, and enterprise value, over a specified period. Useful for trend analysis and historical performance evaluation.`,
-  schema: HistoricalKeyRatiosInputSchema,
+export const getAnalysis = new DynamicStructuredTool({
+  name: 'get_analysis',
+  description:
+    'Fetches AI-powered analysis of a Japanese company including: financial health score (0-100), key financial metrics summary, industry benchmark comparison, and AI-generated company summary. Based on up to 6 years of financial data from annual securities reports.',
+  schema: AnalysisInputSchema,
   func: async (input) => {
-    const params: Record<string, string | number | undefined> = {
-      ticker: input.ticker,
-      period: input.period,
-      limit: input.limit,
-      report_period: input.report_period,
-      report_period_gt: input.report_period_gt,
-      report_period_gte: input.report_period_gte,
-      report_period_lt: input.report_period_lt,
-      report_period_lte: input.report_period_lte,
-    };
-    const { data, url } = await api.get('/financial-metrics/', params);
-    return formatToolResult(
-      stripFieldsDeep(data.financial_metrics || [], REDUNDANT_FINANCIAL_FIELDS),
-      [url]
-    );
+    const edinetCode = await resolveEdinetCode(input.ticker);
+    const { data, url } = await api.get(`/companies/${edinetCode}/analysis`, {});
+    return formatToolResult(data, [url]);
   },
 });

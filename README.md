@@ -1,180 +1,113 @@
-# Dexter 🤖
+# Dexter JP 🇯🇵
 
-Dexter is an autonomous financial research agent that thinks, plans, and learns as it works. It performs analysis using task planning, self-reflection, and real-time market data. Think Claude Code, but built specifically for financial research.
+AI agent for deep financial research on Japanese listed companies. Powered by [EDINET DB](https://edinetdb.jp).
 
-<img width="1098" height="659" alt="Screenshot 2026-01-21 at 5 25 10 PM" src="https://github.com/user-attachments/assets/3bcc3a7f-b68a-4f5e-8735-9d22196ff76e" />
+Forked from [virattt/dexter](https://github.com/virattt/dexter) — adapted from US markets (Financial Datasets API) to Japanese markets (EDINET DB API).
 
-## Table of Contents
+## What it does
 
-- [👋 Overview](#-overview)
-- [✅ Prerequisites](#-prerequisites)
-- [💻 How to Install](#-how-to-install)
-- [🚀 How to Run](#-how-to-run)
-- [📊 How to Evaluate](#-how-to-evaluate)
-- [🐛 How to Debug](#-how-to-debug)
-- [📱 How to Use with WhatsApp](#-how-to-use-with-whatsapp)
-- [🤝 How to Contribute](#-how-to-contribute)
-- [📄 License](#-license)
+Dexter JP is a CLI-based AI agent that can:
 
+- **Analyze financials** — Revenue, operating income, net income, cash flows, balance sheet items for ~3,800 Japanese listed companies (up to 6 years of history)
+- **Read securities reports** — Full text of 有価証券報告書 (annual securities reports): business overview, risk factors, management analysis, strategy
+- **Screen companies** — Filter by 100+ metrics: ROE, ROIC, operating margin, dividend yield, revenue CAGR, PER, PBR, equity ratio, and more
+- **Track earnings** — TDNet 決算短信 (earnings disclosures) with YoY change rates and forecasts
+- **Analyze ownership** — 大量保有報告書 (large shareholding reports) showing 5%+ holders
+- **Run valuations** — Built-in DCF skill adapted for Japanese market (JGB rates, JPY, TSE PBR context)
+- **Search the web** — General research via Exa, Perplexity, or Tavily
 
-## 👋 Overview
+## Quick Start
 
-Dexter takes complex financial questions and turns them into clear, step-by-step research plans. It runs those tasks using live market data, checks its own work, and refines the results until it has a confident, data-backed answer.  
+### Prerequisites
 
-**Key Capabilities:**
-- **Intelligent Task Planning**: Automatically decomposes complex queries into structured research steps
-- **Autonomous Execution**: Selects and executes the right tools to gather financial data
-- **Self-Validation**: Checks its own work and iterates until tasks are complete
-- **Real-Time Financial Data**: Access to income statements, balance sheets, and cash flow statements
-- **Safety Features**: Built-in loop detection and step limits to prevent runaway execution
+- [Bun](https://bun.sh/) runtime
+- An LLM API key (OpenAI, Anthropic, Google, etc.)
+- An [EDINET DB API key](https://edinetdb.jp) (free tier available)
 
-[![Twitter Follow](https://img.shields.io/twitter/follow/virattt?style=social)](https://twitter.com/virattt) [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?style=social&logo=discord)](https://discord.gg/jpGHv2XB6T)
+### Setup
 
-<img width="1042" height="638" alt="Screenshot 2026-02-18 at 12 21 25 PM" src="https://github.com/user-attachments/assets/2a6334f9-863f-4bd2-a56f-923e42f4711e" />
-
-
-## ✅ Prerequisites
-
-- [Bun](https://bun.com) runtime (v1.0 or higher)
-- OpenAI API key (get [here](https://platform.openai.com/api-keys))
-- Financial Datasets API key (get [here](https://financialdatasets.ai))
-- Exa API key (get [here](https://exa.ai)) - optional, for web search
-
-#### Installing Bun
-
-If you don't have Bun installed, you can install it using curl:
-
-**macOS/Linux:**
 ```bash
-curl -fsSL https://bun.com/install | bash
-```
-
-**Windows:**
-```bash
-powershell -c "irm bun.sh/install.ps1|iex"
-```
-
-After installation, restart your terminal and verify Bun is installed:
-```bash
-bun --version
-```
-
-## 💻 How to Install
-
-1. Clone the repository:
-```bash
-git clone https://github.com/virattt/dexter.git
-cd dexter
-```
-
-2. Install dependencies with Bun:
-```bash
+git clone https://github.com/edinetdb/dexter-jp.git
+cd dexter-jp
 bun install
-```
-
-3. Set up your environment variables:
-```bash
-# Copy the example environment file
 cp env.example .env
-
-# Edit .env and add your API keys (if using cloud providers)
-# OPENAI_API_KEY=your-openai-api-key
-# ANTHROPIC_API_KEY=your-anthropic-api-key (optional)
-# GOOGLE_API_KEY=your-google-api-key (optional)
-# XAI_API_KEY=your-xai-api-key (optional)
-# OPENROUTER_API_KEY=your-openrouter-api-key (optional)
-
-# Institutional-grade market data for agents; AAPL, NVDA, MSFT are free
-# FINANCIAL_DATASETS_API_KEY=your-financial-datasets-api-key
-
-# (Optional) If using Ollama locally
-# OLLAMA_BASE_URL=http://127.0.0.1:11434
-
-# Web Search (Exa preferred, Tavily fallback)
-# EXASEARCH_API_KEY=your-exa-api-key
-# TAVILY_API_KEY=your-tavily-api-key
 ```
 
-## 🚀 How to Run
+Edit `.env` and add your API keys:
 
-Run Dexter in interactive mode:
+```
+ANTHROPIC_API_KEY=your-key    # or OPENAI_API_KEY, GOOGLE_API_KEY, etc.
+EDINETDB_API_KEY=your-key     # Get at edinetdb.jp
+```
+
+### Run
+
 ```bash
-bun start
+bun run start
 ```
 
-Or with watch mode for development:
-```bash
-bun dev
+## Example queries
+
+```
+トヨタの直近5年の財務推移を見せて
+
+ソニーのROEと営業利益率の推移は？
+
+ROE15%以上、自己資本比率50%以上の企業をスクリーニングして
+
+任天堂の有報のリスク要因を読んで
+
+7203のDCFバリュエーションをして
+
+配当利回り4%以上の高配当銘柄を探して
 ```
 
-## 📊 How to Evaluate
+English works too:
 
-Dexter includes an evaluation suite that tests the agent against a dataset of financial questions. Evals use LangSmith for tracking and an LLM-as-judge approach for scoring correctness.
+```
+Show me Toyota's financials for the last 5 years
 
-**Run on all questions:**
-```bash
-bun run src/evals/run.ts
+Screen for companies with ROE > 15% and equity ratio > 50%
+
+What are the risk factors in Nintendo's annual report?
 ```
 
-**Run on a random sample of data:**
-```bash
-bun run src/evals/run.ts --sample 10
-```
+## Data Source
 
-The eval runner displays a real-time UI showing progress, current question, and running accuracy statistics. Results are logged to LangSmith for analysis.
+All financial data comes from [EDINET DB](https://edinetdb.jp) — structured data extracted from annual securities reports (有価証券報告書) filed with EDINET and earnings disclosures (決算短信) from TDNet.
 
-## 🐛 How to Debug
+**Note:** Stock price data is not available from EDINET DB. For price data, complement with [J-Quants](https://jpx-jquants.com/) or other providers.
 
-Dexter logs all tool calls to a scratchpad file for debugging and history tracking. Each query creates a new JSONL file in `.dexter/scratchpad/`.
+## Architecture
 
-**Scratchpad location:**
-```
-.dexter/scratchpad/
-├── 2026-01-30-111400_9a8f10723f79.jsonl
-├── 2026-01-30-143022_a1b2c3d4e5f6.jsonl
-└── ...
-```
+Dexter JP uses the same architecture as the original Dexter:
 
-Each file contains newline-delimited JSON entries tracking:
-- **init**: The original query
-- **tool_result**: Each tool call with arguments, raw result, and LLM summary
-- **thinking**: Agent reasoning steps
+- **Agent loop** with iterative tool calling (LangChain)
+- **Meta-tools** (`get_financials`, `read_filings`, `company_screener`) that use an inner LLM call to route to the right sub-tool
+- **Skills** (SKILL.md) for complex multi-step workflows (DCF valuation)
+- **Memory** for persistent context across sessions
+- **Multi-provider LLM** support (OpenAI, Anthropic, Google, xAI, Ollama)
 
-**Example scratchpad entry:**
-```json
-{"type":"tool_result","timestamp":"2026-01-30T11:14:05.123Z","toolName":"get_income_statements","args":{"ticker":"AAPL","period":"annual","limit":5},"result":{...},"llmSummary":"Retrieved 5 years of Apple annual income statements showing revenue growth from $274B to $394B"}
-```
+### Key differences from original Dexter
 
-This makes it easy to inspect exactly what data the agent gathered and how it interpreted results.
+| Feature | Original (US) | JP Version |
+|---------|--------------|------------|
+| Data source | Financial Datasets API | EDINET DB API |
+| Markets | US equities | Japanese equities (~3,800 companies) |
+| Filings | SEC 10-K/10-Q/8-K | 有価証券報告書 (EDINET) |
+| Earnings | 8-K earnings | TDNet 決算短信 |
+| Insider data | SEC Form 4 | 大量保有報告書 |
+| Screening | GICS sectors | 33 Japanese industries, 100+ metrics |
+| Stock prices | Yes | No (use J-Quants etc.) |
+| Crypto | Yes | No |
+| DCF WACC | US rates (~4% risk-free) | Japanese rates (~1% risk-free) |
+| Language | English | Japanese + English |
 
-## 📱 How to Use with WhatsApp
+## License
 
-Chat with Dexter through WhatsApp by linking your phone to the gateway. Messages you send to yourself are processed by Dexter and responses are sent back to the same chat.
+MIT (same as original Dexter)
 
-**Quick start:**
-```bash
-# Link your WhatsApp account (scan QR code)
-bun run gateway:login
+## Credits
 
-# Start the gateway
-bun run gateway
-```
-
-Then open WhatsApp, go to your own chat (message yourself), and ask Dexter a question.
-
-For detailed setup instructions, configuration options, and troubleshooting, see the [WhatsApp Gateway README](src/gateway/channels/whatsapp/README.md).
-
-## 🤝 How to Contribute
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-**Important**: Please keep your pull requests small and focused.  This will make it easier to review and merge.
-
-
-## 📄 License
-
-This project is licensed under the MIT License.
+- Original [Dexter](https://github.com/virattt/dexter) by [@virattt](https://github.com/virattt)
+- Financial data by [EDINET DB](https://edinetdb.jp)

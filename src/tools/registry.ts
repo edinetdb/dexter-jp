@@ -1,5 +1,5 @@
 import { StructuredToolInterface } from '@langchain/core/tools';
-import { createGetFinancials, createGetMarketData, createReadFilings, createScreenStocks } from './finance/index.js';
+import { createGetFinancials, createReadFilings, createScreenCompanies } from './finance/index.js';
 import { exaSearch, perplexitySearch, tavilySearch, WEB_SEARCH_DESCRIPTION, xSearchTool, X_SEARCH_DESCRIPTION } from './search/index.js';
 import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
 import { webFetchTool, WEB_FETCH_DESCRIPTION } from './fetch/web-fetch.js';
@@ -8,9 +8,8 @@ import { readFileTool, READ_FILE_DESCRIPTION } from './filesystem/read-file.js';
 import { writeFileTool, WRITE_FILE_DESCRIPTION } from './filesystem/write-file.js';
 import { editFileTool, EDIT_FILE_DESCRIPTION } from './filesystem/edit-file.js';
 import { GET_FINANCIALS_DESCRIPTION } from './finance/get-financials.js';
-import { GET_MARKET_DATA_DESCRIPTION } from './finance/get-market-data.js';
 import { READ_FILINGS_DESCRIPTION } from './finance/read-filings.js';
-import { SCREEN_STOCKS_DESCRIPTION } from './finance/screen-stocks.js';
+import { SCREEN_COMPANIES_DESCRIPTION } from './finance/screen-companies.js';
 import { heartbeatTool, HEARTBEAT_TOOL_DESCRIPTION } from './heartbeat/heartbeat-tool.js';
 import { cronTool, CRON_TOOL_DESCRIPTION } from './cron/cron-tool.js';
 import { memoryGetTool, MEMORY_GET_DESCRIPTION, memorySearchTool, MEMORY_SEARCH_DESCRIPTION, memoryUpdateTool, MEMORY_UPDATE_DESCRIPTION } from './memory/index.js';
@@ -43,19 +42,14 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       description: GET_FINANCIALS_DESCRIPTION,
     },
     {
-      name: 'get_market_data',
-      tool: createGetMarketData(model),
-      description: GET_MARKET_DATA_DESCRIPTION,
-    },
-    {
       name: 'read_filings',
       tool: createReadFilings(model),
       description: READ_FILINGS_DESCRIPTION,
     },
     {
-      name: 'stock_screener',
-      tool: createScreenStocks(model),
-      description: SCREEN_STOCKS_DESCRIPTION,
+      name: 'company_screener',
+      tool: createScreenCompanies(model),
+      description: SCREEN_COMPANIES_DESCRIPTION,
     },
     {
       name: 'web_fetch',
@@ -154,9 +148,6 @@ export function getToolRegistry(model: string): RegisteredTool[] {
 
 /**
  * Get just the tool instances for binding to the LLM.
- *
- * @param model - The model name
- * @returns Array of tool instances
  */
 export function getTools(model: string): StructuredToolInterface[] {
   return getToolRegistry(model).map((t) => t.tool);
@@ -164,10 +155,6 @@ export function getTools(model: string): StructuredToolInterface[] {
 
 /**
  * Build the tool descriptions section for the system prompt.
- * Formats each tool's rich description with a header.
- *
- * @param model - The model name
- * @returns Formatted string with all tool descriptions
  */
 export function buildToolDescriptions(model: string): string {
   return getToolRegistry(model)
