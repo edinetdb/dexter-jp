@@ -40,6 +40,13 @@ export function createSlackPlugin(params: SlackPluginParams): ChannelPlugin<Gate
           socketMode: true,
         });
 
+        // Get bot's own user ID once at startup (not per-message)
+        let botUserId: string | undefined;
+        try {
+          const auth = await app.client.auth.test();
+          botUserId = auth.user_id as string;
+        } catch { /* ignore */ }
+
         // Listen for messages (DMs and mentions)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         app.message(async ({ message, say, client }: { message: any; say: any; client: any }) => {
@@ -84,11 +91,7 @@ export function createSlackPlugin(params: SlackPluginParams): ChannelPlugin<Gate
             },
           };
 
-          // Get bot's own user ID for mention detection
-          try {
-            const auth = await client.auth.test();
-            inbound.selfId = auth.user_id as string;
-          } catch { /* ignore */ }
+          inbound.selfId = botUserId;
 
           await params.onMessage(inbound);
         });

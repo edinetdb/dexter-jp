@@ -53,10 +53,19 @@ export function createLinePlugin(params: LinePluginParams): ChannelPlugin<Gatewa
             return;
           }
 
-          // Read body
+          // Read body (1MB limit)
+          const MAX_BODY_BYTES = 1024 * 1024;
           const chunks: Buffer[] = [];
+          let totalBytes = 0;
           for await (const chunk of req) {
-            chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+            const buf = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
+            totalBytes += buf.length;
+            if (totalBytes > MAX_BODY_BYTES) {
+              res.writeHead(413);
+              res.end('Payload too large');
+              return;
+            }
+            chunks.push(buf);
           }
           const bodyBuffer = Buffer.concat(chunks);
           const bodyStr = bodyBuffer.toString('utf-8');
