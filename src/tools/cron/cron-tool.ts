@@ -75,6 +75,9 @@ function parseCronSchedule(input: unknown): { ok: true; schedule: CronSchedule }
       if (!value.at) {
         return { ok: false, error: 'Error: schedule.at is required when kind is "at".' };
       }
+      if (Number.isNaN(Date.parse(value.at))) {
+        return { ok: false, error: 'Error: schedule.at must be a valid ISO-8601 timestamp.' };
+      }
       return { ok: true, schedule: { kind: 'at', at: value.at } };
     case 'every':
       if (typeof value.everyMs !== 'number' || value.everyMs < 60000) {
@@ -189,8 +192,13 @@ export const cronTool = new DynamicStructuredTool({
         if (input.schedule !== undefined) {
           const parsedSchedule = parseCronSchedule(input.schedule);
           if (!parsedSchedule.ok) return parsedSchedule.error;
+          const nextRunAtMs = computeNextRunAtMs(parsedSchedule.schedule, Date.now());
+          if (nextRunAtMs === undefined) {
+            return 'Error: schedule is invalid, expired, or cannot be scheduled.';
+          }
+
           job.schedule = parsedSchedule.schedule;
-          job.state.nextRunAtMs = computeNextRunAtMs(job.schedule, Date.now());
+          job.state.nextRunAtMs = nextRunAtMs;
           job.state.scheduleErrorCount = 0;
         }
         if (input.message !== undefined) job.payload.message = input.message;
