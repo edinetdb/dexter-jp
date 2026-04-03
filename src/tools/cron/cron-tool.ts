@@ -51,22 +51,60 @@ Write it as a clear instruction, e.g.: "Check the latest financials for 7203 (To
 - Minimum interval for "every" schedules is 60 seconds
 `.trim();
 
-const scheduleSchema = z.discriminatedUnion('kind', [
-  z.object({
-    kind: z.literal('at'),
-    at: z.string().describe('ISO-8601 timestamp for one-shot execution'),
-  }),
-  z.object({
-    kind: z.literal('every'),
-    everyMs: z.number().min(60000).describe('Interval in milliseconds (minimum 60000 = 1 minute)'),
-    anchorMs: z.number().optional().describe('Optional anchor timestamp in ms'),
-  }),
-  z.object({
-    kind: z.literal('cron'),
-    expr: z.string().describe('Cron expression (5 or 6 fields)'),
-    tz: z.string().optional().describe('IANA timezone (default: system timezone)'),
-  }),
-]);
+const scheduleSchema = z.object({
+  kind: z.enum(['at', 'every', 'cron']).describe('Schedule kind: at | every | cron'),
+  at: z.string().optional().describe('Required when kind="at": ISO-8601 timestamp for one-shot execution'),
+  everyMs: z
+    .number()
+    .optional()
+    .describe('Required when kind="every": interval in milliseconds (minimum 60000 = 1 minute)'),
+  anchorMs: z.number().optional().describe('Optional anchor timestamp in ms (for kind="every")'),
+  expr: z.string().optional().describe('Required when kind="cron": cron expression (5 or 6 fields)'),
+  tz: z.string().optional().describe('Optional IANA timezone (default: system timezone, for kind="cron")'),
+});
+
+function parseCronSchedule(input: unknown): { ok: true; schedule: CronSchedule } | { ok: false; error: string } {
+  const parsed = scheduleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Error: schedule is invalid.' };
+  }
+
+  const value = parsed.data;
+  switch (value.kind) {
+    case 'at':
+      if (!value.at) {
+        return { ok: false, error: 'Error: schedule.at is required when kind is "at".' };
+      }
+      if (Number.isNaN(Date.parse(value.at))) {
+        return { ok: false, error: 'Error: schedule.at must be a valid ISO-8601 timestamp.' };
+      }
+      return { ok: true, schedule: { kind: 'at', at: value.at } };
+    case 'every':
+      if (typeof value.everyMs !== 'number' || value.everyMs < 60000) {
+        return { ok: false, error: 'Error: schedule.everyMs must be >= 60000 when kind is "every".' };
+      }
+      return {
+        ok: true,
+        schedule: {
+          kind: 'every',
+          everyMs: value.everyMs,
+          ...(typeof value.anchorMs === 'number' ? { anchorMs: value.anchorMs } : {}),
+        },
+      };
+    case 'cron':
+      if (!value.expr) {
+        return { ok: false, error: 'Error: schedule.expr is required when kind is "cron".' };
+      }
+      return {
+        ok: true,
+        schedule: {
+          kind: 'cron',
+          expr: value.expr,
+          ...(value.tz ? { tz: value.tz } : {}),
+        },
+      };
+  }
+}
 
 const cronToolSchema = z.object({
   action: z.enum(['list', 'add', 'update', 'remove', 'run']),
@@ -101,10 +139,13 @@ export const cronTool = new DynamicStructuredTool({
         if (!input.schedule) return 'Error: schedule is required for add.';
         if (!input.message) return 'Error: message is required for add.';
 
+        const parsedSchedule = parseCronSchedule(input.schedule);
+        if (!parsedSchedule.ok) return parsedSchedule.error;
+
         const store = loadCronStore();
         const now = Date.now();
         const id = randomBytes(8).toString('hex');
-        const schedule = input.schedule as CronSchedule;
+        const schedule = parsedSchedule.schedule;
 
         const nextRunAtMs = computeNextRunAtMs(schedule, now);
         if (nextRunAtMs === undefined && schedule.kind === 'at') {
@@ -149,8 +190,15 @@ export const cronTool = new DynamicStructuredTool({
         if (input.name !== undefined) job.name = input.name;
         if (input.description !== undefined) job.description = input.description;
         if (input.schedule !== undefined) {
-          job.schedule = input.schedule as CronSchedule;
-          job.state.nextRunAtMs = computeNextRunAtMs(job.schedule, Date.now());
+          const parsedSchedule = parseCronSchedule(input.schedule);
+          if (!parsedSchedule.ok) return parsedSchedule.error;
+          const nextRunAtMs = computeNextRunAtMs(parsedSchedule.schedule, Date.now());
+          if (nextRunAtMs === undefined) {
+            return 'Error: schedule is invalid, expired, or cannot be scheduled.';
+          }
+
+          job.schedule = parsedSchedule.schedule;
+          job.state.nextRunAtMs = nextRunAtMs;
           job.state.scheduleErrorCount = 0;
         }
         if (input.message !== undefined) job.payload.message = input.message;
