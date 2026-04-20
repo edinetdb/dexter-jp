@@ -11,7 +11,7 @@ import type { InboundMessage } from './types.js';
 import { resolveRoute } from './routing/resolve-route.js';
 import { resolveSessionStorePath, upsertSessionMeta } from './sessions/store.js';
 import { loadGatewayConfig, type GatewayConfig } from './config.js';
-import { runAgentForMessage } from './agent-runner.js';
+import { runAgentForMessage, isSessionRunning, enqueueForSession } from './agent-runner.js';
 import { startCronRunner } from '../cron/runner.js';
 import { ensureHeartbeatCronJob } from '../cron/heartbeat-migration.js';
 import {
@@ -185,10 +185,18 @@ async function handleInbound(cfg: GatewayConfig, inbound: InboundMessage): Promi
     }
 
     console.log(`Processing message with agent...`);
-    debugLog(`[gateway] running agent for session=${route.sessionKey}`);
-    const startedAt = Date.now();
     const model = process.env.DEXTER_MODEL || getSetting('modelId', 'gpt-5.4') as string;
     const modelProvider = process.env.DEXTER_PROVIDER || getSetting('provider', 'openai') as string;
+
+    // If agent is already running for this session, enqueue for mid-run injection
+    if (isSessionRunning(route.sessionKey)) {
+      debugLog(`[gateway] agent busy for session=${route.sessionKey}, enqueueing`);
+      enqueueForSession(route.sessionKey, model, query);
+      return;
+    }
+
+    debugLog(`[gateway] running agent for session=${route.sessionKey}`);
+    const startedAt = Date.now();
     const agentTimeoutMs = parseInt(process.env.DEXTER_AGENT_TIMEOUT_MS || '120000', 10);
     const agentController = new AbortController();
     const agentTimer = setTimeout(() => agentController.abort(), agentTimeoutMs);
@@ -209,12 +217,10 @@ async function handleInbound(cfg: GatewayConfig, inbound: InboundMessage): Promi
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes('abort')) {
         answer = `⏱️ 処理が${agentTimeoutMs / 1000}秒を超えたため中断しました。もう少し具体的な質問にするか、時間を空けて再度お試しください。`;
-      } else {
-        if (msg.includes('rate limit') || msg.includes('429') || msg.includes('quota')) {
+      } else if (msg.includes('rate limit') || msg.includes('429') || msg.includes('quota')) {
         answer = '⏳ APIのレート制限に達しました。少し時間を置いてから再度お試しください。';
       } else {
         answer = `Error: ${msg.slice(0, 200)}`;
-      }
       }
     } finally {
       clearTimeout(agentTimer);

@@ -1,4 +1,4 @@
-import { buildToolDescriptions } from '../tools/registry.js';
+import { buildCompactToolDescriptions } from '../tools/registry.js';
 import { buildSkillMetadataSection, discoverSkills } from '../skills/index.js';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -223,7 +223,7 @@ export function buildSystemPrompt(
   memoryContext?: string | null,
   rulesContent?: string | null,
 ): string {
-  const toolDescriptions = buildToolDescriptions(model);
+  const toolDescriptions = buildCompactToolDescriptions(model);
   const profile = getChannelProfile(channel);
 
   const behaviorBullets = profile.behavior.map(b => `- ${b}`).join('\n');
@@ -250,13 +250,13 @@ ${toolDescriptions}
 - For reading securities report text (business overview, risks, MD&A, strategy, shareholders), use read_filings
 - For screening companies by financial criteria (e.g., ROE above 15%, high dividend yield), use company_screener
 - For stock prices (if get_stock_price is available), use it for current/historical OHLC data from J-Quants (TSE official)
-- Call get_financials or read_filings ONCE with the full natural language query - they handle routing internally
-- Do NOT break up queries into multiple tool calls when one call can handle the request
-- For general web queries or non-financial topics, use web_search
-- Only use browser when you need JavaScript rendering or interactive navigation
-- For factual questions about entities, use tools to verify current state
-- Only respond directly for: conceptual definitions, stable historical facts, or conversational queries
-- Respond in the same language the user uses (Japanese or English)
+- Call get_financials or read_filings ONCE with the full natural language query — they handle routing internally. Do NOT break up into multiple calls.
+- Only use web_fetch when headlines are insufficient (need quotes, deal specifics, earnings details).
+- Only use browser when you need JavaScript rendering or interactive navigation.
+- Tool results are automatically capped. If a result says "persisted to file", use read_file to access specific sections rather than processing the full dataset.
+- For factual questions about entities, use tools to verify current state.
+- Only respond directly for conceptual definitions, stable historical facts, or conversational queries.
+- Respond in the same language the user uses (Japanese or English).
 
 ${buildSkillsSection()}
 
@@ -273,6 +273,15 @@ Example user requests: "watch 7203 for me", "add a market check to my heartbeat"
 
 ${behaviorBullets}
 
+${rulesContent ? `## Research Rules
+
+The following rules were set by the user. Follow them on every query.
+
+${rulesContent}
+
+To manage these rules, the user can say "add a rule", "show my rules", "remove rule about X".
+Rules are stored in .dexter/RULES.md — use write_file or edit_file to modify them.
+` : ''}
 ${soulContent ? `## Identity
 
 ${soulContent}
@@ -282,45 +291,11 @@ Embody the identity and investing philosophy described above. Let it shape your 
 
 ## Response Format
 
-${formatBullets}${tablesSection}${groupContext ? '\n\n' + buildGroupSection(groupContext) : ''}${rulesContent ? `\n\n## Research Rules\n\nThe user has configured the following research rules in .dexter/RULES.md. Follow these when conducting research:\n\n${rulesContent}` : ''}`;
+${formatBullets}${tablesSection}${groupContext ? '\n\n' + buildGroupSection(groupContext) : ''}`;
 }
 
 // ============================================================================
 // User Prompts
 // ============================================================================
 
-/**
- * Build user prompt for agent iteration with full tool results.
- * Anthropic-style: full results in context for accurate decision-making.
- * Context clearing happens at threshold, not inline summarization.
- * 
- * @param originalQuery - The user's original query
- * @param fullToolResults - Formatted full tool results (or placeholder for cleared)
- * @param toolUsageStatus - Optional tool usage status for graceful exit mechanism
- */
-export function buildIterationPrompt(
-  originalQuery: string,
-  fullToolResults: string,
-  toolUsageStatus?: string | null
-): string {
-  let prompt = `Query: ${originalQuery}`;
-
-  if (fullToolResults.trim()) {
-    prompt += `
-
-Data retrieved from tool calls:
-${fullToolResults}`;
-  }
-
-  // Add tool usage status if available (graceful exit mechanism)
-  if (toolUsageStatus) {
-    prompt += `\n\n${toolUsageStatus}`;
-  }
-
-  prompt += `
-
-Continue working toward answering the query. When you have gathered sufficient data to answer, write your complete answer directly and do not call more tools. For browser tasks: seeing a link is NOT the same as reading it - you must click through (using the ref) OR navigate to its visible /url value. NEVER guess at URLs - use ONLY URLs visible in snapshots.`;
-
-  return prompt;
-}
 

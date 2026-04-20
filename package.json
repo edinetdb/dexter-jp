@@ -1,6 +1,6 @@
 {
   "name": "dexter-jp",
-  "version": "2026.4.1-jp",
+  "version": "2026.4.16-jp",
   "description": "Dexter JP - AI agent for deep financial research on Japanese listed companies. Powered by EDINET DB.",
   "license": "MIT",
   "type": "module",

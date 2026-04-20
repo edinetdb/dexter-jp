@@ -76,8 +76,10 @@ export class Scratchpad {
   // Stores indices of tool_result entries that have been cleared from context
   private clearedToolIndices: Set<number> = new Set();
 
-  // Compaction summary replaces raw tool results after LLM-based context compaction
+  // Compaction state (in-memory only — JSONL file untouched)
+  // When set, getToolResults() returns the summary + any post-compaction results
   private compactionSummary: string | null = null;
+  private compactionBoundaryIndex: number = -1;
 
   constructor(query: string, limitConfig?: Partial<ToolLimitConfig>) {
     this.limitConfig = { ...DEFAULT_LIMIT_CONFIG, ...limitConfig };
@@ -304,16 +306,44 @@ export class Scratchpad {
    * Get full tool results formatted for the iteration prompt.
    * Anthropic-style: full results in context, excluding cleared entries.
    * Does NOT modify the JSONL file - clearing is in-memory only.
+   *
+   * When a compaction summary is active, returns:
+   *   summary + separator + any post-compaction tool results
    */
   getToolResults(): string {
-    // If compaction has run, return the summary instead of raw tool results
-    if (this.compactionSummary) {
-      return this.compactionSummary;
-    }
-
     const entries = this.readEntries();
     let toolResultIndex = 0;
 
+    // Compaction mode: return summary + post-compaction results
+    if (this.compactionSummary) {
+      const postCompactionResults: string[] = [];
+
+      for (const entry of entries) {
+        if (entry.type !== 'tool_result' || !entry.toolName) continue;
+
+        // Skip entries covered by the compaction summary
+        if (toolResultIndex <= this.compactionBoundaryIndex) {
+          toolResultIndex++;
+          continue;
+        }
+
+        // Post-compaction entries: format normally
+        const argsStr = entry.args
+          ? Object.entries(entry.args).map(([k, v]) => `${k}=${v}`).join(', ')
+          : '';
+        const resultStr = this.stringifyResult(entry.result);
+        postCompactionResults.push(`### ${entry.toolName}(${argsStr})\n${resultStr}`);
+        toolResultIndex++;
+      }
+
+      if (postCompactionResults.length > 0) {
+        return `${this.compactionSummary}\n\n---\n\nNew data retrieved after compaction:\n\n${postCompactionResults.join('\n\n')}`;
+      }
+
+      return this.compactionSummary;
+    }
+
+    // Standard mode: full results with clearing placeholders
     const formattedResults: string[] = [];
     for (const entry of entries) {
       if (entry.type !== 'tool_result' || !entry.toolName) continue;
@@ -337,42 +367,6 @@ export class Scratchpad {
   }
 
   /**
-   * Clear oldest tool results from context (in-memory only).
-   * Anthropic-style: removes oldest tool results, keeping most recent N.
-   * The JSONL file is NOT modified - this only affects what gets sent to the LLM.
-   * 
-   * @param keepCount - Number of most recent tool results to keep
-   * @returns Number of tool results that were cleared
-   */
-  clearOldestToolResults(keepCount: number): number {
-    const entries = this.readEntries();
-    const toolResultIndices: number[] = [];
-    
-    let index = 0;
-    for (const entry of entries) {
-      if (entry.type === 'tool_result') {
-        // Only consider entries not already cleared
-        if (!this.clearedToolIndices.has(index)) {
-          toolResultIndices.push(index);
-        }
-        index++;
-      }
-    }
-    
-    // Calculate how many to clear
-    const toClearCount = Math.max(0, toolResultIndices.length - keepCount);
-    
-    if (toClearCount === 0) return 0;
-    
-    // Clear oldest entries (first N indices)
-    for (let i = 0; i < toClearCount; i++) {
-      this.clearedToolIndices.add(toolResultIndices[i]);
-    }
-    
-    return toClearCount;
-  }
-
-  /**
    * Get count of active (non-cleared) tool results.
    */
   getActiveToolResultCount(): number {
@@ -393,21 +387,22 @@ export class Scratchpad {
   }
 
   /**
-   * Replace all accumulated tool results with a compaction summary.
-   * Called after successful LLM-based context compaction to reset the scratchpad
-   * while preserving research continuity via the summary.
+   * Store a compaction summary that replaces all current tool results.
+   * After this call, getToolResults() returns the summary + any new results added later.
    */
-  replaceWithCompactionSummary(summary: string): void {
-    this.clearedToolIndices = new Set();
+  setCompactionSummary(summary: string): void {
     this.compactionSummary = summary;
-  }
-
-  /**
-   * Get the current compaction summary (if any).
-   * Injected into the iteration prompt to preserve context after compaction.
-   */
-  getCompactionSummary(): string | null {
-    return this.compactionSummary ?? null;
+    // Count current tool_result entries — all are now covered by the summary
+    const entries = this.readEntries();
+    let toolResultCount = 0;
+    for (const entry of entries) {
+      if (entry.type === 'tool_result') {
+        toolResultCount++;
+      }
+    }
+    this.compactionBoundaryIndex = toolResultCount - 1;
+    // Old clearing state is superseded by the summary
+    this.clearedToolIndices.clear();
   }
 
   /**

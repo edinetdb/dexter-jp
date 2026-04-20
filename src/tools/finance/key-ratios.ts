@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { api } from './api.js';
 import { resolveEdinetCode } from './resolver.js';
 import { formatToolResult } from '../types.js';
+import { TTL_1H, TTL_6H } from './utils.js';
 
 const KeyRatiosInputSchema = z.object({
   ticker: z
@@ -19,7 +20,11 @@ export const getKeyRatios = new DynamicStructuredTool({
   schema: KeyRatiosInputSchema,
   func: async (input) => {
     const edinetCode = await resolveEdinetCode(input.ticker);
-    const { data: response, url } = await api.get(`/companies/${edinetCode}`, {});
+    const { data: response, url } = await api.get(
+      `/companies/${edinetCode}`,
+      {},
+      { cacheable: true, ttlMs: TTL_1H },
+    );
     // API returns {data: {name, industry, latest_financials, credit_score, ...}, meta: {...}}
     return formatToolResult(response.data || response, [url]);
   },
@@ -40,7 +45,11 @@ export const getAnalysis = new DynamicStructuredTool({
   schema: AnalysisInputSchema,
   func: async (input) => {
     const edinetCode = await resolveEdinetCode(input.ticker);
-    const { data: response, url } = await api.get(`/companies/${edinetCode}/analysis`, {});
+    const { data: response, url } = await api.get(
+      `/companies/${edinetCode}/analysis`,
+      {},
+      { cacheable: true, ttlMs: TTL_6H },
+    );
     return formatToolResult(response.data || response, [url]);
   },
 });

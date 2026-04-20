@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { api } from './api.js';
 import { resolveEdinetCode } from './resolver.js';
 import { formatToolResult } from '../types.js';
+import { TTL_24H } from './utils.js';
 
 const EarningsInputSchema = z.object({
   ticker: z
@@ -25,7 +26,11 @@ export const getEarnings = new DynamicStructuredTool({
     const params: Record<string, string | number> = {
       limit: input.limit ?? 8,
     };
-    const { data: response, url } = await api.get(`/companies/${edinetCode}/earnings`, params);
+    const { data: response, url } = await api.get(
+      `/companies/${edinetCode}/earnings`,
+      params,
+      { cacheable: true, ttlMs: TTL_24H },
+    );
     // API returns {data: {count, earnings: [...], edinet_code}}
     const earningsData = response.data as Record<string, unknown> | undefined;
     return formatToolResult(earningsData?.earnings || response.data || response, [url]);
