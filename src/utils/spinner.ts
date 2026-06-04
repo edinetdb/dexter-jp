@@ -8,7 +8,7 @@
 
 import type { TUI } from '@mariozechner/pi-tui';
 
-const SPINNER_INTERVAL_MS = 150;
+export const SPINNER_INTERVAL_MS = 150;
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
 type SpinnerSubscriber = (frame: string) => void;
