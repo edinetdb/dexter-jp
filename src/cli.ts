@@ -193,6 +193,7 @@ export async function runCli() {
   });
 
   // Incremental history tracking
+  let lastRenderedItemId = '';
   let lastRenderedEventCount = 0;
   let lastRenderedStatus = '';
   let lastRenderedAnswer = false;
@@ -207,9 +208,14 @@ export async function runCli() {
       const lastItem = history[history.length - 1];
       if (lastItem) {
         // New query started
-        if (lastItem.events.length === 0 && lastRenderedEventCount === 0 && !lastRenderedAnswer) {
+        if (lastItem.id !== lastRenderedItemId) {
           chatLog.addQuery(lastItem.query);
           chatLog.resetToolGrouping();
+          lastRenderedItemId = lastItem.id;
+          lastRenderedEventCount = 0;
+          lastRenderedStatus = '';
+          lastRenderedAnswer = false;
+          finalizedToolIds.clear();
         }
 
         // Render new events only
@@ -423,6 +429,7 @@ export async function runCli() {
 
     await inputHistory.saveMessage(query);
     inputHistory.resetNavigation();
+    lastRenderedItemId = '';
     lastRenderedEventCount = 0;
     lastRenderedStatus = '';
     lastRenderedAnswer = false;

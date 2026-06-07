@@ -10,6 +10,8 @@ export interface ProviderDef {
   displayName: string;
   /** Model name prefix used for routing (e.g., 'claude-'). Empty string for default (OpenAI). */
   modelPrefix: string;
+  /** Additional model prefixes for providers that expose multiple model families. */
+  modelPrefixes?: string[];
   /** Environment variable name for API key. Omit for local providers (e.g., Ollama). */
   apiKeyEnvVar?: string;
   /** Fast model variant for lightweight tasks like summarization. */
@@ -39,6 +41,7 @@ export const PROVIDERS: ProviderDef[] = [
     id: 'google',
     displayName: 'Google',
     modelPrefix: 'gemini-',
+    modelPrefixes: ['gemini-', 'gemma-'],
     apiKeyEnvVar: 'GOOGLE_API_KEY',
     fastModel: 'gemini-3-flash-preview',
     contextWindow: 1_000_000,
@@ -91,7 +94,10 @@ const defaultProvider = PROVIDERS.find((p) => p.id === 'openai')!;
  */
 export function resolveProvider(modelName: string): ProviderDef {
   return (
-    PROVIDERS.find((p) => p.modelPrefix && modelName.startsWith(p.modelPrefix)) ??
+    PROVIDERS.find((p) => {
+      const prefixes = p.modelPrefixes ?? (p.modelPrefix ? [p.modelPrefix] : []);
+      return prefixes.some((prefix) => modelName.startsWith(prefix));
+    }) ??
     defaultProvider
   );
 }
