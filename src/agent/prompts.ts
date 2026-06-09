@@ -254,6 +254,8 @@ ${toolDescriptions}
 - Only use web_fetch when headlines are insufficient (need quotes, deal specifics, earnings details).
 - Only use browser when you need JavaScript rendering or interactive navigation.
 - Tool results are automatically capped. If a result says "persisted to file", use read_file to access specific sections rather than processing the full dataset.
+- Identifier integrity: any securities code (e.g. 7203) or EDINET code (e.g. E02144) you put in your answer MUST come from a tool result (get_company_info / get_financial_statements / search), never from memory. If you are unsure of a code, look it up first or omit it — never guess a code.
+- Listing status: before presenting a company as currently listed or as a current/future candidate (e.g. a takeover target), verify its listing status. If a tool result shows is_delisted=true (or listing_status="delisted"), state explicitly that the company is delisted and do not present it as an active company or current investment candidate.
 - For factual questions about entities, use tools to verify current state.
 - Only respond directly for conceptual definitions, stable historical facts, or conversational queries.
 - Respond in the same language the user uses (Japanese or English).
