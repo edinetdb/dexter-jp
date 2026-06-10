@@ -21,6 +21,7 @@ const PROVIDER_MODELS: Record<string, Model[]> = {
     { id: 'claude-sonnet-4-6', displayName: 'Sonnet 4.6' },
     { id: 'claude-opus-4-8', displayName: 'Opus 4.8' },
     { id: 'claude-opus-4-7', displayName: 'Opus 4.7' },
+    { id: 'claude-fable-5', displayName: 'Fable 5' },
   ],
   google: [
     { id: 'gemini-3-flash-preview', displayName: 'Gemini 3 Flash' },
