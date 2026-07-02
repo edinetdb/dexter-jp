@@ -7,8 +7,15 @@ import type {
   ApprovalDecision,
   DoneEvent,
 } from '../agent/index.js';
-import type { DisplayEvent } from '../agent/types.js';
+import type { Question, UserAnswers } from '../tools/ask-user-question/types.js';
+import type { DisplayEvent, StreamMode } from '../agent/types.js';
 import type { HistoryItem, HistoryItemStatus, WorkingState } from '../types.js';
+
+export interface TurnStats {
+  turnStartMs: number;
+  streamedChars: number;
+  streamMode: StreamMode;
+}
 
 type ChangeListener = () => void;
 
@@ -21,11 +28,16 @@ export class AgentRunnerController {
   private workingStateValue: WorkingState = { status: 'idle' };
   private errorValue: string | null = null;
   private pendingApprovalValue: { tool: string; args: Record<string, unknown> } | null = null;
+  private pendingQuestionValue: { questions: Question[] } | null = null;
+  private turnStartMsValue: number | null = null;
+  private streamedCharsValue = 0;
+  private streamModeValue: StreamMode | null = null;
   private agentConfig: AgentConfig;
   private readonly inMemoryChatHistory: InMemoryChatHistory;
   private readonly onChange?: ChangeListener;
   private abortController: AbortController | null = null;
   private approvalResolve: ((decision: ApprovalDecision) => void) | null = null;
+  private questionResolve: ((answers: UserAnswers) => void) | null = null;
   private sessionApprovedTools = new Set<string>();
 
   constructor(
@@ -52,6 +64,19 @@ export class AgentRunnerController {
 
   get pendingApproval(): { tool: string; args: Record<string, unknown> } | null {
     return this.pendingApprovalValue;
+  }
+
+  get pendingQuestion(): { questions: Question[] } | null {
+    return this.pendingQuestionValue;
+  }
+
+  get turnStats(): TurnStats | null {
+    if (this.turnStartMsValue === null) return null;
+    return {
+      turnStartMs: this.turnStartMsValue,
+      streamedChars: this.streamedCharsValue,
+      streamMode: this.streamModeValue ?? 'requesting',
+    };
   }
 
   get isProcessing(): boolean {
@@ -89,6 +114,17 @@ export class AgentRunnerController {
     this.emitChange();
   }
 
+  respondToQuestion(answers: UserAnswers) {
+    if (!this.questionResolve) {
+      return;
+    }
+    this.questionResolve(answers);
+    this.questionResolve = null;
+    this.pendingQuestionValue = null;
+    this.workingStateValue = { status: 'thinking' };
+    this.emitChange();
+  }
+
   cancelExecution() {
     if (this.abortController) {
       this.abortController.abort();
@@ -99,8 +135,14 @@ export class AgentRunnerController {
       this.approvalResolve = null;
       this.pendingApprovalValue = null;
     }
+    if (this.questionResolve) {
+      this.questionResolve({ answers: [], declined: true });
+      this.questionResolve = null;
+      this.pendingQuestionValue = null;
+    }
     this.markLastProcessing('interrupted');
     this.workingStateValue = { status: 'idle' };
+    this.resetTurnStats();
     this.emitChange();
   }
 
@@ -121,6 +163,9 @@ export class AgentRunnerController {
     this.inMemoryChatHistory.saveUserQuery(query);
     this.errorValue = null;
     this.workingStateValue = { status: 'thinking' };
+    this.turnStartMsValue = startTime;
+    this.streamedCharsValue = 0;
+    this.streamModeValue = 'requesting';
     this.emitChange();
 
     try {
@@ -128,6 +173,7 @@ export class AgentRunnerController {
         ...this.agentConfig,
         signal: this.abortController.signal,
         requestToolApproval: this.requestToolApproval,
+        requestUserInput: this.requestUserInput,
         sessionApprovedTools: this.sessionApprovedTools,
         messageQueue: defaultQueue,
       });
@@ -154,6 +200,7 @@ export class AgentRunnerController {
       if (error instanceof Error && error.name === 'AbortError') {
         this.markLastProcessing('interrupted');
         this.workingStateValue = { status: 'idle' };
+        this.resetTurnStats();
         this.emitChange();
         return undefined;
       }
@@ -161,6 +208,7 @@ export class AgentRunnerController {
       this.errorValue = message;
       this.markLastProcessing('error');
       this.workingStateValue = { status: 'idle' };
+      this.resetTurnStats();
       this.emitChange();
       return undefined;
     } finally {
@@ -168,11 +216,26 @@ export class AgentRunnerController {
     }
   }
 
+  private resetTurnStats() {
+    this.turnStartMsValue = null;
+    this.streamedCharsValue = 0;
+    this.streamModeValue = null;
+  }
+
   private requestToolApproval = (request: { tool: string; args: Record<string, unknown> }) => {
     return new Promise<ApprovalDecision>((resolve) => {
       this.approvalResolve = resolve;
       this.pendingApprovalValue = request;
       this.workingStateValue = { status: 'approval', toolName: request.tool };
+      this.emitChange();
+    });
+  };
+
+  private requestUserInput = (request: { questions: Question[] }) => {
+    return new Promise<UserAnswers>((resolve) => {
+      this.questionResolve = resolve;
+      this.pendingQuestionValue = request;
+      this.workingStateValue = { status: 'question' };
       this.emitChange();
     });
   };
@@ -204,14 +267,16 @@ export class AgentRunnerController {
         }));
         break;
       }
-      case 'tool_progress':
+      case 'tool_progress': {
+        const progressToolId = event.toolCallId ?? this.getLastItem()?.activeToolId;
         this.updateLastItem((last) => ({
           ...last,
           events: last.events.map((entry) =>
-            entry.id === last.activeToolId ? { ...entry, progressMessage: event.message } : entry,
+            entry.id === progressToolId ? { ...entry, progressMessage: event.message } : entry,
           ),
         }));
         break;
+      }
       case 'tool_end': {
         const endToolId = event.toolCallId ?? this.getLastItem()?.activeToolId;
         this.updateLastItem((last) => ({
@@ -259,6 +324,13 @@ export class AgentRunnerController {
           completed: true,
         });
         break;
+      case 'stream_progress':
+        // Update accumulators without firing onChange — the working indicator
+        // pulls turnStats on its own spinner tick. Avoids a per-chunk emitChange
+        // storm that stutters input.
+        this.streamedCharsValue += event.charDelta;
+        this.streamModeValue = event.mode;
+        return;
       case 'done': {
         const done = event as DoneEvent;
         if (done.answer) {
@@ -273,6 +345,7 @@ export class AgentRunnerController {
           tokensPerSecond: done.tokensPerSecond,
         }));
         this.workingStateValue = { status: 'idle' };
+        this.resetTurnStats();
         break;
       }
     }
