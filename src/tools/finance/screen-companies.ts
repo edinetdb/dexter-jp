@@ -35,7 +35,7 @@ Screens for Japanese listed companies matching financial criteria. Takes a natur
 `.trim();
 
 // Available metrics for the EDINET DB screener
-const AVAILABLE_METRICS = `
+export const AVAILABLE_METRICS = `
 Supported metrics (use exact keys):
 - roe: Return on Equity (%)
 - roic: Return on Invested Capital (%)
@@ -71,7 +71,7 @@ Industries (Japanese, exact match):
 情報・通信業, 卸売業, 電気機器, 輸送用機器, 医薬品, 銀行業, 小売業, サービス業, 化学, 機械, 建設業, 不動産業, 食料品, 鉄鋼, 証券・商品先物取引業, 保険業, etc.
 `.trim();
 
-const ScreenerConditionSchema = z.object({
+export const ScreenerConditionSchema = z.object({
   conditions: z.array(z.object({
     metric: z.string().describe('Metric key from the available metrics list'),
     operator: z.enum(['gte', 'lte', 'gt', 'lt', 'eq']).describe('Comparison operator'),
@@ -82,7 +82,7 @@ const ScreenerConditionSchema = z.object({
   sort_by: z.string().optional().describe('Sort results by this metric key'),
 });
 
-type ScreenerConditions = z.infer<typeof ScreenerConditionSchema>;
+export type ScreenerConditions = z.infer<typeof ScreenerConditionSchema>;
 
 function buildScreenerPrompt(): string {
   return `You are a Japanese stock screening assistant.
