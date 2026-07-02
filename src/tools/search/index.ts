@@ -31,3 +31,28 @@ export { exaSearch } from './exa.js';
 export { perplexitySearch } from './perplexity.js';
 export { langSearch } from './langsearch.js';
 export { xSearchTool, X_SEARCH_DESCRIPTION } from './x-search.js';
+export { createWebSearchTool, type WebSearchProvider } from './web-search.js';
+
+import type { StructuredToolInterface } from '@langchain/core/tools';
+import { createWebSearchTool as buildWebSearch, type WebSearchProvider } from './web-search.js';
+import { exaSearch as exaSearchTool } from './exa.js';
+import { perplexitySearch as perplexitySearchTool } from './perplexity.js';
+import { tavilySearch as tavilySearchTool } from './tavily.js';
+import { langSearch as langSearchTool } from './langsearch.js';
+
+/**
+ * Build a raw web_search tool for Claude Agent SDK mode from whichever provider
+ * keys are set. Returns null when no provider is configured. Unlike the registry
+ * version, this does not consult user settings for a preferred provider order —
+ * SDK mode keeps configuration minimal. The returned tool performs no internal
+ * LLM call; it aggregates raw provider results.
+ */
+export function buildWebSearchToolForSdk(): StructuredToolInterface | null {
+  const providers: WebSearchProvider[] = [];
+  if (process.env.EXASEARCH_API_KEY) providers.push({ id: 'exa', name: 'Exa', tool: exaSearchTool });
+  if (process.env.PERPLEXITY_API_KEY) providers.push({ id: 'perplexity', name: 'Perplexity', tool: perplexitySearchTool });
+  if (process.env.TAVILY_API_KEY) providers.push({ id: 'tavily', name: 'Tavily', tool: tavilySearchTool });
+  if (process.env.LANGSEARCH_API_KEY) providers.push({ id: 'langsearch', name: 'LangSearch', tool: langSearchTool });
+  if (providers.length === 0) return null;
+  return buildWebSearch(providers);
+}

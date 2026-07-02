@@ -81,6 +81,19 @@ export const PROVIDERS: ProviderDef[] = [
     modelPrefix: 'ollama:',
     contextWindow: 128_000,
   },
+  {
+    // Claude Agent SDK mode: the loop is delegated to @anthropic-ai/claude-agent-sdk,
+    // which resolves its own credentials (Claude Code login / OAuth / API key / etc.).
+    // No apiKeyEnvVar — like Ollama, this is a special (non-API-key) provider whose
+    // selection is by explicit provider id, not by model-name prefix. The models here
+    // share the 'claude-' name with the 'anthropic' provider, so this entry uses a
+    // non-matching prefix to avoid resolveProvider() routing collisions; dispatch keys
+    // off the stored provider id instead.
+    id: 'claude-agent-sdk',
+    displayName: 'Claude Agent SDK',
+    modelPrefix: 'claude-agent-sdk:',
+    contextWindow: 200_000,
+  },
 ];
 
 const defaultProvider = PROVIDERS.find((p) => p.id === 'openai')!;

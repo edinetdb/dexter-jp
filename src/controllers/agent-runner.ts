@@ -1,4 +1,5 @@
 import { Agent } from '../agent/agent.js';
+import { AgentSdkAgent } from '../agent/agent-sdk-agent.js';
 import type { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
 import { defaultQueue } from '../utils/message-queue.js';
 import type {
@@ -18,6 +19,13 @@ export interface TurnStats {
 }
 
 type ChangeListener = () => void;
+
+/** Parse a truthy env flag ('1'/'true'/'yes'), tolerating undefined. */
+function isEnvFlagEnabled(value: string | undefined): boolean {
+  if (value === undefined) return false;
+  const v = value.trim().toLowerCase();
+  return v !== '' && v !== '0' && v !== 'false' && v !== 'no';
+}
 
 export interface RunQueryResult {
   answer: string;
@@ -169,15 +177,7 @@ export class AgentRunnerController {
     this.emitChange();
 
     try {
-      const agent = await Agent.create({
-        ...this.agentConfig,
-        signal: this.abortController.signal,
-        requestToolApproval: this.requestToolApproval,
-        requestUserInput: this.requestUserInput,
-        sessionApprovedTools: this.sessionApprovedTools,
-        messageQueue: defaultQueue,
-      });
-      const stream = agent.run(query, this.inMemoryChatHistory);
+      const stream = await this.createAgentStream(query);
       for await (const event of stream) {
         if (event.type === 'done') {
           finalAnswer = (event as DoneEvent).answer;
@@ -221,6 +221,60 @@ export class AgentRunnerController {
     this.streamedCharsValue = 0;
     this.streamModeValue = null;
   }
+
+  /**
+   * Build the event stream for a query, dispatching on provider:
+   * - `claude-agent-sdk` → AgentSdkAgent (loop delegated to the Agent SDK).
+   * - everything else     → the LangChain-based Agent.
+   * Both expose `run(query) → AsyncGenerator<AgentEvent>`, so the consumer loop
+   * is identical.
+   */
+  private async createAgentStream(query: string): Promise<AsyncGenerator<AgentEvent>> {
+    const signal = this.abortController?.signal;
+    if (this.agentConfig.modelProvider === 'claude-agent-sdk') {
+      const allowMetered = isEnvFlagEnabled(process.env.DEXTER_AGENT_SDK_ALLOW_METERED);
+      const budgetRaw = process.env.DEXTER_AGENT_SDK_MAX_BUDGET_USD;
+      const maxBudgetUsd = budgetRaw && Number.isFinite(Number(budgetRaw)) ? Number(budgetRaw) : undefined;
+      const agent = await AgentSdkAgent.create({
+        model: this.agentConfig.model ?? 'claude-fable-5',
+        signal,
+        channel: this.agentConfig.channel,
+        // The LangChain Agent's `maxIterations` (default 10) is a different budget
+        // than SDK agentic turns; let AgentSdkAgent use its own default (40) so
+        // multi-tool research is not cut short. Only forward an explicitly higher value.
+        maxTurns:
+          this.agentConfig.maxIterations && this.agentConfig.maxIterations > 10
+            ? this.agentConfig.maxIterations
+            : undefined,
+        maxBudgetUsd,
+        allowMetered,
+        requestUserInput: this.requestSdkTextInput,
+      });
+      return agent.run(query);
+    }
+
+    const agent = await Agent.create({
+      ...this.agentConfig,
+      signal,
+      requestToolApproval: this.requestToolApproval,
+      requestUserInput: this.requestUserInput,
+      sessionApprovedTools: this.sessionApprovedTools,
+      messageQueue: defaultQueue,
+    });
+    return agent.run(query, this.inMemoryChatHistory);
+  }
+
+  /**
+   * Bridge SDK-side elicitation (free-text prompts) to the CLI. The structured
+   * Question[] UI requires model-supplied options, so elicitation routes via the
+   * approval surface instead: "allow" affirms, "deny" cancels (null, so the SDK
+   * run does not hang). Rare in SDK mode — finance Q&A seldom asks back.
+   */
+  private requestSdkTextInput = async (prompt: string): Promise<string | null> => {
+    const decision = await this.requestToolApproval({ tool: 'ask_user', args: { question: prompt } });
+    return decision === 'deny' ? null : 'yes';
+  };
+
 
   private requestToolApproval = (request: { tool: string; args: Record<string, unknown> }) => {
     return new Promise<ApprovalDecision>((resolve) => {

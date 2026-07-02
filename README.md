@@ -193,6 +193,21 @@ CLIで `/rules` と入力すると現在のルールを確認できる。
 - xAI（Grok）
 - OpenRouter
 - Ollama（ローカルLLM）
+- Claude Agent SDK（後述）
+
+### Claude Agent SDK モード
+
+`@anthropic-ai/claude-agent-sdk` 経由で動く実行モード。エージェントのループを SDK に委譲し、**認証は SDK が解決する**（Dexter は認証フローを実装しない）。
+
+- `/model` で **Claude Agent SDK** プロバイダを選び、モデル（claude-fable-5 / claude-opus-4-8 / claude-sonnet-4-6）を選ぶだけで使える。API キーの入力は求められない。
+- 認証は SDK が解決する。**Claude Code のログイン**、`CLAUDE_CODE_OAUTH_TOKEN`、`ANTHROPIC_API_KEY` のいずれでも動作する。どれが使われるかは SDK が環境から判断する。
+- Claude プラン（Pro/Max）で Agent SDK を利用できるかの条件は Anthropic の公式ヘルプを参照（[Use the Claude Agent SDK with your Claude plan](https://support.claude.com/en/articles/15036540)）。制度は変更される可能性がある。
+- 個人の資格情報でのみ使うこと。マルチユーザー向けサービスとして提供しない。
+- **課金経路の確認**: `ANTHROPIC_API_KEY` や `CLAUDE_CODE_USE_BEDROCK` / `CLAUDE_CODE_USE_VERTEX` など従量課金の資格情報が環境にある場合、起動時に検出結果を表示し、意図しない課金経路で走らないよう停止する（fail-loud）。その経路で実行したい場合は `DEXTER_AGENT_SDK_ALLOW_METERED=1` を設定して再実行する。
+- コスト上限を設けたい場合は `DEXTER_AGENT_SDK_MAX_BUDGET_USD`（USD）を設定する。SDK 側の見積りがこの値に達すると停止する。
+- このモードでは Dexter の財務・データツールを「そのままのデータを返す」形で SDK に渡し、メインモデル自身が解釈する（ツール内部で LLM を再呼び出ししない）。SDK 組み込みのツール（Bash / Write / WebSearch 等）は使わない。
+
+> 注: 本モードの利用可否・料金は Anthropic 側の仕様変更に依存する。ここでは「無料」「追加課金なし」といった断定はしない。実際にどの資格情報が使われるかは起動時の表示で確認できる。
 
 ### メッセージング連携
 
