@@ -305,6 +305,7 @@ export async function runCli() {
 
   const errorText = new Text('', 0, 0);
   const workingIndicator = new WorkingIndicatorComponent(tui);
+  workingIndicator.setTurnStatsProvider(() => agentRunner.turnStats);
   const editor = new CustomEditor(tui, editorTheme);
   const hintBar = new HintBarComponent();
   const debugPanel = new DebugPanelComponent(8, true);
@@ -504,7 +505,6 @@ export async function runCli() {
     }
     if (
       !modelSelection.isInSelectionFlow() &&
-      !searchSelection.isInSelectionFlow() &&
       !agentRunner.pendingApproval &&
       !agentRunner.pendingQuestion
     ) {
@@ -563,10 +563,8 @@ export async function runCli() {
 
   const renderSelectionOverlay = () => {
     const state = modelSelection.state;
-    const searchState = searchSelection.state;
     if (
       state.appState === 'idle' &&
-      searchState.appState === 'idle' &&
       !agentRunner.pendingApproval &&
       !agentRunner.pendingQuestion
     ) {

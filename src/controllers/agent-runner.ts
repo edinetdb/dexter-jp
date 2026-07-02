@@ -11,6 +11,12 @@ import type { Question, UserAnswers } from '../tools/ask-user-question/types.js'
 import type { DisplayEvent, StreamMode } from '../agent/types.js';
 import type { HistoryItem, HistoryItemStatus, WorkingState } from '../types.js';
 
+export interface TurnStats {
+  turnStartMs: number;
+  streamedChars: number;
+  streamMode: StreamMode;
+}
+
 type ChangeListener = () => void;
 
 export interface RunQueryResult {
@@ -136,6 +142,7 @@ export class AgentRunnerController {
     }
     this.markLastProcessing('interrupted');
     this.workingStateValue = { status: 'idle' };
+    this.resetTurnStats();
     this.emitChange();
   }
 
@@ -156,6 +163,9 @@ export class AgentRunnerController {
     this.inMemoryChatHistory.saveUserQuery(query);
     this.errorValue = null;
     this.workingStateValue = { status: 'thinking' };
+    this.turnStartMsValue = startTime;
+    this.streamedCharsValue = 0;
+    this.streamModeValue = 'requesting';
     this.emitChange();
 
     try {
@@ -190,6 +200,7 @@ export class AgentRunnerController {
       if (error instanceof Error && error.name === 'AbortError') {
         this.markLastProcessing('interrupted');
         this.workingStateValue = { status: 'idle' };
+        this.resetTurnStats();
         this.emitChange();
         return undefined;
       }
@@ -197,11 +208,18 @@ export class AgentRunnerController {
       this.errorValue = message;
       this.markLastProcessing('error');
       this.workingStateValue = { status: 'idle' };
+      this.resetTurnStats();
       this.emitChange();
       return undefined;
     } finally {
       this.abortController = null;
     }
+  }
+
+  private resetTurnStats() {
+    this.turnStartMsValue = null;
+    this.streamedCharsValue = 0;
+    this.streamModeValue = null;
   }
 
   private requestToolApproval = (request: { tool: string; args: Record<string, unknown> }) => {
@@ -249,14 +267,16 @@ export class AgentRunnerController {
         }));
         break;
       }
-      case 'tool_progress':
+      case 'tool_progress': {
+        const progressToolId = event.toolCallId ?? this.getLastItem()?.activeToolId;
         this.updateLastItem((last) => ({
           ...last,
           events: last.events.map((entry) =>
-            entry.id === last.activeToolId ? { ...entry, progressMessage: event.message } : entry,
+            entry.id === progressToolId ? { ...entry, progressMessage: event.message } : entry,
           ),
         }));
         break;
+      }
       case 'tool_end': {
         const endToolId = event.toolCallId ?? this.getLastItem()?.activeToolId;
         this.updateLastItem((last) => ({
@@ -304,6 +324,13 @@ export class AgentRunnerController {
           completed: true,
         });
         break;
+      case 'stream_progress':
+        // Update accumulators without firing onChange — the working indicator
+        // pulls turnStats on its own spinner tick. Avoids a per-chunk emitChange
+        // storm that stutters input.
+        this.streamedCharsValue += event.charDelta;
+        this.streamModeValue = event.mode;
+        return;
       case 'done': {
         const done = event as DoneEvent;
         if (done.answer) {
@@ -318,6 +345,7 @@ export class AgentRunnerController {
           tokensPerSecond: done.tokensPerSecond,
         }));
         this.workingStateValue = { status: 'idle' };
+        this.resetTurnStats();
         break;
       }
     }
