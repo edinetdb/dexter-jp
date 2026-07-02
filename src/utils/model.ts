@@ -36,6 +36,14 @@ const PROVIDER_MODELS: Record<string, Model[]> = {
     { id: 'deepseek-v4-pro', displayName: 'DeepSeek V4 Pro' },
     { id: 'deepseek-v4-flash', displayName: 'DeepSeek V4 Flash' },
   ],
+  // Claude Agent SDK mode — models are passed straight through to the SDK's
+  // `model` option (verified honored). If the SDK reports model_not_found, the
+  // agent surfaces a fallback message listing these ids.
+  'claude-agent-sdk': [
+    { id: 'claude-fable-5', displayName: 'Fable 5' },
+    { id: 'claude-opus-4-8', displayName: 'Opus 4.8' },
+    { id: 'claude-sonnet-4-6', displayName: 'Sonnet 4.6' },
+  ],
 };
 
 export const PROVIDERS: Provider[] = PROVIDER_DEFS.map((provider) => ({

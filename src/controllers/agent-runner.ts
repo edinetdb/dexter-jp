@@ -1,4 +1,5 @@
 import { Agent } from '../agent/agent.js';
+import { AgentSdkAgent } from '../agent/agent-sdk-agent.js';
 import type { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
 import { defaultQueue } from '../utils/message-queue.js';
 import type {
@@ -7,10 +8,24 @@ import type {
   ApprovalDecision,
   DoneEvent,
 } from '../agent/index.js';
-import type { DisplayEvent } from '../agent/types.js';
+import type { Question, UserAnswers } from '../tools/ask-user-question/types.js';
+import type { DisplayEvent, StreamMode } from '../agent/types.js';
 import type { HistoryItem, HistoryItemStatus, WorkingState } from '../types.js';
 
+export interface TurnStats {
+  turnStartMs: number;
+  streamedChars: number;
+  streamMode: StreamMode;
+}
+
 type ChangeListener = () => void;
+
+/** Parse a truthy env flag ('1'/'true'/'yes'), tolerating undefined. */
+function isEnvFlagEnabled(value: string | undefined): boolean {
+  if (value === undefined) return false;
+  const v = value.trim().toLowerCase();
+  return v !== '' && v !== '0' && v !== 'false' && v !== 'no';
+}
 
 export interface RunQueryResult {
   answer: string;
@@ -21,11 +36,16 @@ export class AgentRunnerController {
   private workingStateValue: WorkingState = { status: 'idle' };
   private errorValue: string | null = null;
   private pendingApprovalValue: { tool: string; args: Record<string, unknown> } | null = null;
+  private pendingQuestionValue: { questions: Question[] } | null = null;
+  private turnStartMsValue: number | null = null;
+  private streamedCharsValue = 0;
+  private streamModeValue: StreamMode | null = null;
   private agentConfig: AgentConfig;
   private readonly inMemoryChatHistory: InMemoryChatHistory;
   private readonly onChange?: ChangeListener;
   private abortController: AbortController | null = null;
   private approvalResolve: ((decision: ApprovalDecision) => void) | null = null;
+  private questionResolve: ((answers: UserAnswers) => void) | null = null;
   private sessionApprovedTools = new Set<string>();
 
   constructor(
@@ -52,6 +72,19 @@ export class AgentRunnerController {
 
   get pendingApproval(): { tool: string; args: Record<string, unknown> } | null {
     return this.pendingApprovalValue;
+  }
+
+  get pendingQuestion(): { questions: Question[] } | null {
+    return this.pendingQuestionValue;
+  }
+
+  get turnStats(): TurnStats | null {
+    if (this.turnStartMsValue === null) return null;
+    return {
+      turnStartMs: this.turnStartMsValue,
+      streamedChars: this.streamedCharsValue,
+      streamMode: this.streamModeValue ?? 'requesting',
+    };
   }
 
   get isProcessing(): boolean {
@@ -89,6 +122,17 @@ export class AgentRunnerController {
     this.emitChange();
   }
 
+  respondToQuestion(answers: UserAnswers) {
+    if (!this.questionResolve) {
+      return;
+    }
+    this.questionResolve(answers);
+    this.questionResolve = null;
+    this.pendingQuestionValue = null;
+    this.workingStateValue = { status: 'thinking' };
+    this.emitChange();
+  }
+
   cancelExecution() {
     if (this.abortController) {
       this.abortController.abort();
@@ -99,8 +143,14 @@ export class AgentRunnerController {
       this.approvalResolve = null;
       this.pendingApprovalValue = null;
     }
+    if (this.questionResolve) {
+      this.questionResolve({ answers: [], declined: true });
+      this.questionResolve = null;
+      this.pendingQuestionValue = null;
+    }
     this.markLastProcessing('interrupted');
     this.workingStateValue = { status: 'idle' };
+    this.resetTurnStats();
     this.emitChange();
   }
 
@@ -121,17 +171,13 @@ export class AgentRunnerController {
     this.inMemoryChatHistory.saveUserQuery(query);
     this.errorValue = null;
     this.workingStateValue = { status: 'thinking' };
+    this.turnStartMsValue = startTime;
+    this.streamedCharsValue = 0;
+    this.streamModeValue = 'requesting';
     this.emitChange();
 
     try {
-      const agent = await Agent.create({
-        ...this.agentConfig,
-        signal: this.abortController.signal,
-        requestToolApproval: this.requestToolApproval,
-        sessionApprovedTools: this.sessionApprovedTools,
-        messageQueue: defaultQueue,
-      });
-      const stream = agent.run(query, this.inMemoryChatHistory);
+      const stream = await this.createAgentStream(query);
       for await (const event of stream) {
         if (event.type === 'done') {
           finalAnswer = (event as DoneEvent).answer;
@@ -154,6 +200,7 @@ export class AgentRunnerController {
       if (error instanceof Error && error.name === 'AbortError') {
         this.markLastProcessing('interrupted');
         this.workingStateValue = { status: 'idle' };
+        this.resetTurnStats();
         this.emitChange();
         return undefined;
       }
@@ -161,6 +208,7 @@ export class AgentRunnerController {
       this.errorValue = message;
       this.markLastProcessing('error');
       this.workingStateValue = { status: 'idle' };
+      this.resetTurnStats();
       this.emitChange();
       return undefined;
     } finally {
@@ -168,11 +216,80 @@ export class AgentRunnerController {
     }
   }
 
+  private resetTurnStats() {
+    this.turnStartMsValue = null;
+    this.streamedCharsValue = 0;
+    this.streamModeValue = null;
+  }
+
+  /**
+   * Build the event stream for a query, dispatching on provider:
+   * - `claude-agent-sdk` → AgentSdkAgent (loop delegated to the Agent SDK).
+   * - everything else     → the LangChain-based Agent.
+   * Both expose `run(query) → AsyncGenerator<AgentEvent>`, so the consumer loop
+   * is identical.
+   */
+  private async createAgentStream(query: string): Promise<AsyncGenerator<AgentEvent>> {
+    const signal = this.abortController?.signal;
+    if (this.agentConfig.modelProvider === 'claude-agent-sdk') {
+      const allowMetered = isEnvFlagEnabled(process.env.DEXTER_AGENT_SDK_ALLOW_METERED);
+      const budgetRaw = process.env.DEXTER_AGENT_SDK_MAX_BUDGET_USD;
+      const maxBudgetUsd = budgetRaw && Number.isFinite(Number(budgetRaw)) ? Number(budgetRaw) : undefined;
+      const agent = await AgentSdkAgent.create({
+        model: this.agentConfig.model ?? 'claude-fable-5',
+        signal,
+        channel: this.agentConfig.channel,
+        // The LangChain Agent's `maxIterations` (default 10) is a different budget
+        // than SDK agentic turns; let AgentSdkAgent use its own default (40) so
+        // multi-tool research is not cut short. Only forward an explicitly higher value.
+        maxTurns:
+          this.agentConfig.maxIterations && this.agentConfig.maxIterations > 10
+            ? this.agentConfig.maxIterations
+            : undefined,
+        maxBudgetUsd,
+        allowMetered,
+        requestUserInput: this.requestSdkTextInput,
+      });
+      return agent.run(query);
+    }
+
+    const agent = await Agent.create({
+      ...this.agentConfig,
+      signal,
+      requestToolApproval: this.requestToolApproval,
+      requestUserInput: this.requestUserInput,
+      sessionApprovedTools: this.sessionApprovedTools,
+      messageQueue: defaultQueue,
+    });
+    return agent.run(query, this.inMemoryChatHistory);
+  }
+
+  /**
+   * Bridge SDK-side elicitation (free-text prompts) to the CLI. The structured
+   * Question[] UI requires model-supplied options, so elicitation routes via the
+   * approval surface instead: "allow" affirms, "deny" cancels (null, so the SDK
+   * run does not hang). Rare in SDK mode — finance Q&A seldom asks back.
+   */
+  private requestSdkTextInput = async (prompt: string): Promise<string | null> => {
+    const decision = await this.requestToolApproval({ tool: 'ask_user', args: { question: prompt } });
+    return decision === 'deny' ? null : 'yes';
+  };
+
+
   private requestToolApproval = (request: { tool: string; args: Record<string, unknown> }) => {
     return new Promise<ApprovalDecision>((resolve) => {
       this.approvalResolve = resolve;
       this.pendingApprovalValue = request;
       this.workingStateValue = { status: 'approval', toolName: request.tool };
+      this.emitChange();
+    });
+  };
+
+  private requestUserInput = (request: { questions: Question[] }) => {
+    return new Promise<UserAnswers>((resolve) => {
+      this.questionResolve = resolve;
+      this.pendingQuestionValue = request;
+      this.workingStateValue = { status: 'question' };
       this.emitChange();
     });
   };
@@ -204,14 +321,16 @@ export class AgentRunnerController {
         }));
         break;
       }
-      case 'tool_progress':
+      case 'tool_progress': {
+        const progressToolId = event.toolCallId ?? this.getLastItem()?.activeToolId;
         this.updateLastItem((last) => ({
           ...last,
           events: last.events.map((entry) =>
-            entry.id === last.activeToolId ? { ...entry, progressMessage: event.message } : entry,
+            entry.id === progressToolId ? { ...entry, progressMessage: event.message } : entry,
           ),
         }));
         break;
+      }
       case 'tool_end': {
         const endToolId = event.toolCallId ?? this.getLastItem()?.activeToolId;
         this.updateLastItem((last) => ({
@@ -259,6 +378,13 @@ export class AgentRunnerController {
           completed: true,
         });
         break;
+      case 'stream_progress':
+        // Update accumulators without firing onChange — the working indicator
+        // pulls turnStats on its own spinner tick. Avoids a per-chunk emitChange
+        // storm that stutters input.
+        this.streamedCharsValue += event.charDelta;
+        this.streamModeValue = event.mode;
+        return;
       case 'done': {
         const done = event as DoneEvent;
         if (done.answer) {
@@ -273,6 +399,7 @@ export class AgentRunnerController {
           tokensPerSecond: done.tokensPerSecond,
         }));
         this.workingStateValue = { status: 'idle' };
+        this.resetTurnStats();
         break;
       }
     }
