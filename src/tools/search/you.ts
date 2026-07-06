@@ -1,26 +1,35 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { formatToolResult, parseSearchResults } from '../types.js';
+import { formatToolResult } from '../types.js';
 import { logger } from '@/utils';
 
-const YOU_API_BASE = 'https://api.you.com/v1';
+const YOU_API_BASE = 'https://ydc-index.io/v1';
+
+interface YouComResult {
+  url: string;
+  title?: string;
+  description?: string;
+  snippets?: string[];
+}
 
 interface YouSearchResponse {
-  results?: Array<{ url: string; title?: string; snippet?: string }>;
-  agent_results?: Array<{ url: string; title?: string; snippet?: string }>;
+  results?: {
+    web?: YouComResult[];
+    news?: YouComResult[];
+  };
 }
 
 function parseYouSearchResponse(response: unknown): { parsed: unknown; urls: string[] } {
   const parsed = response as YouSearchResponse;
   let urls: string[] = [];
 
-  // You.com returns results in agent_results or results field
-  const results = parsed?.agent_results ?? parsed?.results ?? [];
-  if (Array.isArray(results)) {
-    urls = results
-      .map((r) => r.url)
-      .filter((url): url is string => Boolean(url));
-  }
+  const webResults = parsed?.results?.web ?? [];
+  const newsResults = parsed?.results?.news ?? [];
+  const allResults = [...webResults, ...newsResults];
+
+  urls = allResults
+    .map((r) => r.url)
+    .filter((url): url is string => Boolean(url));
 
   return { parsed: response, urls };
 }
@@ -39,9 +48,9 @@ export const youSearch = new DynamicStructuredTool({
         throw new Error('YOUCOM_API_KEY is not set');
       }
 
-      const url = new URL(`${YOU_API_BASE}/agents/search`);
-      url.searchParams.set('input', input.query);
-      url.searchParams.set('num_results', '5');
+      const url = new URL(`${YOU_API_BASE}/search`);
+      url.searchParams.set('query', input.query);
+      url.searchParams.set('count', '5');
 
       const response = await fetch(url.toString(), {
         headers: {
