@@ -1,5 +1,6 @@
 import { readCache, writeCache, describeRequest } from '../../utils/cache.js';
 import { logger } from '../../utils/logger.js';
+import { assertEdinetQuota } from '../../utils/quota.js';
 
 const BASE_URL = 'https://edinetdb.jp/v1';
 
@@ -57,6 +58,9 @@ async function executeRequest(
   if (!apiKey) {
     logger.warn(`[EDINET DB API] call without key: ${label}`);
   }
+
+  // キャッシュ命中はここに来ないため、ここでのカウントは実際のネットワーク呼び出し数と一致する
+  assertEdinetQuota(label);
 
   let response: Response;
   try {
