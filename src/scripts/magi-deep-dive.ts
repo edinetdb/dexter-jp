@@ -27,7 +27,7 @@ const RESEARCH_TOOLS = [
 ];
 
 const MAX_ITERATIONS = 8;
-const TIMEOUT_MS = 5 * 60 * 1000; // 1銘柄あたり最大5分で打ち切る
+const TIMEOUT_MS = 15 * 60 * 1000; // 1銘柄あたり最大15分で打ち切る(Phi-4はバッチ前提で低速のため許容)
 
 interface Vote {
   name: string;
