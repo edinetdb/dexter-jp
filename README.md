@@ -64,6 +64,28 @@ X_BEARER_TOKEN=...
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 ```
 
+> **⚠️ LM Studio(OpenAI互換API)経由でローカルLLMを使う場合の注意**
+> `OPENAI_API_KEY`にダミー値(例: `lm-studio`)、`OPENAI_BASE_URL`にLM StudioのAPI
+> エンドポイント(例: `http://<ホスト>:1234/v1`)を設定すると、`provider: "openai"`の
+> まま実質ローカルLLMへ接続できる(OpenAI公式SDKが`OPENAI_BASE_URL`環境変数を標準で
+> 読むため)。ただし2026-08-10の実運用で以下の落とし穴があった:
+>
+> - **接続先はグラボ搭載機を指すこと。** グラボ無しのPC(CPU推論)を指すと`No models
+>   loaded`エラーが頻発する(モデルがダウンロード済みでも実際にロードされていない
+>   ことが多いため)。深掘り実行前に`lms load <model>`相当の処理でモデルを事前ロード
+>   しておく必要がある(このリポジトリでは`自動投資/magi_batch.py`の
+>   `remote_lms_load`がこれを担う)。
+> - **LM Studioサーバーは既定でLAN内アクセスを許可しない。** 別PCから接続する場合は
+>   `lms server start --bind 0.0.0.0`相当のLANバインド設定が必要(このリポジトリでは
+>   `自動投資/orchestrate_magi_remote.py`の`ensure_lm_studio_lan_bind()`が担う)。
+> - **`.dexter/settings.json`の`modelId`は、指定するプロバイダで実在するモデル名で
+>   なければならない。** OpenAI公式APIとLM Studio(OpenAI互換)は`provider`の値では
+>   区別されず、接続先は`OPENAI_BASE_URL`のみで決まる。モデル名がどのプロバイダ
+>   プレフィックス(`claude-`, `gemini-`等)にも一致しない場合は常にOpenAI向け
+>   ファクトリが使われるため、実在しないモデル名を指定すると`aborted`等の
+>   分かりにくいタイムアウトエラーになる(`src/utils/errors.ts`の`ERROR_PATTERNS`
+>   にも"aborted"は含まれておらず生の英語エラー文がそのまま出る)。
+
 ### インストール & 起動
 
 ```bash
@@ -193,6 +215,23 @@ CLIで `/rules` と入力すると現在のルールを確認できる。
 - xAI（Grok）
 - OpenRouter
 - Ollama（ローカルLLM）
+- LM Studio（OpenAI互換API経由、`OPENAI_BASE_URL`で接続先を指定。詳細は
+  上の環境変数セクションの注意書きを参照）
+
+> **ローカルLLMでのツール呼び出し(Function Calling)対応状況（2026-08-10検証）**
+> Dexterはエージェントループの中で`get_financials`/`web_search`等のツールを
+> 最大数回呼び出す構成のため、単純な指示追従とは別に「ツール呼び出しを
+> 適切なタイミングで終える判断力」が求められる。以下のローカルモデルで検証:
+>
+> - **microsoft/phi-4**: 安定して完走（13/13件成功、平均2分/件）。**採用**
+> - **openai/gpt-oss-20b**: `Reached maximum iterations`でループが収束せず失敗
+> - **meta-llama-3.1-8b-instruct**: 同上（gpt-oss-20bと同じ症状）
+>
+> 上記2件はいずれも「ツール呼び出しをいつ終えるべきか」の判断に失敗する
+> 同一の症状だった。指示追従(賛成/反対を1語で出す等)は問題なくこなせる
+> モデルでも、Agent形式のツール呼び出しでは別の適性が必要と分かる。次回
+> 別モデルを試す際は、まずこの症状(`MAX_ITERATIONS`到達で打ち切り)が
+> 再発しないか確認するとよい。
 
 ### メッセージング連携
 
@@ -287,7 +326,25 @@ bun run gateway    # 設定済みの全チャネルが同時に起動
 |--------|------|--------|
 | [EDINET DB](https://edinetdb.jp) | 財務データ、有報テキスト、スクリーニング、AI分析（~3,800社） | 必須 |
 | [J-Quants](https://jpx-jquants.com/) | 株価OHLC（東証公式） | オプション |
+| [SEC EDGAR](https://www.sec.gov/edgar) | 米国株の10-K/10-Q定性セクション（Business/Risk Factors/MD&A） | 不要（無料・APIキー不要） |
 | Web検索 | Exa / Perplexity / Tavily | オプション |
+
+> **米国株の深掘り（`read_sec_filings`ツール、2026-08-12追加）**
+> `read_filings`（EDINET DB、日本株専用）とは別に、米国ティッカー向けの
+> `read_sec_filings`ツールを追加した。SEC EDGAR（`data.sec.gov` /
+> `www.sec.gov`）は完全無料・APIキー不要の公式開示データベースで、
+> `User-Agent`ヘッダー（連絡先メールアドレス含む）の明示のみが求められる。
+> EDINET DBのような構造化APIが無いため、10-K/10-Qの本文HTMLからItem番号
+> （SEC規則Regulation S-Kにより全社共通: Item 1=Business, Item 1A=Risk
+> Factors, Item 7=MD&A）を正規表現で切り出し、Turndownでmarkdown化する
+> 方式で実装（`src/tools/finance/sec-edgar-client.ts` /
+> `sec-edgar-sections.ts` / `read-sec-filings.ts`）。長いセクションは
+> LLMで要約するが、要約に使うモデルはローカルLM Studio運用を前提に
+> ツール呼び出し元の`model`引数をそのまま使う（`getFastModel`のような
+> クラウドプロバイダ前提の軽量モデル切替は、ローカル運用では実在しない
+> モデル名にフォールバックして失敗するため使わない）。phi-4はネイティブ
+> 最大コンテキストが16,384トークンで頭打ちのため、要約入力は約45,000文字
+> （概算10,000トークン弱）に切り詰めている。
 
 ## オリジナル版（米国株）との違い
 

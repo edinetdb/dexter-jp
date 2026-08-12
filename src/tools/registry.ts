@@ -1,5 +1,6 @@
 import { StructuredToolInterface } from '@langchain/core/tools';
 import { createGetFinancials, createReadFilings, createScreenCompanies, getStockPrice, isJQuantsAvailable, STOCK_PRICE_DESCRIPTION } from './finance/index.js';
+import { createReadSecFilings, READ_SEC_FILINGS_DESCRIPTION } from './finance/read-sec-filings.js';
 import { exaSearch, perplexitySearch, tavilySearch, langSearch, WEB_SEARCH_DESCRIPTION, xSearchTool, X_SEARCH_DESCRIPTION } from './search/index.js';
 import { createWebSearchTool, type WebSearchProvider } from './search/web-search.js';
 import { getSetting } from '../utils/config.js';
@@ -65,6 +66,15 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       tool: createScreenCompanies(model),
       description: SCREEN_COMPANIES_DESCRIPTION,
       compactDescription: 'Screen Japanese listed companies by financial criteria (PER, ROE, growth, margins, etc.).',
+      concurrencySafe: true,
+    },
+    {
+      // 2026-08-12、米国株版MAGI深掘り(read_filingsの米国株版)。SEC EDGAR(無料・
+      // APIキー不要の公式開示データベース)から10-K/10-Qの定性セクションを取得する。
+      name: 'read_sec_filings',
+      tool: createReadSecFilings(model),
+      description: READ_SEC_FILINGS_DESCRIPTION,
+      compactDescription: 'US company SEC filings (10-K/10-Q): business overview, risk factors, MD&A. Use for US tickers instead of read_filings.',
       concurrencySafe: true,
     },
     {

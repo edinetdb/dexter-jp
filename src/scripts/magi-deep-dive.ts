@@ -16,9 +16,15 @@ import { getSetting } from '../utils/config.js';
 import { DEFAULT_MODEL } from '../model/llm.js';
 
 // 読み取り専用の財務リサーチに閉じる。write_file/edit_file/browser/spawn_subagent等は含めない。
+// 2026-08-12、米国株版MAGIスクリーニング(us_magi_batch.py)からも深掘りを
+// 呼べるようread_sec_filings(SEC EDGAR、read_filingsの米国株版)を追加した。
+// get_financials/read_filingsは日本株専用、read_sec_filingsは米国株専用
+// (各ツールのdescriptionに明記済み)で、エージェントが候補銘柄のティッカー
+// 形式(日本株=数字4桁、米国株=アルファベット)を見て自然に使い分ける想定。
 const RESEARCH_TOOLS = [
   'get_financials',
   'read_filings',
+  'read_sec_filings',
   'company_screener',
   'get_stock_price',
   'web_search',
@@ -26,8 +32,18 @@ const RESEARCH_TOOLS = [
   'x_search',
 ];
 
-const MAX_ITERATIONS = 8;
-const TIMEOUT_MS = 15 * 60 * 1000; // 1銘柄あたり最大15分で打ち切る(Phi-4はバッチ前提で低速のため許容)
+// 2026-08-10、.dexter/settings.jsonのmodelIdが誤ってmicrosoft/phi-4(OpenAIには
+// 存在しないモデル名)になっていたバグを修正しgpt-5.5→openai/gpt-oss-20b(メインPC
+// のLM Studio、GPU)に変更。さらに.envのOPENAI_BASE_URLがサブPC自身(グラボ無し)の
+// LM Studioを指しておりモデル未ロードで失敗していた問題も、メインPCのLAN内バインド
+// (ensure_lm_studio_lan_bind)を有効化して解決。gpt-oss-20bは8回のツール呼び出し
+// では完了できず12回に増やしても解決しなかった(ツール呼び出しループが収束しない
+// モデル固有の弱点)ため、最終的にmicrosoft/phi-4に変更。
+// Phi-4は実測で1銘柄あたり平均2分、最速でも数分と判明(10件中10件成功、21分で
+// 完走)。当初の12回・20分は過剰な余裕だったため、実測の3〜5倍程度を目安に
+// MAX_ITERATIONSを10、TIMEOUT_MSを10分に調整した。
+const MAX_ITERATIONS = 10;
+const TIMEOUT_MS = 10 * 60 * 1000; // 1銘柄あたり最大10分で打ち切る
 
 interface Vote {
   name: string;
