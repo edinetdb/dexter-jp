@@ -14,7 +14,7 @@
     "gateway": "tsx src/gateway/index.ts run",
     "gateway:login": "tsx src/gateway/index.ts login",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test --isolate",
     "test:watch": "bun test --watch",
     "postinstall": "playwright install chromium"
   },
