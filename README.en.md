@@ -9,6 +9,19 @@ Forked from [virattt/dexter](https://github.com/virattt/dexter) (US equities) an
 
 ![Dexter JP Demo](docs/demo.png)
 
+## ⚠️ Disclaimer
+
+This project is for **educational, entertainment, and informational purposes only**. It is not intended for real trading or investment.
+
+- Not financial, investment, tax, or legal advice
+- No guarantees of accuracy, completeness, or fitness for any purpose
+- Outputs may be incorrect, incomplete, or out of date
+- Creator and contributors assume no liability for any financial losses or damages
+- Consult a licensed financial advisor before making investment decisions
+- Past performance does not indicate future results
+
+By using this software, you agree to use it solely for learning and informational purposes and accept all risks associated with its use.
+
 ## Not Just Another Financial Tool
 
 Most financial tools stop at "here's a screener" or "here's the data." Dexter JP goes further.

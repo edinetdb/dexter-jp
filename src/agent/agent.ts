@@ -20,13 +20,13 @@ import { runMemoryFlush, shouldRunMemoryFlush } from '../memory/flush.js';
 import { resolveProvider } from '../providers.js';
 
 
-const DEFAULT_MODEL = 'gpt-5.5';
+const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_MAX_ITERATIONS = 10;
 const MAX_OVERFLOW_RETRIES = 2;
 const OVERFLOW_KEEP_ROUNDS = 3;
 
 /** Tools that require an interactive user and are only bound on the CLI channel. */
-const CLI_ONLY_TOOLS = new Set<string>(['ask_user_question']);
+const CLI_ONLY_TOOLS = new Set<string>(['ask_user_question', 'bash']);
 
 /**
  * The core agent class that handles the agent loop and tool execution.
@@ -506,14 +506,14 @@ export class Agent {
   }
 
   private truncateMessages(messages: BaseMessage[], keepRounds: number): number {
-    let roundStartIndex = 0;
+    let roundStartIndex = -1;
     for (let i = 0; i < messages.length; i++) {
       if (messages[i] instanceof AIMessage) {
         roundStartIndex = i;
         break;
       }
     }
-    if (roundStartIndex === 0) return 0;
+    if (roundStartIndex === -1) return 0;
 
     const rounds: { start: number; end: number }[] = [];
     let i = roundStartIndex;

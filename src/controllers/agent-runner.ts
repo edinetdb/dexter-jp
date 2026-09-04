@@ -9,6 +9,17 @@ import type {
   DoneEvent,
 } from '../agent/index.js';
 import type { Question, UserAnswers } from '../tools/ask-user-question/types.js';
+import type { PermissionDecision } from '../permissions/types.js';
+
+/** A pending approval request surfaced to the CLI overlay. */
+export interface PendingApproval {
+  tool: string;
+  args: Record<string, unknown>;
+  /** For bash: the command being approved (shown instead of args.path). */
+  command?: string;
+  /** The engine's decision (reason, classification, etc.). */
+  decision?: PermissionDecision;
+}
 import type { DisplayEvent, StreamMode } from '../agent/types.js';
 import type { HistoryItem, HistoryItemStatus, WorkingState } from '../types.js';
 
@@ -35,7 +46,7 @@ export class AgentRunnerController {
   private historyValue: HistoryItem[] = [];
   private workingStateValue: WorkingState = { status: 'idle' };
   private errorValue: string | null = null;
-  private pendingApprovalValue: { tool: string; args: Record<string, unknown> } | null = null;
+  private pendingApprovalValue: PendingApproval | null = null;
   private pendingQuestionValue: { questions: Question[] } | null = null;
   private turnStartMsValue: number | null = null;
   private streamedCharsValue = 0;
@@ -70,7 +81,7 @@ export class AgentRunnerController {
     return this.errorValue;
   }
 
-  get pendingApproval(): { tool: string; args: Record<string, unknown> } | null {
+  get pendingApproval(): PendingApproval | null {
     return this.pendingApprovalValue;
   }
 
@@ -157,6 +168,12 @@ export class AgentRunnerController {
   async runQuery(query: string): Promise<RunQueryResult | undefined> {
     this.abortController = new AbortController();
     let finalAnswer: string | undefined;
+
+    // bash `allow-session` grants are scoped to a single query: prune them at the
+    // start of each new query while leaving write/edit (file:write) grants intact.
+    for (const key of this.sessionApprovedTools) {
+      if (key.startsWith('bash:')) this.sessionApprovedTools.delete(key);
+    }
 
     const startTime = Date.now();
     const item: HistoryItem = {
@@ -276,7 +293,7 @@ export class AgentRunnerController {
   };
 
 
-  private requestToolApproval = (request: { tool: string; args: Record<string, unknown> }) => {
+  private requestToolApproval = (request: PendingApproval) => {
     return new Promise<ApprovalDecision>((resolve) => {
       this.approvalResolve = resolve;
       this.pendingApprovalValue = request;

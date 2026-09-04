@@ -9,6 +9,19 @@
 
 ![Dexter JP Demo](docs/demo.png)
 
+## ⚠️ 免責事項
+
+本プロジェクトは**教育・娯楽・情報提供のみを目的**としています。実際の取引や投資判断のために使用することは意図していません。
+
+- 金融、投資、税務、法律に関する助言ではありません
+- 正確性、完全性、特定目的への適合性を保証するものではありません
+- 出力結果には誤り、不完全な情報、古い情報が含まれる可能性があります
+- 作成者および貢献者は、本ソフトウェアの利用によって生じたいかなる金銭的損失・損害についても責任を負いません
+- 投資判断を行う前には、必ず有資格の金融アドバイザーにご相談ください
+- 過去の実績は将来の成果を示すものではありません
+
+本ソフトウェアを利用することにより、学習・情報提供の目的のみに使用することに同意し、利用に伴う一切のリスクを受け入れたものとします。
+
 ## ただのツールではない
 
 よくある金融ツールは「スクリーニングできます」「財務データ見れます」で終わる。Dexter JPは違う。
@@ -324,6 +337,6 @@ MIT
 
 ## クレジット
 
-- オリジナル [Dexter](https://github.com/virattt/dexter) by [@virattt](https://github.com/virattt)
+- オリジナル [Dexter](https://github.com/virattt/dexter) by [@virattt](https://github.com/virattt)（現在 [v1.0.5](https://github.com/virattt/dexter/releases/tag/v1.0.5) に追従）
 - 財務データ: [EDINET DB](https://edinetdb.jp)
 - 株価データ: [J-Quants](https://jpx-jquants.com/)

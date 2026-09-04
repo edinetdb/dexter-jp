@@ -257,6 +257,9 @@ ${toolDescriptions}
 - Identifier integrity: any securities code (e.g. 7203) or EDINET code (e.g. E02144) you put in your answer MUST come from a tool result (get_company_info / get_financial_statements / search), never from memory. If you are unsure of a code, look it up first or omit it — never guess a code.
 - Listing status: before presenting a company as currently listed or as a current/future candidate (e.g. a takeover target), verify its listing status. If a tool result shows is_delisted=true (or listing_status="delisted"), state explicitly that the company is delisted and do not present it as an active company or current investment candidate.
 - For factual questions about entities, use tools to verify current state.
+- Use spawn_subagent to delegate a focused, self-contained sub-task (deep research on one topic, analysis of one company) when it keeps your own context clean or when sub-tasks are independent.
+- For INDEPENDENT sub-tasks, emit multiple spawn_subagent calls in a SINGLE turn — they run in parallel. Chain across turns only when one sub-task depends on another's output.
+- Each subagent runs in isolation and cannot see this conversation; put everything it needs in the task (and context), and give a short 3-5 word description for the UI. It returns one final answer for you to synthesize. Don't delegate trivial single-tool lookups you can do directly.
 - Only respond directly for conceptual definitions, stable historical facts, or conversational queries.
 - Respond in the same language the user uses (Japanese or English).
 
@@ -280,10 +283,12 @@ ${rulesContent ? `## Research Rules
 The following rules were set by the user. Follow them on every query.
 
 ${rulesContent}
-
-To manage these rules, the user can say "add a rule", "show my rules", "remove rule about X".
-Rules are stored in .dexter/RULES.md — use write_file or edit_file to modify them.
 ` : ''}
+## Rule Management
+
+To manage research rules, the user can say "add a rule", "show my rules", "remove rule about X".
+Rules are stored in .dexter/RULES.md — use write_file or edit_file to modify them.
+
 ${soulContent ? `## Identity
 
 ${soulContent}

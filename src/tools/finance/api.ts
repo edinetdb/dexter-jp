@@ -45,6 +45,31 @@ function getApiKey(): string {
 }
 
 /**
+ * Merge a follow-up page into the accumulated response. The API caps list
+ * responses at a fixed page size, so record arrays are concatenated —
+ * recursively, because /financials/ nests its three statement arrays one
+ * level down. Scalars keep the first page's value; next_page_url is
+ * excluded so it never reaches the cache, the formatters, or the LLM.
+ */
+function mergePage(accumulated: Record<string, unknown>, page: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(page)) {
+    if (key === 'next_page_url') {
+      continue;
+    }
+    const existing = accumulated[key];
+    if (Array.isArray(existing) && Array.isArray(value)) {
+      existing.push(...value);
+    } else if (
+      existing && value &&
+      typeof existing === 'object' && typeof value === 'object' &&
+      !Array.isArray(existing) && !Array.isArray(value)
+    ) {
+      mergePage(existing as Record<string, unknown>, value as Record<string, unknown>);
+    }
+  }
+}
+
+/**
  * Shared request execution: handles API key, error handling, logging, and response parsing.
  */
 async function executeRequest(
@@ -118,6 +143,17 @@ export const api = {
     }
 
     const data = await executeRequest(url.toString(), label, {});
+
+    // Reassemble the full result: follow next_page_url (absolute and
+    // self-contained — request it verbatim) until the last page. This runs
+    // before the cache write so caches only ever hold complete results.
+    let nextPageUrl = data.next_page_url;
+    while (typeof nextPageUrl === 'string' && nextPageUrl) {
+      const page = await executeRequest(nextPageUrl, label, {});
+      mergePage(data, page);
+      nextPageUrl = page.next_page_url;
+    }
+    delete data.next_page_url;
 
     // Persist for future requests when the caller marked the response as cacheable
     if (options?.cacheable) {

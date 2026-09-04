@@ -379,15 +379,8 @@ export class ChatLogComponent extends Container {
   }
 
 
-  addPerformanceStats(duration: number, tokenUsage?: TokenUsage, tokensPerSecond?: number) {
-    const parts = [formatDuration(duration)];
-    if (tokenUsage && tokenUsage.totalTokens > 20_000) {
-      parts.push(`${tokenUsage.totalTokens.toLocaleString()} tokens`);
-      if (tokensPerSecond !== undefined) {
-        parts.push(`(${tokensPerSecond.toFixed(1)} tok/s)`);
-      }
-    }
+  addPerformanceStats(duration: number, _tokenUsage?: TokenUsage, _tokensPerSecond?: number) {
     this.addChild(new Spacer(1));
-    this.addChild(new Text(`${theme.muted('✻ ')}${theme.muted(parts.join(' · '))}`, 0, 0));
+    this.addChild(new Text(`${theme.muted('✻ ')}${theme.muted(formatDuration(duration))}`, 0, 0));
   }
 }
