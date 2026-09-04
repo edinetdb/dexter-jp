@@ -43,7 +43,7 @@
 ## LLM Providers
 
 - Supported: OpenAI (default), Anthropic, Google, xAI (Grok), OpenRouter, Ollama (local).
-- Default model: `gpt-5.4`. Provider detection is prefix-based (`claude-` -> Anthropic, `gemini-` -> Google, etc.).
+- Default model: `gpt-5.5`. Provider detection is prefix-based (`claude-` -> Anthropic, `gemini-` -> Google, etc.).
 - Fast models for lightweight tasks: see `FAST_MODELS` map in `src/model/llm.ts`.
 - Users switch providers/models via `/model` command in the CLI.
 
@@ -81,7 +81,9 @@
 
 ## Version & Release
 
-- Version format: SemVer.
+- Version format: SemVer `MAJOR.MINOR.PATCH` with a `-jp` suffix (e.g. `1.0.5-jp`). Tag prefix: `v`.
+- Release script: `bash scripts/release.sh [version]` (defaults to bumping the patch segment).
+- Release flow: bump version in `package.json`, create git tag, push tag, create GitHub release via `gh`.
 - Do not push or publish without user confirmation.
 
 ## Testing

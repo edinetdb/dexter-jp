@@ -24,7 +24,7 @@ export const PROVIDERS: ProviderDef[] = [
     displayName: 'OpenAI',
     modelPrefix: '',
     apiKeyEnvVar: 'OPENAI_API_KEY',
-    fastModel: 'gpt-5.4-mini',
+    fastModel: 'gpt-5.6-luna',
     contextWindow: 1_047_576,
   },
   {
@@ -79,6 +79,13 @@ export const PROVIDERS: ProviderDef[] = [
     id: 'ollama',
     displayName: 'Ollama',
     modelPrefix: 'ollama:',
+    contextWindow: 128_000,
+  },
+  {
+    id: 'ollama-cloud',
+    displayName: 'Ollama Cloud',
+    modelPrefix: 'ollama-cloud:',
+    apiKeyEnvVar: 'OLLAMA_CLOUD_API_KEY',
     contextWindow: 128_000,
   },
   {
