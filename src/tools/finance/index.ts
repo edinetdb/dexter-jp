@@ -8,3 +8,5 @@ export { createGetFinancials } from './get-financials.js';
 export { createReadFilings } from './read-filings.js';
 export { createScreenCompanies } from './screen-companies.js';
 export { resolveEdinetCode } from './resolver.js';
+export { createReadSecFilings, READ_SEC_FILINGS_DESCRIPTION } from './read-sec-filings.js';
+export { resolveTickerToCik, getRecentFilings } from './sec-edgar-client.js';
