@@ -3,7 +3,7 @@ import { PROVIDERS, type Model } from '../utils/model.js';
 import type { ApprovalDecision } from '../agent/types.js';
 import { selectListTheme, theme } from '../theme.js';
 
-class VimSelectList extends SelectList {
+export class VimSelectList extends SelectList {
   handleInput(keyData: string): void {
     if (keyData === 'j') {
       super.handleInput('\u001b[B');
@@ -54,6 +54,27 @@ export function createProviderSelector(
   return list;
 }
 
+export function createSearchProviderSelector(
+  currentProvider: string,
+  onSelect: (providerId: 'exa' | 'perplexity' | 'tavily' | 'langsearch') => void,
+  onCancel: () => void,
+) {
+  const providers: { id: 'exa' | 'perplexity' | 'tavily' | 'langsearch'; displayName: string }[] = [
+    { id: 'exa', displayName: 'Exa' },
+    { id: 'perplexity', displayName: 'Perplexity' },
+    { id: 'tavily', displayName: 'Tavily' },
+    { id: 'langsearch', displayName: 'LangSearch' },
+  ];
+  const items: SelectItem[] = providers.map((provider, index) => ({
+    value: provider.id,
+    label: `${index + 1}. ${provider.displayName}${currentProvider === provider.id ? ' ✓' : ''}`,
+  }));
+  const list = new VimSelectList(items, 5, selectListTheme);
+  list.onSelect = (item) => onSelect(item.value as 'exa' | 'perplexity' | 'tavily' | 'langsearch');
+  list.onCancel = () => onCancel();
+  return list;
+}
+
 export function createModelSelector(
   models: Model[],
   currentModel: string | undefined,
@@ -73,13 +94,21 @@ export function createModelSelector(
   return list;
 }
 
-export function createApprovalSelector(onSelect: (decision: ApprovalDecision) => void) {
-  const items: SelectItem[] = [
-    { value: 'allow-once', label: '1. Yes' },
-    { value: 'allow-session', label: '2. Yes, allow all edits this session' },
-    { value: 'deny', label: '3. No' },
-  ];
-  const list = new VimSelectList(items, 5, selectListTheme);
+export function createApprovalSelector(
+  onSelect: (decision: ApprovalDecision) => void,
+  proposedRule?: string,
+) {
+  const items: SelectItem[] = [{ value: 'allow-once', label: '1. Yes' }];
+  if (proposedRule) {
+    // bash: offer to persist a rule, and scope the session grant to this query.
+    items.push({ value: 'allow-always', label: `2. Yes, and always allow ${proposedRule}` });
+    items.push({ value: 'allow-session', label: '3. Yes, allow all bash this query' });
+    items.push({ value: 'deny', label: '4. No' });
+  } else {
+    items.push({ value: 'allow-session', label: '2. Yes, allow all edits this session' });
+    items.push({ value: 'deny', label: '3. No' });
+  }
+  const list = new VimSelectList(items, 6, selectListTheme);
   list.onSelect = (item) => onSelect(item.value as ApprovalDecision);
   list.onCancel = () => onSelect('deny');
   return list;

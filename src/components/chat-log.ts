@@ -1,5 +1,6 @@
 import { Container, Spacer, Text, type TUI } from '@mariozechner/pi-tui';
 import type { TokenUsage } from '../agent/types.js';
+import type { QuestionAnswer } from '../tools/ask-user-question/types.js';
 import { theme } from '../theme.js';
 import { AnswerBoxComponent } from './answer-box.js';
 import { ToolEventComponent } from './tool-event.js';
@@ -291,6 +292,21 @@ export class ChatLogComponent extends Container {
     this.activeAnswer = null;
   }
 
+  addAnsweredQuestions(answers: QuestionAnswer[]) {
+    if (answers.length === 0) {
+      return;
+    }
+    this.addChild(new Text(`${theme.success('⏺')} ${theme.muted('Answered:')}`, 0, 0));
+    for (const a of answers) {
+      const picks = [...a.selected];
+      if (a.otherText) {
+        picks.push(a.otherText);
+      }
+      const ans = picks.length ? picks.join(', ') : '—';
+      this.addChild(new Text(`${theme.muted('⎿  ')}${theme.dim(`${a.question} → ${ans}`)}`, 0, 0));
+    }
+  }
+
   addContextCleared(clearedCount: number, keptCount: number) {
     this.addChild(
       new Text(
@@ -363,15 +379,8 @@ export class ChatLogComponent extends Container {
   }
 
 
-  addPerformanceStats(duration: number, tokenUsage?: TokenUsage, tokensPerSecond?: number) {
-    const parts = [formatDuration(duration)];
-    if (tokenUsage && tokenUsage.totalTokens > 20_000) {
-      parts.push(`${tokenUsage.totalTokens.toLocaleString()} tokens`);
-      if (tokensPerSecond !== undefined) {
-        parts.push(`(${tokensPerSecond.toFixed(1)} tok/s)`);
-      }
-    }
+  addPerformanceStats(duration: number, _tokenUsage?: TokenUsage, _tokensPerSecond?: number) {
     this.addChild(new Spacer(1));
-    this.addChild(new Text(`${theme.muted('✻ ')}${theme.muted(parts.join(' · '))}`, 0, 0));
+    this.addChild(new Text(`${theme.muted('✻ ')}${theme.muted(formatDuration(duration))}`, 0, 0));
   }
 }

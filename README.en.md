@@ -9,6 +9,19 @@ Forked from [virattt/dexter](https://github.com/virattt/dexter) (US equities) an
 
 ![Dexter JP Demo](docs/demo.png)
 
+## ⚠️ Disclaimer
+
+This project is for **educational, entertainment, and informational purposes only**. It is not intended for real trading or investment.
+
+- Not financial, investment, tax, or legal advice
+- No guarantees of accuracy, completeness, or fitness for any purpose
+- Outputs may be incorrect, incomplete, or out of date
+- Creator and contributors assume no liability for any financial losses or damages
+- Consult a licensed financial advisor before making investment decisions
+- Past performance does not indicate future results
+
+By using this software, you agree to use it solely for learning and informational purposes and accept all risks associated with its use.
+
 ## Not Just Another Financial Tool
 
 Most financial tools stop at "here's a screener" or "here's the data." Dexter JP goes further.
@@ -193,6 +206,21 @@ Switch models on the fly with the `/model` command:
 - xAI (Grok)
 - OpenRouter
 - Ollama (local LLMs)
+- Claude Agent SDK (see below)
+
+### Claude Agent SDK mode
+
+A run mode powered by `@anthropic-ai/claude-agent-sdk`. The agent loop is delegated to the SDK, and **authentication is resolved by the SDK** — Dexter implements no auth flow of its own.
+
+- Pick the **Claude Agent SDK** provider via `/model`, choose a model (claude-fable-5 / claude-opus-4-8 / claude-sonnet-4-6), and go. No API key entry is requested.
+- The SDK resolves credentials. It works with your **Claude Code login**, `CLAUDE_CODE_OAUTH_TOKEN`, or `ANTHROPIC_API_KEY` — the SDK decides which, based on your environment.
+- Whether the Agent SDK can be used on a Claude plan (Pro/Max), and under what terms, is described in Anthropic's help ([Use the Claude Agent SDK with your Claude plan](https://support.claude.com/en/articles/15036540)). Terms may change.
+- Use it with your own personal credentials only; do not offer it as a multi-user service.
+- **Billing-path check**: if a usage-based credential (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_VERTEX`, …) is present in the environment, the mode reports what it detected at startup and stops before running so it does not proceed on an unintended billing path (fail-loud). To proceed on that path, set `DEXTER_AGENT_SDK_ALLOW_METERED=1` and retry.
+- To cap cost, set `DEXTER_AGENT_SDK_MAX_BUDGET_USD` (USD); the SDK stops when its estimate reaches it.
+- In this mode Dexter's finance/data tools return raw data for the main model to interpret (no internal LLM re-call inside tools). SDK built-in tools (Bash / Write / WebSearch, etc.) are not used.
+
+> Note: availability and pricing of this mode depend on Anthropic's terms and may change. This does not claim the mode is "free" or "no extra cost"; the startup line shows which credential path is actually in use.
 
 ### Messaging Integrations
 

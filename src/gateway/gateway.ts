@@ -185,7 +185,7 @@ async function handleInbound(cfg: GatewayConfig, inbound: InboundMessage): Promi
     }
 
     console.log(`Processing message with agent...`);
-    const model = process.env.DEXTER_MODEL || getSetting('modelId', 'gpt-5.4') as string;
+    const model = process.env.DEXTER_MODEL || getSetting('modelId', 'gpt-5.6-sol') as string;
     const modelProvider = process.env.DEXTER_PROVIDER || getSetting('provider', 'openai') as string;
 
     // If agent is already running for this session, enqueue for mid-run injection

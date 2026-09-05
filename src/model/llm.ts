@@ -16,7 +16,7 @@ import { classifyError, isNonRetryableError } from '@/utils/errors';
 import { resolveProvider, getProviderById } from '@/providers';
 
 export const DEFAULT_PROVIDER = 'openai';
-export const DEFAULT_MODEL = 'gpt-5.5';
+export const DEFAULT_MODEL = 'gpt-5.6-sol';
 
 /**
  * Gets the fast model variant for the given provider.
@@ -171,6 +171,15 @@ const MODEL_FACTORIES: Record<string, ModelFactory> = {
       ...opts,
       ...(process.env.OLLAMA_BASE_URL ? { baseUrl: process.env.OLLAMA_BASE_URL } : {}),
     }),
+  'ollama-cloud': (name, opts) => {
+    const apiKey = process.env.OLLAMA_CLOUD_API_KEY;
+    return new ChatOllama({
+      model: name.replace(/^ollama-cloud:/, ''),
+      ...opts,
+      baseUrl: 'https://ollama.com',
+      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+    });
+  },
 };
 
 const DEFAULT_FACTORY: ModelFactory = (name, opts) =>
@@ -178,6 +187,8 @@ const DEFAULT_FACTORY: ModelFactory = (name, opts) =>
     model: name,
     ...opts,
     apiKey: getApiKey('OPENAI_API_KEY'),
+    // GPT-5.6 requires the Responses API when reasoning and function tools are combined.
+    useResponsesApi: name.startsWith('gpt-5.6-'),
   });
 
 export function getChatModel(

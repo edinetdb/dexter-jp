@@ -20,10 +20,13 @@ import { runMemoryFlush, shouldRunMemoryFlush } from '../memory/flush.js';
 import { resolveProvider } from '../providers.js';
 
 
-const DEFAULT_MODEL = 'gpt-5.5';
+const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_MAX_ITERATIONS = 10;
 const MAX_OVERFLOW_RETRIES = 2;
 const OVERFLOW_KEEP_ROUNDS = 3;
+
+/** Tools that require an interactive user and are only bound on the CLI channel. */
+const CLI_ONLY_TOOLS = new Set<string>(['ask_user_question', 'bash']);
 
 /**
  * The core agent class that handles the agent loop and tool execution.
@@ -62,6 +65,8 @@ export class Agent {
       config.signal,
       config.requestToolApproval,
       config.sessionApprovedTools,
+      undefined,
+      config.requestUserInput,
     );
     this.systemPrompt = systemPrompt;
     this.signal = config.signal;
@@ -72,9 +77,15 @@ export class Agent {
   static async create(config: AgentConfig = {}): Promise<Agent> {
     const model = config.model ?? DEFAULT_MODEL;
     const allTools = getTools(model);
-    const tools = config.toolAllowlist
+    let tools = config.toolAllowlist
       ? allTools.filter(t => config.toolAllowlist!.includes(t.name))
       : allTools;
+    // CLI-only tools (interactive prompts) are dropped on non-CLI channels
+    // (WhatsApp/gateway) and in headless runs, where there is no user at a keyboard.
+    const isCli = !config.channel || config.channel === 'cli';
+    if (!isCli) {
+      tools = tools.filter(t => !CLI_ONLY_TOOLS.has(t.name));
+    }
     // The concurrency map is a name→bool lookup; extra entries are harmless since
     // toolMap only holds the (possibly filtered) tools above.
     const concurrencyMap = getToolConcurrencyMap(model);
@@ -495,14 +506,14 @@ export class Agent {
   }
 
   private truncateMessages(messages: BaseMessage[], keepRounds: number): number {
-    let roundStartIndex = 0;
+    let roundStartIndex = -1;
     for (let i = 0; i < messages.length; i++) {
       if (messages[i] instanceof AIMessage) {
         roundStartIndex = i;
         break;
       }
     }
-    if (roundStartIndex === 0) return 0;
+    if (roundStartIndex === -1) return 0;
 
     const rounds: { start: number; end: number }[] = [];
     let i = roundStartIndex;

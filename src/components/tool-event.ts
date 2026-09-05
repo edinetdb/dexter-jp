@@ -1,11 +1,20 @@
 import { Container, Spacer, Text, type TUI } from '@mariozechner/pi-tui';
 import type { ApprovalDecision } from '../agent/types.js';
 import { theme } from '../theme.js';
-import { subscribeSpinner } from '../utils/spinner.js';
+import { subscribeSpinner, SPINNER_INTERVAL_MS } from '../utils/spinner.js';
 
 const CIRCLE = '⏺';
 
+/** Short display names that override the default title-casing. */
+const TOOL_NAME_OVERRIDES: Record<string, string> = {
+  ask_user_question: 'Ask',
+};
+
 function formatToolName(name: string): string {
+  const override = TOOL_NAME_OVERRIDES[name];
+  if (override) {
+    return override;
+  }
   const stripped = name.replace(/^(get)_/, '');
   return stripped
     .split('_')
@@ -25,6 +34,13 @@ function truncateAtWord(str: string, maxLength: number): string {
 }
 
 function formatArgs(tool: string, args: Record<string, unknown>): string {
+  if (tool === 'ask_user_question') {
+    const questions = Array.isArray(args.questions) ? args.questions : [];
+    const headers = questions
+      .map((q) => (q && typeof q === 'object' ? (q as { header?: unknown }).header : undefined))
+      .filter((h): h is string => typeof h === 'string');
+    return theme.muted(headers.join(', '));
+  }
   if ('query' in args) {
     const query = String(args.query);
     return theme.muted(`"${truncateAtWord(query, 60)}"`);
@@ -53,6 +69,8 @@ function approvalLabel(decision: ApprovalDecision): string {
       return 'Approved';
     case 'allow-session':
       return 'Approved (session)';
+    case 'allow-always':
+      return 'Approved (always)';
     case 'deny':
       return 'Denied';
   }
@@ -81,9 +99,11 @@ export class ToolEventComponent extends Container {
     this.blinkCounter = 0;
     this.blinkVisible = true;
     this.header.setText(`${theme.success(CIRCLE)} ${this.toolTitle}`);
+    // Toggle visibility every ~600ms regardless of the spinner tick rate.
+    const ticksPerHalfPeriod = Math.max(1, Math.round(600 / SPINNER_INTERVAL_MS));
     this.unsubscribeSpinner = subscribeSpinner(() => {
       this.blinkCounter++;
-      if (this.blinkCounter % 4 === 0) {
+      if (this.blinkCounter % ticksPerHalfPeriod === 0) {
         this.blinkVisible = !this.blinkVisible;
         const circle = this.blinkVisible ? theme.success(CIRCLE) : ' ';
         this.header.setText(`${circle} ${this.toolTitle}`);

@@ -13,6 +13,10 @@ import type {
   ToolProgressEvent,
   ToolStartEvent,
 } from './types.js';
+import type { Question, UserAnswers } from '../tools/ask-user-question/types.js';
+import { evaluatePermission, sessionKey } from '../permissions/engine.js';
+import { addRule } from '../permissions/rules.js';
+import type { PermissionDecision } from '../permissions/types.js';
 import type { RunContext } from './run-context.js';
 
 type ToolExecutionEvent =
@@ -24,7 +28,6 @@ type ToolExecutionEvent =
   | ToolDeniedEvent
   | ToolLimitEvent;
 
-const TOOLS_REQUIRING_APPROVAL = ['write_file', 'edit_file'] as const;
 const DEFAULT_MAX_CONCURRENCY = 10;
 
 interface ToolCallBatch {
@@ -50,9 +53,14 @@ export class AgentToolExecutor {
     private readonly requestToolApproval?: (request: {
       tool: string;
       args: Record<string, unknown>;
+      command?: string;
+      decision?: PermissionDecision;
     }) => Promise<ApprovalDecision>,
     sessionApprovedTools?: Set<string>,
     maxConcurrency?: number,
+    private readonly requestUserInput?: (request: {
+      questions: Question[];
+    }) => Promise<UserAnswers>,
   ) {
     this.sessionApprovedTools = sessionApprovedTools ?? new Set();
     this.maxConcurrency = maxConcurrency ?? DEFAULT_MAX_CONCURRENCY;
@@ -129,17 +137,36 @@ export class AgentToolExecutor {
     const toolCallId = call.id;
     const toolQuery = this.extractQueryFromArgs(toolArgs);
 
-    // Approval flow for sensitive tools
-    if (this.requiresApproval(toolName) && !this.sessionApprovedTools.has(toolName)) {
-      const decision = (await this.requestToolApproval?.({ tool: toolName, args: toolArgs })) ?? 'deny';
-      yield { type: 'tool_approval', tool: toolName, args: toolArgs, approved: decision };
-      if (decision === 'deny') {
-        yield { type: 'tool_denied', tool: toolName, args: toolArgs, toolCallId };
-        return;
-      }
-      if (decision === 'allow-session') {
-        for (const name of TOOLS_REQUIRING_APPROVAL) {
-          this.sessionApprovedTools.add(name);
+    // Permission gate: the engine decides allow / ask / deny per call.
+    const permission = evaluatePermission({ tool: toolName, args: toolArgs });
+    if (permission.mode === 'deny') {
+      // Denied by rule — never reaches the user (avoids rubber-stamp fatigue).
+      yield { type: 'tool_denied', tool: toolName, args: toolArgs, toolCallId };
+      return;
+    }
+    if (permission.mode === 'ask') {
+      // Commands the engine marks non-cacheable always re-prompt (a prior
+      // allow-session grant can never silently skip them).
+      const cacheable = permission.sessionCacheable !== false;
+      const key = sessionKey(toolName, permission);
+      if (!(cacheable && this.sessionApprovedTools.has(key))) {
+        const decision = (await this.requestToolApproval?.({
+          tool: toolName,
+          args: toolArgs,
+          command: permission.command,
+          decision: permission,
+        })) ?? 'deny';
+        yield { type: 'tool_approval', tool: toolName, args: toolArgs, approved: decision };
+        if (decision === 'deny') {
+          yield { type: 'tool_denied', tool: toolName, args: toolArgs, toolCallId };
+          return;
+        }
+        if (decision === 'allow-session' && cacheable) {
+          this.sessionApprovedTools.add(key);
+        }
+        if (decision === 'allow-always' && permission.proposedRule) {
+          // Persist a permanent allow rule, then run this turn.
+          addRule('allow', permission.proposedRule);
         }
       }
     }
@@ -162,7 +189,10 @@ export class AgentToolExecutor {
 
       const channel = createProgressChannel();
       const config = {
-        metadata: { onProgress: channel.emit },
+        metadata: {
+          onProgress: channel.emit,
+          ...(this.requestUserInput ? { onUserInput: this.requestUserInput } : {}),
+        },
         ...(this.signal ? { signal: this.signal } : {}),
       };
 
@@ -172,7 +202,7 @@ export class AgentToolExecutor {
       );
 
       for await (const message of channel) {
-        yield { type: 'tool_progress', tool: toolName, message } as ToolProgressEvent;
+        yield { type: 'tool_progress', tool: toolName, message, toolCallId } as ToolProgressEvent;
       }
 
       const rawResult = await toolPromise;
@@ -200,9 +230,5 @@ export class AgentToolExecutor {
       }
     }
     return undefined;
-  }
-
-  private requiresApproval(toolName: string): boolean {
-    return (TOOLS_REQUIRING_APPROVAL as readonly string[]).includes(toolName);
   }
 }
