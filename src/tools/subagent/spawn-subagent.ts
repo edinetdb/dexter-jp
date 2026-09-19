@@ -45,7 +45,7 @@ Delegate a focused, self-contained sub-task to an isolated subagent that runs it
 
 ## How It Works
 
-The subagent runs in isolation — it cannot see this conversation and cannot delegate further. Put everything it needs into \`task\` (and optional \`context\`). It returns one complete answer that you then synthesize.
+The subagent runs in isolation — it cannot see this conversation and cannot delegate further. Put everything it needs into \`task\` (and optional \`context\`). It returns one complete answer that you then synthesize. For an explicit DCF request, use the worker to gather sourced inputs and run the deterministic \`calculate_dcf\` tool yourself.
 
 ## Subagent Types
 
@@ -86,7 +86,7 @@ export function createSpawnSubagent(model: string): DynamicStructuredTool {
 
       const typeKey = input.subagent_type ?? DEFAULT_SUBAGENT_TYPE;
       const typeCfg = SUBAGENT_TYPES[typeKey] ?? SUBAGENT_TYPES[DEFAULT_SUBAGENT_TYPE];
-      const toolAllowlist = resolveSubagentTools(typeKey);
+      const toolAllowlist = resolveSubagentTools(typeKey, input.task);
 
       // Lazy import to break the registry → spawn-subagent → agent → registry cycle.
       // By first invocation all modules are fully loaded.

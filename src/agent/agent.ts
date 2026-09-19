@@ -12,12 +12,13 @@ import { enforceResultBudget } from '../utils/tool-result-budget.js';
 import { formatUserFacingError, isContextOverflowError } from '../utils/errors.js';
 import type { AgentConfig, AgentEvent, CompactionEvent, ContextClearedEvent, MicrocompactEvent, QueueDrainEvent, StreamMode, StreamProgressEvent, TokenUsage } from '../agent/types.js';
 import type { MessageQueue } from '../utils/message-queue.js';
-import { buildCompactionSource, compactContext, MAX_CONSECUTIVE_COMPACTION_FAILURES, MIN_TOOL_RESULTS_FOR_COMPACTION } from './compact.js';
+import { buildCompactionSource, compactContext, MAX_CONSECUTIVE_COMPACTION_FAILURES, MIN_TOOL_RESULTS_FOR_COMPACTION, rebuildMessagesAfterCompaction } from './compact.js';
 import { microcompactMessages } from './microcompact.js';
 import { createRunContext, type RunContext } from './run-context.js';
 import { AgentToolExecutor } from './tool-executor.js';
 import { MemoryManager } from '../memory/index.js';
 import { resolveProvider } from '../providers.js';
+import { hasRemainingIterationBudget } from './iteration-budget.js';
 
 const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_MAX_ITERATIONS = 10;
@@ -152,7 +153,7 @@ export class Agent {
 
     // Main agent loop
     let overflowRetries = 0;
-    while (ctx.iteration < this.maxIterations) {
+    while (hasRemainingIterationBudget(ctx.iteration, this.maxIterations)) {
       ctx.iteration++;
 
       // Microcompact: per-turn lightweight trimming before LLM call
@@ -267,8 +268,8 @@ export class Agent {
       yield* this.manageContextThreshold(ctx, query, messageState);
       messages = messageState.messages;
 
-      // Inject tool usage warning if approaching limits
-      const toolUsageWarning = ctx.scratchpad.formatToolUsageForPrompt();
+      // Warn only when an exact operation repeats without progress
+      const toolUsageWarning = ctx.scratchpad.formatToolProgressWarningForPrompt();
       if (toolUsageWarning) {
         messages.push(new HumanMessage(toolUsageWarning));
       }
@@ -548,16 +549,6 @@ export class Agent {
     return removed;
   }
 
-  /**
-   * Replace message array with compacted version after LLM summarization.
-   */
-  private compactMessages(messages: BaseMessage[], summary: string, query: string): BaseMessage[] {
-    return [
-      messages[0], // SystemMessage
-      new HumanMessage(`${query}\n\n${summary}`),
-    ];
-  }
-
   // ---------------------------------------------------------------------------
   // Context threshold management
   // ---------------------------------------------------------------------------
@@ -580,7 +571,7 @@ export class Agent {
 
     // Compaction only transforms transient conversation state. Durable memory
     // writes are exclusively handled by the explicit memory_update tool path.
-    const fullToolResults = ctx.scratchpad.getToolResults();
+    const fullToolResults = ctx.scratchpad.getCompactionEvidence();
     const compactionSource = buildCompactionSource(messageState.messages, fullToolResults);
     if (
       this.compactionFailures < MAX_CONSECUTIVE_COMPACTION_FAILURES &&
@@ -595,7 +586,12 @@ export class Agent {
           signal: this.signal,
         });
 
-        messageState.messages = this.compactMessages(messageState.messages, result.summary, query);
+        messageState.messages = rebuildMessagesAfterCompaction(
+          this.systemPrompt,
+          result.summary,
+          query,
+          ctx.scratchpad.formatActiveSkillContractsForPrompt(),
+        );
         ctx.scratchpad.setCompactionSummary(result.summary);
 
         if (result.usage) {

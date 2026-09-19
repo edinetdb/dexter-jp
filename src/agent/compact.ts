@@ -7,7 +7,7 @@
  * subsequent iteration prompts while preserving key information.
  */
 
-import { AIMessage, HumanMessage, type BaseMessage } from '@langchain/core/messages';
+import { AIMessage, HumanMessage, SystemMessage, type BaseMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { callLlm } from '../model/llm.js';
 import { resolveProvider } from '../providers.js';
@@ -113,6 +113,30 @@ export function buildCompactionSource(
   }
 
   return sections.join('\n\n');
+}
+
+/**
+ * Rebuild the trusted prompt after full compaction.
+ * Active Skill instructions stay outside the generated summary and remain run-local.
+ */
+export function rebuildMessagesAfterCompaction(
+  baseSystemPrompt: string,
+  summary: string,
+  query: string,
+  activeSkillContracts: string,
+): BaseMessage[] {
+  const rebuiltSystem = activeSkillContracts.trim()
+    ? new SystemMessage(`${baseSystemPrompt}
+
+${activeSkillContracts.trim()}`)
+    : new SystemMessage(baseSystemPrompt);
+
+  return [
+    rebuiltSystem,
+    new HumanMessage(`${query}
+
+${summary}`),
+  ];
 }
 
 // ---------------------------------------------------------------------------

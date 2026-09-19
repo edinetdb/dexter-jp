@@ -47,9 +47,11 @@ describe('durable memory persistence boundary', () => {
 
     scratchpad.addThinking('candidate hypothesis');
     scratchpad.addToolResult('web_search', { query: 'candidate' }, 'temporary result');
+    scratchpad.recordActiveSkill('dcf-valuation', 'run-local Skill instructions');
     scratchpad.setCompactionSummary('compacted transient state');
 
     expect(scratchpad.getToolResults()).toContain('compacted transient state');
+    expect(scratchpad.getActiveSkillContracts()).toHaveLength(1);
     expect(await store.listMemoryFiles()).toEqual([]);
 
     const restartedStore = new MemoryStore(memoryBase);

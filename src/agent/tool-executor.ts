@@ -8,7 +8,6 @@ import type {
   ToolDeniedEvent,
   ToolEndEvent,
   ToolErrorEvent,
-  ToolLimitEvent,
   ToolProgressEvent,
   ToolStartEvent,
 } from './types.js';
@@ -28,8 +27,7 @@ type ToolExecutionEvent =
   | ToolEndEvent
   | ToolErrorEvent
   | ToolApprovalEvent
-  | ToolDeniedEvent
-  | ToolLimitEvent;
+  | ToolDeniedEvent;
 
 const DEFAULT_MAX_CONCURRENCY = 10;
 
@@ -187,13 +185,6 @@ export class AgentToolExecutor {
     }
 
     let toolArgs = authorizedArgs;
-    const toolQuery = this.extractQueryFromArgs(toolArgs);
-
-    // Tool limit check (warn but never block)
-    const limitCheck = ctx.scratchpad.canCallTool(toolName, toolQuery);
-    if (limitCheck.warning) {
-      yield { type: 'tool_limit', tool: toolName, warning: limitCheck.warning, blocked: false };
-    }
 
     yield { type: 'tool_start', tool: toolName, args: toolArgs, toolCallId };
 
@@ -234,24 +225,19 @@ export class AgentToolExecutor {
 
       yield { type: 'tool_end', tool: toolName, args: toolArgs, result, duration, toolCallId };
 
-      ctx.scratchpad.recordToolCall(toolName, toolQuery);
+      ctx.scratchpad.recordToolOutcome(toolName, toolArgs, result, false);
       ctx.scratchpad.addToolResult(toolName, toolArgs, result);
+      if (toolName === 'skill') {
+        const skillName = typeof toolArgs.skill === 'string' ? toolArgs.skill : '';
+        ctx.scratchpad.recordActiveSkill(skillName, result);
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       yield { type: 'tool_error', tool: toolName, error: errorMessage, toolCallId };
 
-      ctx.scratchpad.recordToolCall(toolName, toolQuery);
-      ctx.scratchpad.addToolResult(toolName, toolArgs, `Error: ${errorMessage}`);
+      const result = `Error: ${errorMessage}`;
+      ctx.scratchpad.recordToolOutcome(toolName, toolArgs, result, true);
+      ctx.scratchpad.addToolResult(toolName, toolArgs, result);
     }
-  }
-
-  private extractQueryFromArgs(args: Record<string, unknown>): string | undefined {
-    const queryKeys = ['query', 'search', 'question', 'q', 'text', 'input'];
-    for (const key of queryKeys) {
-      if (typeof args[key] === 'string') {
-        return args[key] as string;
-      }
-    }
-    return undefined;
   }
 }

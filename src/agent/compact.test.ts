@@ -6,6 +6,7 @@ import {
   buildCompactionPrompt,
   compactionSummarySchema,
   parseCompactionSummaryPayload,
+  rebuildMessagesAfterCompaction,
 } from './compact.js';
 
 describe('compaction privacy boundary', () => {
@@ -46,6 +47,22 @@ describe('compaction privacy boundary', () => {
     expect(source).toContain('verified tool evidence');
     expect(source).not.toContain('durable memory and private system instructions');
     expect(source).not.toContain('private intermediate reasoning');
+  });
+
+
+  test('restores active Skill details outside the generated compaction summary', () => {
+    const rebuilt = rebuildMessagesAfterCompaction(
+      'base system contract',
+      'Verified evidence and pending work.',
+      'original request',
+      '## Active Skill contracts\n\n### dcf-valuation\n\nUse calculate_dcf only.',
+    );
+
+    expect(rebuilt).toHaveLength(2);
+    expect(rebuilt[0].content).toContain('base system contract');
+    expect(rebuilt[0].content).toContain('Use calculate_dcf only.');
+    expect(rebuilt[1].content).toContain('Verified evidence and pending work.');
+    expect(rebuilt[1].content).not.toContain('Use calculate_dcf only.');
   });
 
   test('accepts only the summary field and never requests an analysis block', () => {

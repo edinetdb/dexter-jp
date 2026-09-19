@@ -67,6 +67,27 @@ describe('main system prompt boundaries', () => {
     expect(prompt).toContain('do not present it as active');
   });
 
+  test('multi-part task contract requires every deliverable and validation', () => {
+    const prompt = buildPrompt();
+
+    expect(prompt).toContain('Complete every requested deliverable and required validation');
+    expect(prompt).toContain('do not stop after a partial result');
+    expect(prompt.match(/## Completion/g)).toHaveLength(1);
+  });
+
+  test('blocked task reports completed, incomplete, and blocker separately', () => {
+    const prompt = buildPrompt();
+
+    expect(prompt).toContain('distinguish completed work, incomplete work, and the blocker');
+  });
+
+  test('completion contract does not override approval refusal or safety budgets', () => {
+    const prompt = buildPrompt();
+
+    expect(prompt).toContain('Never bypass a denied approval');
+    expect(prompt).toContain('a safety boundary, or a runtime/tool budget');
+  });
+
   test('omits memory instructions when memory is irrelevant', () => {
     expect(buildPrompt()).not.toContain('## Memory');
     expect(buildPrompt({ tools: new Set(['skill', 'memory_search']), memoryEnabled: false }))
@@ -109,6 +130,8 @@ describe('SDK prompt boundaries', () => {
     expect(prompt).not.toContain('**get_key_ratios**');
     expect(prompt).toContain('**Identifier integrity**');
     expect(prompt).toContain('**Listing status**');
+    expect(prompt).toContain('Complete every requested deliverable');
+    expect(prompt.match(/## Completion/g)).toHaveLength(1);
   });
 
   test('uses the same explicit write-memo discovery boundary in SDK mode', async () => {

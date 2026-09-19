@@ -22,9 +22,8 @@ export type {
   DoneEvent,
 } from './types.js';
 
-export type { 
-  ToolCallRecord, 
+export type {
+  ActiveSkillContract,
+  ToolCallRecord,
   ScratchpadEntry,
-  ToolLimitConfig,
-  ToolUsageStatus,
 } from './scratchpad.js';

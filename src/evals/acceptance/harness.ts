@@ -322,8 +322,12 @@ class ScenarioHarness {
     outputSummary?: Record<string, unknown>,
   ): void {
     this.events.push({ type: 'tool_result', turn, name, status, operation, ...(outputSummary ? { outputSummary } : {}) });
-    this.scratchpad.addToolResult(name, operation.arguments as Record<string, unknown>, JSON.stringify({ status, ...outputSummary }));
-    if (status === 'success') this.scratchpad.recordToolCall(name);
+    const args = operation.arguments as Record<string, unknown>;
+    const result = JSON.stringify({ status, ...outputSummary });
+    this.scratchpad.addToolResult(name, args, result);
+    if (status !== 'denied') {
+      this.scratchpad.recordToolOutcome(name, args, result, status === 'error');
+    }
   }
 
   private async invokeSkill(

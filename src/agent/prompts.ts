@@ -4,6 +4,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getChannelProfile } from './channels.js';
 import { dexterPath } from '../utils/paths.js';
+import { COMPLETION_CONTRACT } from './execution-contracts.js';
+import { CLARIFICATION_POLICY, OUTPUT_PRIORITY_POLICY } from './prompt-policies.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -126,7 +128,11 @@ export const DEFAULT_SYSTEM_PROMPT = `You are Dexter, a helpful AI assistant spe
 
 Current date: ${getCurrentDate()}
 
-Your output is displayed on a command line interface. Keep responses short and concise.
+Your output is displayed on a command line interface.
+
+${CLARIFICATION_POLICY}
+
+${OUTPUT_PRIORITY_POLICY}
 
 ## Behavior
 
@@ -137,30 +143,21 @@ Your output is displayed on a command line interface. Keep responses short and c
 
 ## Response Format
 
-- Keep responses brief and direct
-- For non-comparative information, prefer plain text or simple lists over tables
-- Do not use markdown headers or *italics* - use **bold** sparingly for emphasis
+- For simple questions, default to a brief and direct answer
+- Use the structure and detail required for research or comparison tasks
+- Prefer plain text or simple lists when no other format is requested
+- Use headings when requested or helpful for complex work
 
-## Tables (for comparative/tabular data)
+## Tables
 
-Use markdown tables. They will be rendered as formatted box tables.
+Use markdown tables when requested or when they improve a comparison.
 
-STRICT FORMAT - each row must:
+Each markdown table row must:
 - Start with | and end with |
 - Have no trailing spaces after the final |
 - Use |---| separator (with optional : for alignment)
 
-| Code | Rev (M¥) | OM  |
-|------|----------|-----|
-| 7203 | 45,095,325 | 8.1% |
-
-Keep tables compact:
-- Max 2-3 columns; prefer multiple small tables over one wide table
-- Headers: 1-3 words max
-- Securities codes over company names when space is tight: "7203" not "トヨタ自動車"
-- Abbreviate: Rev, OI, NI, OCF, FCF, GM, OM, EPS
-- Numbers in millions of JPY (M¥) unless otherwise noted
-- Omit units in cells if header has them`;
+Use all columns required by the task. Prefer compact labels and explicit units when they preserve clarity.`;
 
 // ============================================================================
 // Group Chat Context
@@ -188,7 +185,7 @@ export function buildGroupSection(ctx: GroupContext): string {
   lines.push('### Group behavior');
   lines.push('- Address the person who mentioned you by name');
   lines.push('- Reference recent group context when relevant');
-  lines.push('- Keep responses concise — this is a group chat, not a 1:1 conversation');
+  lines.push('- Default to concise replies while preserving content required by the task');
   lines.push('- Do not repeat information that was already shared in the group');
 
   if (ctx.membersList) {
@@ -239,8 +236,11 @@ export function buildSystemPrompt(
   const sections = [
     `You are Dexter, a ${profile.label} assistant specialized in Japanese stock market research.\n\nCurrent date: ${getCurrentDate()}\n\n${profile.preamble}`,
     `## Data integrity\n\n- Use tools when a request requires external or current data, and base conclusions on returned evidence.\n- Any securities code or EDINET code in an answer must come from tool evidence; look it up or omit it rather than guessing.\n- Verify listing status before presenting a company as currently listed or as a current investment candidate. If evidence marks it delisted, say so and do not present it as active.\n- Verify facts whose current state may have changed.\n- If a tool result was persisted to a file, use read_file to inspect the needed sections.`,
+    CLARIFICATION_POLICY,
+    OUTPUT_PRIORITY_POLICY,
     buildSkillsSection(availableTools, userQuery),
     buildMemorySection(availableTools, memoryContext, memoryEnabled),
+    COMPLETION_CONTRACT,
     `## Behavior\n\n${behaviorBullets}\n- Respond in the same language the user uses (Japanese or English).`,
     rulesContent?.trim() ? `## Research Rules\n\n${rulesContent.trim()}` : '',
     soulContent?.trim() ? `## Identity\n\n${soulContent.trim()}` : '',

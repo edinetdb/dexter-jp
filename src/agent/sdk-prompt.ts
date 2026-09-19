@@ -6,6 +6,8 @@
  */
 import { getCurrentDate, loadSoulDocument, loadRulesDocument } from './prompts.js';
 import { buildSkillMetadataSection, discoverSkills } from '../skills/index.js';
+import { COMPLETION_CONTRACT } from './execution-contracts.js';
+import { CLARIFICATION_POLICY, OUTPUT_PRIORITY_POLICY } from './prompt-policies.js';
 
 const SDK_TOOL_POLICY = `## Data and tool policy
 
@@ -14,7 +16,6 @@ const SDK_TOOL_POLICY = `## Data and tool policy
 - **Identifier integrity**: any securities code or EDINET code in an answer must come from tool evidence. Look it up or omit it rather than guessing.
 - **Listing status**: verify that a company is currently listed before presenting it as active or as a current investment candidate. State clearly when evidence marks it delisted.
 - Verify factual claims whose current state may have changed.
-- Ask a concise clarification question when required.
 - Respond in the same language the user uses (Japanese or English).`;
 
 function buildSdkSkillsSection(
@@ -63,6 +64,9 @@ export async function buildSdkAgentSystemPrompt(
   }
 
   parts.push(SDK_TOOL_POLICY);
+  parts.push(CLARIFICATION_POLICY);
+  parts.push(OUTPUT_PRIORITY_POLICY);
+  parts.push(COMPLETION_CONTRACT);
 
   const skills = buildSdkSkillsSection(availableTools, userQuery);
   if (skills) parts.push(skills);
