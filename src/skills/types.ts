@@ -5,15 +5,32 @@
  */
 export type SkillSource = 'builtin' | 'user' | 'project';
 
+/** Discovery lifecycle for a skill. */
+export type SkillStatus = 'stable' | 'experimental' | 'disabled';
+
+/** Optional code-enforced activation boundary for context-sensitive Skills. */
+export type SkillActivation = 'explicit_memo';
+
+/** Runtime capabilities required before a skill can be discovered. */
+export interface SkillRequirements {
+  tools?: string[];
+}
+
 /**
  * Skill metadata - lightweight info loaded at startup for system prompt injection.
- * Only contains the name and description from YAML frontmatter.
+ * Only contains lightweight YAML frontmatter used during discovery.
  */
 export interface SkillMetadata {
   /** Unique skill name (e.g., "dcf") */
   name: string;
   /** Description of when to use this skill */
   description: string;
+  /** Optional discovery lifecycle. Missing status remains discoverable. */
+  status?: SkillStatus;
+  /** Optional code-enforced activation boundary. */
+  activation?: SkillActivation;
+  /** Optional runtime capabilities required for discovery. */
+  requires?: SkillRequirements;
   /** Absolute path to the SKILL.md file */
   path: string;
   /** Where this skill was discovered from */

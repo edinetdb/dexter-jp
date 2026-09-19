@@ -1,12 +1,13 @@
 /**
- * Disk persistence for large tool results.
+ * Run-scoped offloading for large tool results.
  *
- * When a tool result exceeds the size cap, the full result is saved to disk
+ * When a tool result exceeds the size cap, the full result is saved temporarily
  * and a compact preview + file path replaces it in the message array.
- * The model can read the full result back via read_file if needed.
+ * The model can read it via read_file during the run; the run directory is then removed.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { dexterPath } from './paths.js';
 
 /** Maximum characters for a single tool result in context. */
@@ -18,27 +19,65 @@ export const PREVIEW_CHARS = 2_000;
 const RESULTS_DIR = dexterPath('tool-results');
 
 /**
- * Persist a large tool result to disk and return a compact preview.
+ * Owns temporary tool-result files for one Agent.run invocation.
  */
-export function persistLargeResult(
-  toolName: string,
-  toolCallId: string,
-  result: string,
-): { preview: string; filePath: string } {
-  if (!existsSync(RESULTS_DIR)) {
-    mkdirSync(RESULTS_DIR, { recursive: true });
+export class TransientToolResultStore {
+  private readonly rootDir: string;
+  private runDir: string | null = null;
+  private disposed = false;
+
+  constructor(baseDir: string = RESULTS_DIR) {
+    this.rootDir = resolve(baseDir);
   }
 
-  const sanitizedId = toolCallId.replace(/[^a-zA-Z0-9_-]/g, '_');
-  const filePath = `${RESULTS_DIR}/${sanitizedId}.txt`;
-  writeFileSync(filePath, result, 'utf-8');
+  persist(
+    toolName: string,
+    toolCallId: string,
+    result: string,
+  ): { preview: string; filePath: string } {
+    if (this.disposed) {
+      throw new Error('Transient tool-result store is already disposed.');
+    }
 
-  const preview = result.slice(0, PREVIEW_CHARS);
-  return { preview, filePath };
+    if (!this.runDir) {
+      mkdirSync(this.rootDir, { recursive: true });
+      this.runDir = mkdtempSync(join(this.rootDir, 'run-'));
+    }
+
+    const sanitizedTool = toolName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const sanitizedId = toolCallId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = join(this.runDir, sanitizedTool + '-' + sanitizedId + '.txt');
+    writeFileSync(filePath, result, 'utf-8');
+
+    return {
+      preview: result.slice(0, PREVIEW_CHARS),
+      filePath,
+    };
+  }
+
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+
+    if (!this.runDir) {
+      this.disposed = true;
+      return;
+    }
+
+    const resolvedRunDir = resolve(this.runDir);
+    const rel = relative(this.rootDir, resolvedRunDir);
+    if (!rel || rel.startsWith('..') || isAbsolute(rel)) {
+      throw new Error('Refusing to remove a tool-result path outside its run root.');
+    }
+
+    rmSync(resolvedRunDir, { recursive: true, force: true });
+    this.disposed = true;
+  }
 }
 
 /**
- * Build the replacement content for a persisted tool result.
+ * Build the replacement content for a temporarily offloaded tool result.
  */
 export function buildPersistedContent(
   filePath: string,
@@ -46,7 +85,7 @@ export function buildPersistedContent(
   originalSizeBytes: number,
 ): string {
   const sizeKB = Math.round(originalSizeBytes / 1024);
-  return `[Result persisted to ${filePath} (${sizeKB} KB)]\n\nPreview:\n${preview}\n\nUse read_file to access the full result if needed.`;
+  return `[Result temporarily offloaded to ${filePath} (${sizeKB} KB)]\n\nPreview:\n${preview}\n\nUse read_file to access the full result if needed.`;
 }
 
 /**

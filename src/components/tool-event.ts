@@ -146,11 +146,15 @@ export class ToolEventComponent extends Container {
     this.addChild(this.activeDetail);
   }
 
-  setDenied(path: string, tool: string) {
+  setDenied(target: string, operationKind: string) {
     this.clearDetail();
-    this.header.setText(`${theme.error(CIRCLE)} ${this.toolTitle}`);
-    const action = tool === 'write_file' ? 'write to' : tool === 'edit_file' ? 'edit of' : tool;
-    const detail = new Text(`${theme.muted('⎿  ')}${theme.warning(`User denied ${action} ${path}`)}`, 0, 0);
+    this.header.setText(theme.error(CIRCLE) + ' ' + this.toolTitle);
+    const suffix = target ? ' on ' + target : '';
+    const detail = new Text(
+      theme.muted('⎿  ') + theme.warning('User denied ' + operationKind + suffix),
+      0,
+      0,
+    );
     this.completedDetails.push(detail);
     this.addChild(detail);
   }

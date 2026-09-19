@@ -1,8 +1,3 @@
-import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { createHash } from 'crypto';
-import { dexterPath } from '../utils/paths.js';
-
 /**
  * Record of a tool call for external consumers (e.g., DoneEvent)
  */
@@ -53,56 +48,40 @@ const DEFAULT_LIMIT_CONFIG: ToolLimitConfig = {
 };
 
 /**
- * Append-only scratchpad for tracking agent work on a query.
- * Uses JSONL format (newline-delimited JSON) for resilient appending.
- * Files are persisted in .dexter/scratchpad/ for debugging/history.
+ * In-memory scratchpad for tracking agent work on a single query.
  * 
  * This is the single source of truth for all agent work on a query.
+ * It is intentionally never written to durable storage or restored in a later run.
  * 
  * Includes soft limit warnings to guide the LLM:
  * - Tool call counting with suggested limits (warnings, not blocks)
  * - Query similarity detection to help prevent retry loops
  */
 export class Scratchpad {
-  private readonly scratchpadDir = dexterPath('scratchpad');
-  private readonly filepath: string;
+  private readonly entries: ScratchpadEntry[] = [];
   private readonly limitConfig: ToolLimitConfig;
 
-  // In-memory tracking for tool limits (also persisted in JSONL)
+  // In-memory tracking for tool limits.
   private toolCallCounts: Map<string, number> = new Map();
   private toolQueries: Map<string, string[]> = new Map();
 
-  // In-memory tracking for Anthropic-style context clearing (JSONL file untouched)
+  // In-memory tracking for Anthropic-style context clearing.
   // Stores indices of tool_result entries that have been cleared from context
   private clearedToolIndices: Set<number> = new Set();
 
-  // Compaction state (in-memory only — JSONL file untouched)
+  // Compaction state (in-memory only).
   // When set, getToolResults() returns the summary + any post-compaction results
   private compactionSummary: string | null = null;
   private compactionBoundaryIndex: number = -1;
 
   constructor(query: string, limitConfig?: Partial<ToolLimitConfig>) {
     this.limitConfig = { ...DEFAULT_LIMIT_CONFIG, ...limitConfig };
-
-    if (!existsSync(this.scratchpadDir)) {
-      mkdirSync(this.scratchpadDir, { recursive: true });
-    }
-
-    const hash = createHash('md5').update(query).digest('hex').slice(0, 12);
-    const now = new Date();
-    const timestamp = now.toISOString()
-      .slice(0, 19)           // "2026-01-21T15:30:45"
-      .replace('T', '-')      // "2026-01-21-15:30:45"
-      .replace(/:/g, '');     // "2026-01-21-153045"
-    this.filepath = join(this.scratchpadDir, `${timestamp}_${hash}.jsonl`);
-
-    // Write initial entry with the query
     this.append({ type: 'init', content: query, timestamp: new Date().toISOString() });
   }
 
   /**
    * Add a complete tool result with full data.
-   * Parses JSON strings to store as objects for cleaner JSONL output.
+   * Parses JSON strings to keep structured values in transient memory.
    * Anthropic-style: no inline summarization, full results preserved.
    */
   addToolResult(
@@ -305,7 +284,6 @@ export class Scratchpad {
   /**
    * Get full tool results formatted for the iteration prompt.
    * Anthropic-style: full results in context, excluding cleared entries.
-   * Does NOT modify the JSONL file - clearing is in-memory only.
    *
    * When a compaction summary is active, returns:
    *   summary + separator + any post-compaction tool results
@@ -446,41 +424,13 @@ export class Scratchpad {
     );
   }
 
-  /**
-   * Append-only write
-   */
+  /** Append an entry to this run's transient state. */
   private append(entry: ScratchpadEntry): void {
-    appendFileSync(this.filepath, JSON.stringify(entry) + '\n');
+    this.entries.push(entry);
   }
 
-  /**
-   * Parse and validate a single JSONL line. Returns null for malformed or invalid entries.
-   */
-  private parseLine(line: string): ScratchpadEntry | null {
-    try {
-      const parsed = JSON.parse(line);
-      return parsed && typeof parsed === 'object' && 'type' in parsed && 'timestamp' in parsed
-        ? (parsed as ScratchpadEntry)
-        : null;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Read all entries from the log.
-   * Skips malformed or corrupt lines (partial writes, disk corruption) to avoid
-   * a single bad line crashing tool-context methods.
-   */
+  /** Read a snapshot of this run's transient entries. */
   private readEntries(): ScratchpadEntry[] {
-    if (!existsSync(this.filepath)) {
-      return [];
-    }
-
-    return readFileSync(this.filepath, 'utf-8')
-      .split('\n')
-      .filter((line) => line.trim())
-      .map((line) => this.parseLine(line))
-      .filter((entry): entry is ScratchpadEntry => entry !== null);
+    return [...this.entries];
   }
 }

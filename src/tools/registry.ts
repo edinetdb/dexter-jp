@@ -1,10 +1,10 @@
 import { StructuredToolInterface } from '@langchain/core/tools';
-import { createGetFinancials, createReadFilings, createScreenCompanies, getStockPrice, isJQuantsAvailable, STOCK_PRICE_DESCRIPTION } from './finance/index.js';
+import { calculateDcfTool, CALCULATE_DCF_DESCRIPTION, createGetFinancials, createReadFilings, createScreenCompanies, getStockPrice, isJQuantsAvailable, STOCK_PRICE_DESCRIPTION } from './finance/index.js';
 import { exaSearch, perplexitySearch, tavilySearch, langSearch, WEB_SEARCH_DESCRIPTION, xSearchTool, X_SEARCH_DESCRIPTION } from './search/index.js';
 import { createWebSearchTool, type WebSearchProvider } from './search/web-search.js';
 import { getSetting } from '../utils/config.js';
 import type { SearchProviderId } from '../utils/env.js';
-import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
+import { createSkillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
 import { createWebFetch, WEB_FETCH_DESCRIPTION } from './fetch/web-fetch.js';
 import { browserTool, BROWSER_DESCRIPTION } from './browser/browser.js';
 import { readFileTool, READ_FILE_DESCRIPTION } from './filesystem/read-file.js';
@@ -20,10 +20,17 @@ import { discoverSkills } from '../skills/index.js';
 import { createSpawnSubagent, SPAWN_SUBAGENT_DESCRIPTION } from './subagent/spawn-subagent.js';
 import { createAskUserQuestion, ASK_USER_QUESTION_DESCRIPTION } from './ask-user-question/ask-user-question.js';
 import { createBash, BASH_TOOL_DESCRIPTION } from './bash/bash-tool.js';
+import { writeMemoTool, WRITE_MEMO_DESCRIPTION } from './memo/write-memo.js';
+import { hasExplicitMemoIntent } from '../skills/memo-intent.js';
 
 /**
  * A registered tool with its rich description for system prompt injection.
  */
+export interface ToolRegistryOptions {
+  /** Current user turn used for narrowly activated capabilities. */
+  userQuery?: string;
+}
+
 export interface RegisteredTool {
   /** Tool name (must match the tool's name property) */
   name: string;
@@ -44,7 +51,10 @@ export interface RegisteredTool {
  * @param model - The model name (needed for tools that require model-specific configuration)
  * @returns Array of registered tools
  */
-export function getToolRegistry(model: string): RegisteredTool[] {
+export function getToolRegistry(
+  model: string,
+  options: ToolRegistryOptions = {},
+): RegisteredTool[] {
   const isPublicGateway = process.env.DEXTER_PUBLIC_GATEWAY === '1';
 
   const tools: RegisteredTool[] = [
@@ -67,6 +77,13 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       tool: createScreenCompanies(model),
       description: SCREEN_COMPANIES_DESCRIPTION,
       compactDescription: 'Screen Japanese listed companies by financial criteria (PER, ROE, growth, margins, etc.).',
+      concurrencySafe: true,
+    },
+    {
+      name: 'calculate_dcf',
+      tool: calculateDcfTool,
+      description: CALCULATE_DCF_DESCRIPTION,
+      compactDescription: 'Calculate a validated DCF and 3 × 3 WACC/growth sensitivity matrix from explicit assumptions.',
       concurrencySafe: true,
     },
     {
@@ -141,7 +158,7 @@ export function getToolRegistry(model: string): RegisteredTool[] {
         name: 'memory_search',
         tool: memorySearchTool,
         description: MEMORY_SEARCH_DESCRIPTION,
-        compactDescription: 'Search persistent memory and past conversations for stored facts and preferences.',
+        compactDescription: 'Search explicitly persisted memory for durable facts and preferences.',
         concurrencySafe: true,
       },
       {
@@ -159,6 +176,16 @@ export function getToolRegistry(model: string): RegisteredTool[] {
         concurrencySafe: false,
       },
     );
+
+    if (hasExplicitMemoIntent(options.userQuery)) {
+      tools.push({
+        name: 'write_memo',
+        tool: writeMemoTool,
+        description: WRITE_MEMO_DESCRIPTION,
+        compactDescription: 'Create one deterministic Markdown memo from validated structured content. Requires exact-operation approval.',
+        concurrencySafe: false,
+      });
+    }
   }
 
   // Include stock price tool if J-Quants refresh token is configured
@@ -217,11 +244,16 @@ export function getToolRegistry(model: string): RegisteredTool[] {
     });
   }
 
-  const availableSkills = discoverSkills();
+  const availableToolNames = new Set(tools.map((tool) => tool.name));
+  const discoveryOptions = {
+    availableTools: availableToolNames,
+    userQuery: options.userQuery,
+  };
+  const availableSkills = discoverSkills(discoveryOptions);
   if (availableSkills.length > 0) {
     tools.push({
       name: 'skill',
-      tool: skillTool,
+      tool: createSkillTool(availableToolNames, { userQuery: options.userQuery }),
       description: SKILL_TOOL_DESCRIPTION,
       compactDescription: 'Invoke a specialized skill workflow (e.g., DCF valuation).',
       concurrencySafe: false,
@@ -246,15 +278,21 @@ export function getToolRegistry(model: string): RegisteredTool[] {
 /**
  * Build a name → concurrencySafe map for the tool executor.
  */
-export function getToolConcurrencyMap(model: string): Map<string, boolean> {
-  return new Map(getToolRegistry(model).map(t => [t.name, t.concurrencySafe]));
+export function getToolConcurrencyMap(
+  model: string,
+  options: ToolRegistryOptions = {},
+): Map<string, boolean> {
+  return new Map(getToolRegistry(model, options).map(t => [t.name, t.concurrencySafe]));
 }
 
 /**
  * Get just the tool instances for binding to the LLM.
  */
-export function getTools(model: string): StructuredToolInterface[] {
-  return getToolRegistry(model).map((t) => t.tool);
+export function getTools(
+  model: string,
+  options: ToolRegistryOptions = {},
+): StructuredToolInterface[] {
+  return getToolRegistry(model, options).map((t) => t.tool);
 }
 
 /**
@@ -262,8 +300,11 @@ export function getTools(model: string): StructuredToolInterface[] {
  * Uses 1-2 sentence descriptions instead of full multi-paragraph ones.
  * The LLM already has full tool schemas via bindTools().
  */
-export function buildCompactToolDescriptions(model: string): string {
-  return getToolRegistry(model)
+export function buildCompactToolDescriptions(
+  model: string,
+  options: ToolRegistryOptions = {},
+): string {
+  return getToolRegistry(model, options)
     .map((t) => `- **${t.name}**: ${t.compactDescription}`)
     .join('\n');
 }

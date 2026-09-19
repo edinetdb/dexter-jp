@@ -4,12 +4,12 @@ import { MemoryManager } from '../../memory/index.js';
 import { formatToolResult } from '../types.js';
 
 export const MEMORY_SEARCH_DESCRIPTION = `
-Semantic search over persistent memory and past conversation transcripts.
+Semantic search over explicitly persisted durable memory.
 
 ## When to Use
 
 - ALWAYS before giving personalized financial advice (buy/sell, sizing, recommendations)
-- Before answering questions about prior conversations, decisions, preferences, or facts the user previously shared
+- Before answering questions about durable decisions, preferences, or facts the user explicitly asked to retain
 - To recall user goals, risk tolerance, trade history, and portfolio rules
 - To recall durable memory captured in \`MEMORY.md\` or daily memory logs
 
@@ -26,7 +26,7 @@ const memorySearchSchema = z.object({
 export const memorySearchTool = new DynamicStructuredTool({
   name: 'memory_search',
   description:
-    'Search persistent memory (MEMORY.md + daily logs + past conversation transcripts) with hybrid semantic + keyword retrieval.',
+    'Search explicitly persisted memory files (MEMORY.md + daily logs) with hybrid semantic + keyword retrieval.',
   schema: memorySearchSchema,
   func: async (input) => {
     const manager = await MemoryManager.get();

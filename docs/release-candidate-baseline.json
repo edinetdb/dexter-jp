@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 2,
+  "baselineId": "dexter-rc2-20260919-188a146",
+  "status": "rc2_candidate_precommit",
+  "releaseCandidate": "v1.0.0-jp-rc2",
+  "freezeType": "manifest_bound_staged_snapshot",
+  "recordedAt": "20260919",
+  "timezone": "Asia/Tokyo",
+  "packageVersion": "1.0.5-jp",
+  "integrationBase": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+  "commitSha": null,
+  "commitShaAssignment": "assigned_after_commit_and_recorded_in_freeze_report_or_tag",
+  "previousRcCommit": "299e6990dc3feeb126052479d35f5008c17dd560",
+  "previousRcTag": "v1.0.0-jp-rc1",
+  "documents": [
+    "docs/memory-privacy-boundaries.md",
+    "docs/operation-approval-architecture.md",
+    "docs/memo-architecture.md",
+    "docs/behavioral-evaluation.md",
+    "docs/practical-acceptance.md",
+    "docs/release-candidate-baseline.md",
+    "docs/rc-snapshot-manifest.json"
+  ],
+  "source": {
+    "branch": "rc/v1.0.0-jp-rc2-integration",
+    "integrationBase": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+    "expectedParentSha": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+    "originMainAfterFetch": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+    "originMainMatchesIntegrationBase": true,
+    "previousRcCommit": "299e6990dc3feeb126052479d35f5008c17dd560",
+    "previousRcTag": "v1.0.0-jp-rc1",
+    "stateAtEvidenceCapture": {
+      "clean": false,
+      "stagedOnly": true,
+      "stagedPathCount": 123,
+      "added": 73,
+      "modified": 47,
+      "deleted": 3,
+      "unstagedPathCount": 0,
+      "commitCreated": false,
+      "tagCreated": false,
+      "headAloneReconstructsSnapshot": false
+    }
+  },
+  "integration": {
+    "method": "origin/main plus validated RC1 delta applied without an intermediate commit",
+    "remoteUniqueCommitsPreserved": 61,
+    "rc1ManifestPathsPreserved": 121,
+    "compatibilityRegressionTestPaths": [
+      "src/controllers/agent-runner.test.ts",
+      "src/tools/bash/shell-runner.test.ts"
+    ],
+    "semanticConflicts": {
+      "encountered": 12,
+      "resolved": 12,
+      "unresolved": 0
+    }
+  },
+  "manifest": {
+    "path": "docs/rc-snapshot-manifest.json",
+    "pathCount": 123,
+    "presentPaths": 120,
+    "deletedPaths": 3,
+    "stagedSetMustMatch": true,
+    "presentPathHash": "sha256_of_git_index_bytes",
+    "workingTreeHash": "sha256_of_raw_working_tree_bytes",
+    "eolNormalizationRecorded": true,
+    "selfHashEmbedded": false,
+    "completedManifestHashLocation": "final_freeze_report"
+  },
+  "validation": {
+    "typecheck": {
+      "status": "PASS",
+      "command": "bun run typecheck"
+    },
+    "targetedTests": {
+      "status": "PASS",
+      "command": "bun test src/approval/operation-policy.test.ts src/agent/tool-executor.approval.test.ts src/controllers/agent-runner.test.ts src/agent/prompts.test.ts src/memory/privacy-boundaries.test.ts src/tools/registry.test.ts src/skills/registry.test.ts src/permissions/engine.test.ts src/permissions/command-parser.test.ts src/tools/bash/shell-runner.test.ts",
+      "passed": 198,
+      "skipped": 8,
+      "failed": 0,
+      "assertions": 401,
+      "testFiles": 10
+    },
+    "fullTestSuite": {
+      "status": "PASS",
+      "command": "bun test",
+      "passed": 491,
+      "skipped": 8,
+      "failed": 0,
+      "assertions": 1087,
+      "testFiles": 41
+    },
+    "behavioralEval": {
+      "status": "PASS",
+      "command": "bun run eval",
+      "mode": "offline-fixture",
+      "configurations": 19,
+      "architectureBaseline": {
+        "passed": 34,
+        "total": 34
+      },
+      "criticalFailures": 0,
+      "liveModelsInvoked": false
+    },
+    "practicalAcceptance": {
+      "status": "PASS",
+      "command": "bun run acceptance",
+      "mode": "offline-scripted-workflow",
+      "scenarios": {
+        "passed": 30,
+        "total": 30
+      },
+      "turns": 38,
+      "multiTurnScenarios": 8,
+      "criticalFailures": 0,
+      "xCapability": "observable-stub",
+      "liveCalls": false
+    },
+    "browserFast": {
+      "status": "PASS",
+      "ruff": {
+        "command": "python -m uv run --frozen --offline ruff check --no-cache .",
+        "status": "PASS"
+      },
+      "pytest": {
+        "command": "python -m uv run --frozen --offline pytest -p no:cacheprovider -o addopts=''",
+        "status": "PASS",
+        "passed": 61,
+        "failed": 0
+      },
+      "liveBrowserUsed": false,
+      "networkRequired": false
+    },
+    "diffChecks": {
+      "workingTree": {
+        "command": "git diff --check",
+        "status": "PASS"
+      },
+      "staged": {
+        "command": "git diff --cached --check",
+        "status": "PASS"
+      }
+    },
+    "secretCredentialCheck": {
+      "status": "PASS",
+      "scope": "staged paths and staged diff",
+      "realCredentialsFound": 0
+    },
+    "liveOrPaidExecution": "NOT_RUN"
+  },
+  "evidenceLevels": {
+    "unitDeterministic": {
+      "status": "PASS",
+      "command": "bun test",
+      "scope": [
+        "skill_capability_filtering",
+        "dcf_calculator",
+        "memory_persistence_boundary",
+        "scratchpad_restart_boundary",
+        "compaction_source_sanitization",
+        "operation_policy",
+        "approval_fingerprint",
+        "bash_permission_integration",
+        "memo_renderer",
+        "memo_filename_sanitizer",
+        "memo_create_only_persistence"
+      ]
+    },
+    "offlineBehavioral": {
+      "status": "PASS",
+      "mode": "offline-fixture",
+      "command": "bun run eval",
+      "criticalFailures": 0
+    },
+    "offlinePracticalAcceptance": {
+      "status": "PASS",
+      "mode": "offline-scripted-workflow",
+      "command": "bun run acceptance",
+      "criticalFailures": 0
+    },
+    "liveValidation": {
+      "status": "NOT YET VALIDATED",
+      "commandsRun": [],
+      "credentialsUsed": false
+    }
+  },
+  "verifiedContracts": [
+    "skill_capability_filtering",
+    "dcf_explicit_behavior_contract",
+    "dcf_deterministic_execution",
+    "x_explicit_activation_offline_contract",
+    "memory_privacy_boundary",
+    "scratchpad_privacy",
+    "compaction_safety",
+    "operation_based_approval",
+    "exact_operation_binding",
+    "bash_exact_command_binding",
+    "bash_query_scoped_reuse",
+    "bash_deny_fail_closed",
+    "memo_deterministic_rendering",
+    "memo_create_only_write",
+    "memo_memory_separation",
+    "offline_behavioral_evaluation",
+    "offline_practical_acceptance"
+  ],
+  "knownLimitations": [
+    "Live model routing is not validated.",
+    "Live X integration is not validated; practical acceptance uses an observable stub.",
+    "X intent has no deterministic string gate; actual selection depends on live-model adherence to the Skill/prompt contract.",
+    "Live compaction-model behavior is not validated.",
+    "Offline provider fixtures do not prove real-provider behavior, availability, or quality.",
+    "Eight POSIX shell-runner tests are skipped on Windows; Bash is not exposed by the production Windows registry.",
+    "Memo overwrite, append, and update workflows are not implemented.",
+    "Claude Agent SDK capabilities differ from the LangChain runtime.",
+    "The requested RC label is v1.0.0-jp-rc2 while the preserved latest-main package version is 1.0.5-jp.",
+    "External browser mutations, publishing, destructive remote operations, and paid/live data paths are not validated."
+  ],
+  "deferred": [
+    "optional live model smoke evaluation",
+    "memo overwrite / append / update workflow",
+    "dogfooding-derived regressions"
+  ],
+  "reproduction": [
+    "bun run typecheck",
+    "bun test",
+    "bun run eval",
+    "bun run acceptance",
+    "git diff --check",
+    "git diff --cached --check",
+    "cd mcp/browser-fast && python -m uv run --frozen --offline ruff check --no-cache .",
+    "cd mcp/browser-fast && python -m uv run --frozen --offline pytest -p no:cacheprovider -o addopts=''"
+  ],
+  "prohibitedValidationNotRun": [
+    "live LLM API",
+    "paid API",
+    "X API",
+    "real market API",
+    "browser external mutation",
+    "external publish",
+    "remote destructive operation"
+  ]
+}

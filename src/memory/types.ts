@@ -1,6 +1,6 @@
 export type EmbeddingProviderId = 'openai' | 'gemini' | 'ollama' | 'auto' | 'none';
 
-export type ContentSource = 'memory' | 'sessions';
+export type ContentSource = 'memory';
 
 export type TemporalDecayConfig = {
   enabled: boolean;
@@ -26,7 +26,6 @@ export interface MemoryRuntimeConfig {
   watchDebounceMs: number;
   temporalDecay: TemporalDecayConfig;
   mmr: MMRConfig;
-  indexSessions: boolean;
 }
 
 export interface MemoryChunk {

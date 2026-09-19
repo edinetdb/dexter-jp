@@ -2,23 +2,22 @@ import { AIMessage, AIMessageChunk, SystemMessage, HumanMessage, ToolMessage, ty
 import { StructuredToolInterface } from '@langchain/core/tools';
 import { callLlmWithMessages, streamLlmWithMessages } from '../model/llm.js';
 import { getTools, getToolConcurrencyMap } from '../tools/registry.js';
+import { createSkillTool } from '../tools/skill.js';
 import { buildSystemPrompt, loadSoulDocument, loadRulesDocument } from './prompts.js';
 import { extractTextContent, hasToolCalls } from '../utils/ai-message.js';
 import { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
 import { estimateTokens, getAutoCompactThreshold, KEEP_TOOL_USES } from '../utils/tokens.js';
-import { exceedsSizeCap, persistLargeResult, buildPersistedContent } from '../utils/tool-result-storage.js';
+import { exceedsSizeCap, TransientToolResultStore, buildPersistedContent } from '../utils/tool-result-storage.js';
 import { enforceResultBudget } from '../utils/tool-result-budget.js';
 import { formatUserFacingError, isContextOverflowError } from '../utils/errors.js';
 import type { AgentConfig, AgentEvent, CompactionEvent, ContextClearedEvent, MicrocompactEvent, QueueDrainEvent, StreamMode, StreamProgressEvent, TokenUsage } from '../agent/types.js';
 import type { MessageQueue } from '../utils/message-queue.js';
-import { compactContext, MAX_CONSECUTIVE_COMPACTION_FAILURES, MIN_TOOL_RESULTS_FOR_COMPACTION } from './compact.js';
+import { buildCompactionSource, compactContext, MAX_CONSECUTIVE_COMPACTION_FAILURES, MIN_TOOL_RESULTS_FOR_COMPACTION } from './compact.js';
 import { microcompactMessages } from './microcompact.js';
 import { createRunContext, type RunContext } from './run-context.js';
 import { AgentToolExecutor } from './tool-executor.js';
 import { MemoryManager } from '../memory/index.js';
-import { runMemoryFlush, shouldRunMemoryFlush } from '../memory/flush.js';
 import { resolveProvider } from '../providers.js';
-
 
 const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_MAX_ITERATIONS = 10;
@@ -45,7 +44,6 @@ export class Agent {
   private readonly toolExecutor: AgentToolExecutor;
   private readonly systemPrompt: string;
   private readonly signal?: AbortSignal;
-  private readonly memoryEnabled: boolean;
   private readonly messageQueue?: MessageQueue;
   private compactionFailures: number = 0;
 
@@ -64,19 +62,19 @@ export class Agent {
       concurrencyMap,
       config.signal,
       config.requestToolApproval,
-      config.sessionApprovedTools,
+      config.sessionApprovedOperations,
       undefined,
       config.requestUserInput,
     );
     this.systemPrompt = systemPrompt;
     this.signal = config.signal;
-    this.memoryEnabled = config.memoryEnabled ?? true;
     this.messageQueue = config.messageQueue;
   }
 
   static async create(config: AgentConfig = {}): Promise<Agent> {
     const model = config.model ?? DEFAULT_MODEL;
-    const allTools = getTools(model);
+    const registryOptions = { userQuery: config.userQuery };
+    const allTools = getTools(model, registryOptions);
     let tools = config.toolAllowlist
       ? allTools.filter(t => config.toolAllowlist!.includes(t.name))
       : allTools;
@@ -86,9 +84,13 @@ export class Agent {
     if (!isCli) {
       tools = tools.filter(t => !CLI_ONLY_TOOLS.has(t.name));
     }
+    const availableToolNames = new Set(tools.map((tool) => tool.name));
+    tools = tools.map((tool) => tool.name === 'skill'
+      ? createSkillTool(availableToolNames, { userQuery: config.userQuery })
+      : tool);
     // The concurrency map is a name→bool lookup; extra entries are harmless since
     // toolMap only holds the (possibly filtered) tools above.
-    const concurrencyMap = getToolConcurrencyMap(model);
+    const concurrencyMap = getToolConcurrencyMap(model, registryOptions);
 
     let systemPrompt: string;
     if (config.systemPromptOverride) {
@@ -117,6 +119,9 @@ export class Agent {
         memoryFiles,
         memoryContext,
         rulesContent,
+        availableToolNames,
+        config.memoryEnabled !== false,
+        config.userQuery,
       );
     }
     return new Agent(config, tools, systemPrompt, concurrencyMap);
@@ -133,8 +138,9 @@ export class Agent {
       return;
     }
 
-    const ctx = createRunContext(query);
-    const memoryFlushState = { alreadyFlushed: false };
+    const transientToolResults = new TransientToolResultStore();
+    try {
+      const ctx = createRunContext(query);
 
     // Build initial message array
     const historyMessages = inMemoryHistory?.getRecentTurnsAsMessages() ?? [];
@@ -227,7 +233,7 @@ export class Agent {
       toolMessages = toolMessages.map(tm => {
         const content = typeof tm.content === 'string' ? tm.content : JSON.stringify(tm.content);
         if (exceedsSizeCap(content)) {
-          const { preview, filePath } = persistLargeResult(tm.name ?? 'unknown', tm.tool_call_id, content);
+          const { preview, filePath } = transientToolResults.persist(tm.name ?? 'unknown', tm.tool_call_id, content);
           return new ToolMessage({
             content: buildPersistedContent(filePath, preview, content.length),
             tool_call_id: tm.tool_call_id,
@@ -238,7 +244,7 @@ export class Agent {
       });
 
       // Enforce per-turn total budget
-      toolMessages = enforceResultBudget(toolMessages);
+      toolMessages = enforceResultBudget(toolMessages, transientToolResults);
 
       messages.push(...toolMessages);
 
@@ -258,7 +264,7 @@ export class Agent {
 
       // Context threshold management (may compact the message array)
       const messageState = { messages };
-      yield* this.manageContextThreshold(ctx, query, memoryFlushState, messageState);
+      yield* this.manageContextThreshold(ctx, query, messageState);
       messages = messageState.messages;
 
       // Inject tool usage warning if approaching limits
@@ -286,6 +292,9 @@ export class Agent {
       tokenUsage: ctx.tokenCounter.getUsage(),
       tokensPerSecond: ctx.tokenCounter.getTokensPerSecond(totalTime),
     };
+    } finally {
+      transientToolResults.dispose();
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -556,7 +565,6 @@ export class Agent {
   private async *manageContextThreshold(
     ctx: RunContext,
     query: string,
-    memoryFlushState: { alreadyFlushed: boolean },
     messageState: { messages: BaseMessage[] },
   ): AsyncGenerator<ContextClearedEvent | CompactionEvent | AgentEvent, void> {
     const estimatedContextTokens = ctx.lastApiInputTokens > 0
@@ -570,33 +578,10 @@ export class Agent {
       return;
     }
 
-    // Step 1: Memory flush
+    // Compaction only transforms transient conversation state. Durable memory
+    // writes are exclusively handled by the explicit memory_update tool path.
     const fullToolResults = ctx.scratchpad.getToolResults();
-    if (
-      this.memoryEnabled &&
-      shouldRunMemoryFlush({
-        estimatedContextTokens,
-        threshold,
-        alreadyFlushed: memoryFlushState.alreadyFlushed,
-      })
-    ) {
-      yield { type: 'memory_flush', phase: 'start' };
-      const flushResult = await runMemoryFlush({
-        model: this.model,
-        systemPrompt: this.systemPrompt,
-        query,
-        toolResults: fullToolResults,
-        signal: this.signal,
-      }).catch(() => ({ flushed: false, written: false as const }));
-      memoryFlushState.alreadyFlushed = flushResult.flushed;
-      yield {
-        type: 'memory_flush',
-        phase: 'end',
-        filesWritten: flushResult.written ? [`${new Date().toISOString().slice(0, 10)}.md`] : [],
-      };
-    }
-
-    // Step 2: Compaction
+    const compactionSource = buildCompactionSource(messageState.messages, fullToolResults);
     if (
       this.compactionFailures < MAX_CONSECUTIVE_COMPACTION_FAILURES &&
       ctx.scratchpad.getActiveToolResultCount() >= MIN_TOOL_RESULTS_FOR_COMPACTION
@@ -606,9 +591,7 @@ export class Agent {
       try {
         const result = await compactContext({
           model: this.model,
-          systemPrompt: this.systemPrompt,
-          query,
-          toolResults: fullToolResults,
+          conversationState: compactionSource,
           signal: this.signal,
         });
 
@@ -620,7 +603,6 @@ export class Agent {
         }
 
         this.compactionFailures = 0;
-        memoryFlushState.alreadyFlushed = false;
 
         const postCompactTokens = estimateTokens(
           messageState.messages.map(m =>
@@ -649,10 +631,9 @@ export class Agent {
       }
     }
 
-    // Step 3: Fallback — truncate oldest rounds
+    // Fallback — truncate oldest rounds
     const removed = this.truncateMessages(messageState.messages, KEEP_TOOL_USES);
     if (removed > 0) {
-      memoryFlushState.alreadyFlushed = false;
       yield { type: 'context_cleared', clearedCount: removed, keptCount: KEEP_TOOL_USES };
     }
   }

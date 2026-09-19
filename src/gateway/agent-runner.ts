@@ -91,6 +91,7 @@ export async function runAgentForMessage(req: AgentRunRequest): Promise<string> 
       groupContext: req.groupContext,
       memoryEnabled: !isolated,
       messageQueue: session?.queue,
+      userQuery: req.query,
     });
 
     for await (const event of agent.run(req.query, session?.history)) {
@@ -115,6 +116,7 @@ export async function runAgentForMessage(req: AgentRunRequest): Promise<string> 
         groupContext: req.groupContext,
         memoryEnabled: !isolated,
         messageQueue: session.queue,
+        userQuery: mergedText,
       });
 
       for await (const event of followUp.run(mergedText, session.history)) {

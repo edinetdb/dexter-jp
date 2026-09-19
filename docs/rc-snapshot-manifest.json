@@ -1,0 +1,2058 @@
+{
+  "schemaVersion": 2,
+  "manifestId": "dexter-rc2-snapshot-20260919-188a146",
+  "status": "rc2_candidate_precommit",
+  "releaseCandidate": "v1.0.0-jp-rc2",
+  "recordedAt": "20260919",
+  "timezone": "Asia/Tokyo",
+  "integrationBase": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+  "commitSha": null,
+  "commitShaAssignment": "assigned_after_commit_and_recorded_in_freeze_report_or_tag",
+  "previousRcCommit": "299e6990dc3feeb126052479d35f5008c17dd560",
+  "previousRcTag": "v1.0.0-jp-rc1",
+  "repository": {
+    "branch": "rc/v1.0.0-jp-rc2-integration",
+    "integrationBase": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+    "expectedParentSha": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+    "originMainAfterFetch": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+    "originMainMatchesIntegrationBase": true,
+    "previousRcCommit": "299e6990dc3feeb126052479d35f5008c17dd560",
+    "previousRcTag": "v1.0.0-jp-rc1",
+    "localMainExpected": "299e6990dc3feeb126052479d35f5008c17dd560",
+    "commitCreatedAtManifestTime": false,
+    "rc2TagCreated": false
+  },
+  "integration": {
+    "remoteUniqueCommitsPreserved": 61,
+    "rc1ManifestPathCount": 121,
+    "compatibilityRegressionTestPaths": [
+      "src/controllers/agent-runner.test.ts",
+      "src/tools/bash/shell-runner.test.ts"
+    ],
+    "semanticConflicts": {
+      "encountered": 12,
+      "resolved": 12,
+      "unresolved": 0,
+      "paths": [
+        ".gitignore",
+        "AGENTS.md",
+        "src/agent/agent.ts",
+        "src/agent/prompts.ts",
+        "src/agent/tool-executor.ts",
+        "src/agent/types.ts",
+        "src/cli.ts",
+        "src/components/approval-prompt.ts",
+        "src/components/select-list.ts",
+        "src/controllers/agent-runner.ts",
+        "src/memory/index.ts",
+        "src/tools/registry.ts"
+      ]
+    }
+  },
+  "stagedSnapshot": {
+    "comparisonBase": "origin/main",
+    "added": 73,
+    "modified": 47,
+    "deleted": 3,
+    "total": 123,
+    "present": 120,
+    "unstagedPathCountBeforeManifestWrite": 0,
+    "unexpectedPaths": 0,
+    "generatedRuntimePaths": 0,
+    "envFiles": 0
+  },
+  "integrity": {
+    "hashAlgorithm": "SHA-256",
+    "sha256Meaning": "Bytes stored in the Git index and intended for the commit.",
+    "workingTreeSha256Meaning": "Raw working-tree bytes before Git clean/EOL normalization.",
+    "gitCleanNormalizationCheck": "git diff --name-status is empty after evidence staging",
+    "exactByteMatches": 3,
+    "eolNormalizedEquivalent": 116,
+    "nonEolMismatches": 0,
+    "manifestSelfHashEmbedded": false,
+    "manifestSelfHashLocation": "final_freeze_report"
+  },
+  "included": [
+    {
+      "path": ".gitignore",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "c1ee2c36363a5a73d459f98bfffa99761842101aa9749dfb32bc3bac94183c10",
+      "workingTreeSha256": "764dd79f27758e3d3577d1854f970a218b2300fdcd492ee6a0c83d379fb0751c",
+      "gitIndexBlob": "690f13cf1f8df986908f5602059b8b926dbb1379",
+      "baselineGitBlob": "777a373992fb907c0468f56a773c23517e618e4b",
+      "byteLength": 635,
+      "workingTreeByteLength": 702,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "AGENTS.md",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase2_prompt_baseline"
+      ],
+      "sha256": "e33e9ffa45855d855bb88cc96573a640c6b8c02725b9f45458b1a7c0dcb9da88",
+      "workingTreeSha256": "951d1445390fe258ab8d491ac948d5494fe673b5a04984a0de52f5f1f2cd3388",
+      "gitIndexBlob": "539d53dd3f569fc2845eb7128f0863c1cc306ee2",
+      "baselineGitBlob": "65434049f3eee4acc6c3a979e5c6ad80bc93b9e4",
+      "byteLength": 1773,
+      "workingTreeByteLength": 1806,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "README.en.md",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "d421721c1db53901033c458ca507512de8b22d16108b7491066dd01c856db9db",
+      "workingTreeSha256": "e704a233e125bb0e6fb676fe8b7e40042d04e19701cb32b485bb255467ccaaf4",
+      "gitIndexBlob": "78021ae3158819c2f2aec4ceeebeb54809d4815e",
+      "baselineGitBlob": "1161d56aca50245f71e3437e80919c390e3fb090",
+      "byteLength": 14408,
+      "workingTreeByteLength": 14750,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "8bfabc6d54e54b6ec9c359c7ef063bfd5e7a61c20372d49212c14f05f367ef17",
+      "workingTreeSha256": "888e7455ca6be2e5f4891c03be3fbf93f1f206a94a2c96ed9b0ec56a64323b88",
+      "gitIndexBlob": "b08476377cd18114e6efb2f01273a25941016bea",
+      "baselineGitBlob": "bed08a10f4c8b3edde9da47221a1fc71cc4ec82a",
+      "byteLength": 16697,
+      "workingTreeByteLength": 17039,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "SOUL.md",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase2_prompt_baseline"
+      ],
+      "sha256": "808e41e1344933a3f085a5f09197427293b0b5314d7f688f7a33197c3ed5b54e",
+      "workingTreeSha256": "63fd399a7d32a8ab3fc3514793eda0b3ae50286d7c933f9c32f473c11f6137b7",
+      "gitIndexBlob": "69b522cc05a71e1ed6fdb9131fdc4b3b95054d43",
+      "baselineGitBlob": "a8d3963fadf4abd5767a2eb16502b32861c933c5",
+      "byteLength": 493,
+      "workingTreeByteLength": 502,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "docs/behavioral-evaluation.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "256e88ac4409237065d7a2444608e8868e418c3fcb25413da94d979d1ec56cf9",
+      "workingTreeSha256": "a167de5f1048eedc42409ab1b691475d9c9ac49eeb2590017ff2d588f7a68fa8",
+      "gitIndexBlob": "b8945a3c5ed659602a83a1509e22bf239e85446c",
+      "baselineGitBlob": null,
+      "byteLength": 5583,
+      "workingTreeByteLength": 5642,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "docs/memo-architecture.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "aee5e190baa8bd4bbbf8741063b4b3768be79c6307808b9d0c741c0505780da3",
+      "workingTreeSha256": "f9a6d72a7c989e35d4956be1a354dc2a6332c34c45be13e63715f76cad85fd67",
+      "gitIndexBlob": "fd4db09b54fdec6399be26648352b7f50f452fbe",
+      "baselineGitBlob": null,
+      "byteLength": 3284,
+      "workingTreeByteLength": 3323,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "docs/memory-privacy-boundaries.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "1be4066512c667d2a43a538d2cb11be4482a8a31a4ec5350ac29e8ad1afa3360",
+      "workingTreeSha256": "41521d2d2febc03dbd18c8b8e53c941af81d9f63c03b92798803a65506ee3e3d",
+      "gitIndexBlob": "7f1ff80090523e64331a3b9c34cc00b1c2285204",
+      "baselineGitBlob": null,
+      "byteLength": 3449,
+      "workingTreeByteLength": 3495,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "docs/operation-approval-architecture.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval"
+      ],
+      "sha256": "ea03dd8a3b5c6717c0fae069e9d1d19043dd0ba444cc6e179794cd7fa8927e8a",
+      "workingTreeSha256": "230d59eb6eb66832c7eb55a0567fe2b89af83553038812f5de6f0a1d6abd3900",
+      "gitIndexBlob": "fda2dad5967101f5019e861ffc4259c62b8f8cac",
+      "baselineGitBlob": null,
+      "byteLength": 3004,
+      "workingTreeByteLength": 3049,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "docs/practical-acceptance.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase8_practical_acceptance"
+      ],
+      "sha256": "115e5f631210c926d4b767bb5d0486e8456b1bf41a12c575b9b5e5b00af21908",
+      "workingTreeSha256": "648996be425bf11a667fd0584fe7f43878e26c29b442bb8ed1ae5501fb062427",
+      "gitIndexBlob": "02471a4cddecadf9425a0814acd704a8cbe6bab7",
+      "baselineGitBlob": null,
+      "byteLength": 5418,
+      "workingTreeByteLength": 5514,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "docs/rc-snapshot-manifest.json",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "rc2_evidence"
+      ],
+      "sha256": null,
+      "workingTreeSha256": null,
+      "gitIndexBlob": null,
+      "baselineGitBlob": null,
+      "byteLength": null,
+      "workingTreeByteLength": null,
+      "contentComparison": "self_hash_omitted",
+      "hashOmissionReason": "Manifest SHA-256 is recorded externally after the manifest is complete."
+    },
+    {
+      "path": "docs/release-candidate-baseline.json",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "rc2_evidence"
+      ],
+      "sha256": "80b7080774173bd21a0dc73666ec5834cd8939a4fe1fa3ee8eaadc96dec30831",
+      "workingTreeSha256": "80b7080774173bd21a0dc73666ec5834cd8939a4fe1fa3ee8eaadc96dec30831",
+      "gitIndexBlob": "b4e020805584be0f8b2658332b56c897376d0760",
+      "baselineGitBlob": null,
+      "byteLength": 7979,
+      "workingTreeByteLength": 7979,
+      "contentComparison": "identical"
+    },
+    {
+      "path": "docs/release-candidate-baseline.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "rc2_evidence"
+      ],
+      "sha256": "fa769c79c27d274b3f13571fa45085888952e26531f982f5189a816addd2273d",
+      "workingTreeSha256": "fa769c79c27d274b3f13571fa45085888952e26531f982f5189a816addd2273d",
+      "gitIndexBlob": "3794a66c78676e0a2b8225ea9f468d9047af3386",
+      "baselineGitBlob": null,
+      "byteLength": 9357,
+      "workingTreeByteLength": 9357,
+      "contentComparison": "identical"
+    },
+    {
+      "path": "mcp/browser-fast/.env.example",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "2d92dee034020ec2b74d0e20a53bfcb6653fe2407502c3a9e5e7f65b72872b98",
+      "workingTreeSha256": "d07e3afffaf10247f497485ba79a27b5570afc2a76e7c58811f74643384e2ca4",
+      "gitIndexBlob": "a9c914e00837b25c415350ad47e875954be0345b",
+      "baselineGitBlob": null,
+      "byteLength": 461,
+      "workingTreeByteLength": 475,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/AGENTS.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "57ff092fdd35b492ff2cc6b9d8ce1417444f064299d43c7377bfa65bb54878a7",
+      "workingTreeSha256": "5cfb870ff3afe0629ce0845f52c09019a56c04a9f560695e9353baa8a5b90c2b",
+      "gitIndexBlob": "d1fd3d3e28aeef15bbbc8e7551d136530c99e9ee",
+      "baselineGitBlob": null,
+      "byteLength": 1011,
+      "workingTreeByteLength": 1030,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/PHASE1_ACCEPTANCE.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "84a7351542952709d863ada02be7610d4b16f4164076478dfbbff8487b427e43",
+      "workingTreeSha256": "79d80ecb33f1bdd96f6d7c1120321aa87c25eef82d5d0e9ef416903a5013243f",
+      "gitIndexBlob": "fd5524e351ba4099c63d4e105e62c2dd6b0a3d5d",
+      "baselineGitBlob": null,
+      "byteLength": 2065,
+      "workingTreeByteLength": 2151,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/README.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "f7fca9d64f99d2f7ab994f6d96b42ed1ff486e418dcfdfea1859a684f9b95e8c",
+      "workingTreeSha256": "8d78a9c022ce5c40f1c6eddad4f2705b3e4d144a43e832e44f53bdf4a784e367",
+      "gitIndexBlob": "863fca1b6a10bf05bb761f3bcd888117b0e0e62d",
+      "baselineGitBlob": null,
+      "byteLength": 5587,
+      "workingTreeByteLength": 5718,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/UPSTREAM.lock",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "a832ca4ca386ecd472f43338f2c56162933d58aeb966489cac98275a84c56835",
+      "workingTreeSha256": "38a50e12c84ab49bbe9f18ed3e03f4d8349f942730d4bc250901882c67aae1d3",
+      "gitIndexBlob": "b3fa5ee15d1ced701c09fcdc7233668521eac6c6",
+      "baselineGitBlob": null,
+      "byteLength": 157,
+      "workingTreeByteLength": 161,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/__init__.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "72cb94aef3c70957828897bd3ae6a9c6a2e94fdeee5cea67fd681b09a3fb0b64",
+      "workingTreeSha256": "d542edf3c3854eb490aa88e927fc43042a3912bff8484274c304eff7a5fffef9",
+      "gitIndexBlob": "a2f17be4db906e834e461da9f9d8674c06b6868c",
+      "baselineGitBlob": null,
+      "byteLength": 493,
+      "workingTreeByteLength": 510,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/executor.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "7fa85b8d0719535c2fa4451a936a2d27e828abef5d2b8634a6a6aa26e6125f0a",
+      "workingTreeSha256": "bafb14ca76395894354deaad50e8c85f8deb9c66b3107de63f97a378632a67dc",
+      "gitIndexBlob": "1e9f5816c083ba1e338e0683807caf715feb8774",
+      "baselineGitBlob": null,
+      "byteLength": 11689,
+      "workingTreeByteLength": 11971,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/jev_adapter.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "f4dc1631bcd2b6fb942729429b8e5f4292d972a276418882a69d8dc1a3bb35ef",
+      "workingTreeSha256": "f365f8664a2e684026a7408ddb52cc7a74a149c60a452b0412529f3aa99b0e7a",
+      "gitIndexBlob": "466e5e953ea852cfb0b6b18aff166fc5a6494633",
+      "baselineGitBlob": null,
+      "byteLength": 6097,
+      "workingTreeByteLength": 6261,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/policy.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "5423533d511014ba5f3c37eb844f984248705c4b4a864ae9335e42892b0937b1",
+      "workingTreeSha256": "d04a6d0b5e93b64aa018c197438b38f9356f9c4e31c054902660d8b2edd8ae29",
+      "gitIndexBlob": "f5cc44281c2397a67d162f6d71c62fb415ee600d",
+      "baselineGitBlob": null,
+      "byteLength": 5416,
+      "workingTreeByteLength": 5623,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/redaction.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "574e705964a0ea6259b2316b21fdb86c8c76d30d4da1f04aa2b44674221706ea",
+      "workingTreeSha256": "8dde542f67dab4a3a9c2c6115b3a89bfe2b6198dc75d8645f9b3b87e4f49aeb5",
+      "gitIndexBlob": "f84fa333b9132347ddd143e19bc37041f185902a",
+      "baselineGitBlob": null,
+      "byteLength": 1836,
+      "workingTreeByteLength": 1883,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/schemas.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "c5f6ed1fd8c9a913ee2bcf2cdf8a74f821b824c5a2ad7f58e0c53a17eda9b28d",
+      "workingTreeSha256": "b344ec003a2be9e26103e9b8991cb9a087c5f58d7a326e6d474507c0ea3be7c6",
+      "gitIndexBlob": "e58d0db5f9775bf4cf51eda566c1c25a90931aa0",
+      "baselineGitBlob": null,
+      "byteLength": 3424,
+      "workingTreeByteLength": 3548,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/security.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "a7be43b385bdd883abc4cbe1bf1198b8f5ae37fac044c3b12570e746febcc622",
+      "workingTreeSha256": "aa8f665f9fdc4fb02b47e9f2c0541c67d19096ea780771dcfaf2b511e6fb8020",
+      "gitIndexBlob": "1cb054108320ca0c8009f98c2dcf793020fe536f",
+      "baselineGitBlob": null,
+      "byteLength": 4383,
+      "workingTreeByteLength": 4508,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/server.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "6deb76a91547799fb71c8a4361e2d967a7e9f8bf3402e6187561792f3b7a7d0c",
+      "workingTreeSha256": "9392c3bee4c12054d8b8ee6bf2fc8fa874b9ec8d5df299e11a7bf4ad64317db2",
+      "gitIndexBlob": "a96de588aa5882df0fddd767b3f696accd1085a5",
+      "baselineGitBlob": null,
+      "byteLength": 2085,
+      "workingTreeByteLength": 2153,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/trace.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "a192c991a0747dcdd812a6f4f6155a1ab6d86ebcf2bbfd264249e07e36177a95",
+      "workingTreeSha256": "7833019990f4987cdf1bd9995a987e2f650184b6cec4b8d080c6c26f65657b31",
+      "gitIndexBlob": "fe805729631603e5a24d275ad3a15efe1f302382",
+      "baselineGitBlob": null,
+      "byteLength": 3322,
+      "workingTreeByteLength": 3414,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/browser_fast/verifier.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "772190e1cae1739d5ab867e048ddd3c2e652e384bf8315a7ee8b68230fba1bba",
+      "workingTreeSha256": "f7b29a86586a8d51f46cb7cfa1bc83aacb5d2eb439b94e1e13664a284b86d854",
+      "gitIndexBlob": "a0a4c14c9a05ea0df00d3eeb6d4de86ec883f2e2",
+      "baselineGitBlob": null,
+      "byteLength": 2517,
+      "workingTreeByteLength": 2588,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/pyproject.toml",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "689da009b4b032c71936a8f1b6cc5e67e0964ea47fa6abba3d6b66181b9fd058",
+      "workingTreeSha256": "e38166f6cdc687f9661d180ad97b3277a7f158c11a084f9a59fb7ab66f3bad54",
+      "gitIndexBlob": "3590c2ff829683a02c139d48455593fd561557c8",
+      "baselineGitBlob": null,
+      "byteLength": 813,
+      "workingTreeByteLength": 853,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/scripts/check_environment.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "9614593e047a842ca0710ef36acafcbe54c936caddee0680ea550f9364844c4b",
+      "workingTreeSha256": "7a99371533bdd37af336d938d1fc721f2bb27181bb52de62fd7d5a8a61bc1eec",
+      "gitIndexBlob": "7455a3588ba2abdd75dd6285bfa62193ce5818dc",
+      "baselineGitBlob": null,
+      "byteLength": 3717,
+      "workingTreeByteLength": 3832,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/scripts/smoke_wikipedia.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "01ece9cfee771865868ce401d46ee460518c2604405665741740cc07337cefd3",
+      "workingTreeSha256": "ef63d7c9a75c73afa7e7a487ad4682a6f236d5888bc25bd5d77580051e1302b3",
+      "gitIndexBlob": "1302e9234553635c0bdeade1e2111e6fa3946da1",
+      "baselineGitBlob": null,
+      "byteLength": 1487,
+      "workingTreeByteLength": 1529,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/tests/test_executor_mock.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "9cf9ef5a977107f6e17f5c31c6430eadb18b27eccbedd9b46bb780b187f2e2df",
+      "workingTreeSha256": "59a2f7ac850a7e97249eff0d4621709654175c13bef33bd9d7773d54587a5c97",
+      "gitIndexBlob": "33f7a96c6eae4f254a786774838950b0f203e767",
+      "baselineGitBlob": null,
+      "byteLength": 6327,
+      "workingTreeByteLength": 6513,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/tests/test_mcp_contract.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "6d1b5964578357ef708bd9a673563c6ea836b01da8bbdfde12556b32e7daabe6",
+      "workingTreeSha256": "dc2dbdc06d82b1574cb983f9fe66bb5915a7e3bd3aefc15eadea69922568e880",
+      "gitIndexBlob": "78b649cdcb92d3112bb11a6fb3f5be447808c363",
+      "baselineGitBlob": null,
+      "byteLength": 1924,
+      "workingTreeByteLength": 1978,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/tests/test_policy.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "56deae741e96aa7bb0fd6908de33c862c7c442aba335828409d741ab74b3859e",
+      "workingTreeSha256": "b4e1e5645cc0cfd6f078fb0ea41c374831f3cbeb0f0fe2ae512c26e3c9633796",
+      "gitIndexBlob": "4f297232a3cf00268a60f12a16498e555f111530",
+      "baselineGitBlob": null,
+      "byteLength": 2224,
+      "workingTreeByteLength": 2294,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/tests/test_redaction.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "1ac61087086c98fbfa9e7cc5380da36c0a3996257d26d1fbb4a92cfef4ac248d",
+      "workingTreeSha256": "ca276a84a0f27d35e1cfaf674fc0d0aea96bc27000f3a0c0255a826a69da3f3a",
+      "gitIndexBlob": "6d8cf8bdd560c9c388a3bc1941e06352b3d7519f",
+      "baselineGitBlob": null,
+      "byteLength": 627,
+      "workingTreeByteLength": 644,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/tests/test_schema.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "71a75cb6c9b2e3a96f74c3d6dbbf8769b82d7d209f6beca9efe74b1b7415d2e3",
+      "workingTreeSha256": "99232beeefc3153549a1efdd5d27ed536501500fa259f7542d30895b51a3e5f1",
+      "gitIndexBlob": "2722ac2acaf3590ce450123e24d51373f9ba7c16",
+      "baselineGitBlob": null,
+      "byteLength": 1033,
+      "workingTreeByteLength": 1068,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/tests/test_security.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "6fc3db6d52aea1980c552364c762c001b3a06821109f9970f9818f7d6c4d9f8b",
+      "workingTreeSha256": "a8ace2253498c95541bb930e4c8bfbe84f70d59f79c7d59422b47ed90d448847",
+      "gitIndexBlob": "5817aa07a16a65914701e8161ad566d6dc3166a3",
+      "baselineGitBlob": null,
+      "byteLength": 2253,
+      "workingTreeByteLength": 2318,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/tests/test_verifier.py",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "d9f7a33f9dcd493f32fb7d77a2fdeec807102492aa1a46d84c0e692980e04316",
+      "workingTreeSha256": "f006cb411c3322c425ce186ce86d86d44c4b30e2eed9fb6bad3b664c71a1c7d2",
+      "gitIndexBlob": "59d9301b50789cbea35ea2ad6ead723e68be3d65",
+      "baselineGitBlob": null,
+      "byteLength": 1698,
+      "workingTreeByteLength": 1746,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "mcp/browser-fast/uv.lock",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase1_browser_fast"
+      ],
+      "sha256": "cbec9605735962686f165011350ee83a758b443c8d8e0d89a1c4ec0cddfc1a52",
+      "workingTreeSha256": "7cc97f3936c4f0e25b943843e10bf7aaf77dbed35ea15e0e5ca0b0d704a65a14",
+      "gitIndexBlob": "3c85c8ebd9d707b67565b828ad6eebaede41b10c",
+      "baselineGitBlob": null,
+      "byteLength": 202855,
+      "workingTreeByteLength": 204029,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "package.json",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval",
+        "phase8_practical_acceptance"
+      ],
+      "sha256": "c82c912d6bc5bbf08b325e18a225bc3b64394b4ba93aeb0eb284ec45bfa35427",
+      "workingTreeSha256": "0244890b4e45975f5cef6f91a6215d2617845c8820ee91d2081a3c1c9419eb4f",
+      "gitIndexBlob": "29c253717c22ba498ae57ce04b41ac14804cc233",
+      "baselineGitBlob": "733dd47c0b51029f7e67f31cde0d11c900652de5",
+      "byteLength": 2187,
+      "workingTreeByteLength": 2256,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/agent-sdk-agent.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "b0b1ac584f1a8a9fd18a0278c7ae65835a8f3d7ea3506eae9b1c654790505684",
+      "workingTreeSha256": "ddfe4e4d6fca047330ebf982a8951e1da19b28a299efa54e0c63f42e4d5685cb",
+      "gitIndexBlob": "bcf3316c81eb7f4b4dc5d2f3e83cef1b9dd1bdef",
+      "baselineGitBlob": "4f4fae586359d980ff36526484734eb3583de847",
+      "byteLength": 11381,
+      "workingTreeByteLength": 11674,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/agent-sdk-approval.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "e8f5df262551265f9dd7ce51059026f1a49d350ed8fcd20c9e2de7d41ee74aca",
+      "workingTreeSha256": "82d9d6675db8dc24f84c4804b5ef9ed506a634a3712fc77e6fe1b1f9516957a6",
+      "gitIndexBlob": "52b29c2a65552d05a509a1613108ffcad1616b6a",
+      "baselineGitBlob": null,
+      "byteLength": 2674,
+      "workingTreeByteLength": 2744,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/agent.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase4_memory_privacy",
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "c3a5446ab5c27edf8c9a6f3212c10a8278249d33c8f46eeece55da63e4aaea7b",
+      "workingTreeSha256": "46c41dc8f2894315b5d4fa0a0c040388e2b4ee2304dad1c722f784a4e414b3e7",
+      "gitIndexBlob": "bcf74b1f1885ec6755147509f0b10048e7cfae58",
+      "baselineGitBlob": "03ab8307941f1d81117d2f094f2b470182ffd1fc",
+      "byteLength": 25435,
+      "workingTreeByteLength": 26119,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/compact.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "fa002c7643fbe933070b5602360d739bc949e963a9921880c6fd1cd861f72cef",
+      "workingTreeSha256": "885e9adc726e7dfb163be279a02674c382c8720a01ca79a93f9463c97e0762a0",
+      "gitIndexBlob": "6e67f01b8c5c307f3ad4594f6659eb81c4934b58",
+      "baselineGitBlob": null,
+      "byteLength": 2718,
+      "workingTreeByteLength": 2781,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/compact.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "2d8dbf296b6b53063f85dfac444a3171cf5c1b4172d24b52be9a8bd65ea2aadf",
+      "workingTreeSha256": "093bc065293ef7bcc2cb92aaac5ea6b025abcae44ef87f93403b66d83077d9de",
+      "gitIndexBlob": "da4368b212fb75d453fbc0ca33023334c431bac9",
+      "baselineGitBlob": "4fc1b8669c649473af6f3f64e17f2b5a25f09f86",
+      "byteLength": 6905,
+      "workingTreeByteLength": 7110,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/index.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "caff12b03c4b8bf42d099566c4d231bd5411ec3e9cd3a6dde9bfe9f10d100aa6",
+      "workingTreeSha256": "8d2647e6fa22713696ef880939c31ecad5807b4e80dfe7977bcd801a9a8c420d",
+      "gitIndexBlob": "5585a78cccc747d8dd02edd06091aa03b3b74d86",
+      "baselineGitBlob": "e766890b5cc89884e126752eeacbf920ca130329",
+      "byteLength": 596,
+      "workingTreeByteLength": 626,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/prompts.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase2_prompt_baseline",
+        "phase3_skills_dcf_x",
+        "phase4_memory_privacy",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "cd3223b10d3709ca7c4b75bdb022ad11c4eea249dc884e27d7912882030faa7b",
+      "workingTreeSha256": "a822f8de057229a7ec70112966f465b1815a0919caf4156f053d2835639b5f89",
+      "gitIndexBlob": "bdc0e1b18fb8264454a14bf3929ccc39fd00278b",
+      "baselineGitBlob": null,
+      "byteLength": 5696,
+      "workingTreeByteLength": 5841,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/prompts.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase2_prompt_baseline",
+        "phase3_skills_dcf_x",
+        "phase4_memory_privacy",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "3223a6519924023d8a5b40f08c36afe2935cc903526a318e7f0d0d92659eca66",
+      "workingTreeSha256": "47edbdc8791f3dd8efd07e2f62e2d2a09d62b851a48ea4048c214df7e9e71cca",
+      "gitIndexBlob": "b4790832b84823f26b7b28a4aa953afeae550cc4",
+      "baselineGitBlob": "18661d8bef6ae222e71488018107b1b8f1af24e3",
+      "byteLength": 9171,
+      "workingTreeByteLength": 9427,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/scratchpad.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "064dc22306eecebe750b65e78ff79dd3ac1827017a8ed6b2d89753510fe19a89",
+      "workingTreeSha256": "4571c7199edc99a009b497a4e3752f2f759b94c21e005d4bea1a0cbee4d83dd0",
+      "gitIndexBlob": "b6dd75dfe861b9343afff9d917d028be98caa49d",
+      "baselineGitBlob": null,
+      "byteLength": 878,
+      "workingTreeByteLength": 896,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/scratchpad.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "4460ad56301f28933a2fa09586aa5560fa88bac6898e585b856724be8ad9c17b",
+      "workingTreeSha256": "0627719170a496aa8277ec3f43d78bb6c7ccaf3bed07ebbf975572b4da57a66c",
+      "gitIndexBlob": "b42c5c298ec966c2a7e4404d91196359610b15d0",
+      "baselineGitBlob": "bb47cc20983c3362a3b306e6f315ca505b801995",
+      "byteLength": 13940,
+      "workingTreeByteLength": 14376,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/sdk-prompt.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase2_prompt_baseline",
+        "phase3_skills_dcf_x",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "f9a6b71cd06186524d5076836aa18bd0c35969b8d5864d739521dc1e8e42bf20",
+      "workingTreeSha256": "ba98b01f94bac8f75499a410451096d5b7e9e175f669ba7437da918e6eb9cc93",
+      "gitIndexBlob": "600f2f9de0522b19372b62a6803969e8ec597320",
+      "baselineGitBlob": "26533467a7ca550283f88959552d92437be797cc",
+      "byteLength": 2803,
+      "workingTreeByteLength": 2880,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/sdk-tool-adapter.test.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "affda55cb6eeb220d8c3ab5b9fc29d72546631cb6adc924b5ca81ae92a360cf2",
+      "workingTreeSha256": "0d027d7cdd136095f2f4398701c1230d9b0d900daca689de77dcb0fed0464e11",
+      "gitIndexBlob": "686b599fcfc178561c1025ad21f3b4aa92ceed7d",
+      "baselineGitBlob": "d00ed66cba584e1fac5fc57cf12b25d190f18bc6",
+      "byteLength": 5971,
+      "workingTreeByteLength": 6127,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/sdk-tool-adapter.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "9497de8afe3202ceb68a74798a0b0fe0231dd605fcd3a36c219941f071a92ea6",
+      "workingTreeSha256": "5cdec0cd8e88f21ed1718a6012efda01964b1ef3fe9c7435e8868b250613b93d",
+      "gitIndexBlob": "26512d6a38e27fdf8e3dbc7f8ea20bd45b20e422",
+      "baselineGitBlob": "d7148ac2a94b7980cea17335308d8652e869b251",
+      "byteLength": 7004,
+      "workingTreeByteLength": 7203,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/tool-executor.approval.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "727e204656def7a6b0fec4e3361be20517b05df56a0384aff6cb39d932e26cac",
+      "workingTreeSha256": "7cdb47b220ac515fe616dccd8a30cc187be3d37cfdc8f3895e81185d5ba4c722",
+      "gitIndexBlob": "e20c20b1fa548b1294793b8f1e4fc0614c4bdb0d",
+      "baselineGitBlob": null,
+      "byteLength": 6360,
+      "workingTreeByteLength": 6572,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/tool-executor.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval"
+      ],
+      "sha256": "2b033fc84eac1333c99b1a876b2342c02e6fac1479e0898cc9da620e48550610",
+      "workingTreeSha256": "be55a1bad0ebf95e60db9850c8dc1efadb3a042caea1a3aadd0bba69d4df0a89",
+      "gitIndexBlob": "c0f9dccc66105d440c0b967278689a93fde1f06b",
+      "baselineGitBlob": "d5ecf381c6b8b1e7a65fa5cc085fd6928d87afa7",
+      "byteLength": 8274,
+      "workingTreeByteLength": 8531,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/agent/types.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy",
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "e063d06a3746f5a77e245fe299b85c811b19ec2171d676a39436e22bf5df7335",
+      "workingTreeSha256": "8a7a4a1ce7702867b33268cd838b251e01c79a483f65400b4f59811bce74af01",
+      "gitIndexBlob": "4d58c3a684370a7c1894af355496d96436f8a302",
+      "baselineGitBlob": "ea1626f7ee1746b86dd445eb3fee9e3c01180cd4",
+      "byteLength": 8903,
+      "workingTreeByteLength": 9211,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/approval/operation-policy.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "abbc9a727ad8eedd257675558e19db5c4a9972f7e2f996a03d40a53180b863b4",
+      "workingTreeSha256": "abbc9a727ad8eedd257675558e19db5c4a9972f7e2f996a03d40a53180b863b4",
+      "gitIndexBlob": "de725a6d02b322932640d493004c0724f1aff54a",
+      "baselineGitBlob": null,
+      "byteLength": 15913,
+      "workingTreeByteLength": 15913,
+      "contentComparison": "identical"
+    },
+    {
+      "path": "src/approval/operation-policy.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "923fcbd88e8356912a84fd566edb6111e1251d509be81c13cb843b08519316df",
+      "workingTreeSha256": "eb9e5c784bbf96348447237f90b39e43fb167d47700ec617ac3e1f49ff429e57",
+      "gitIndexBlob": "4b8cd9b79a122c4c8da3f7c40fe9de8b43d67b2a",
+      "baselineGitBlob": null,
+      "byteLength": 20959,
+      "workingTreeByteLength": 21628,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/cli.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval"
+      ],
+      "sha256": "79252a80c51b4d64c0e38849fa67dc114b494df94bcf312958ce4305e33a5c63",
+      "workingTreeSha256": "1617f73ed64bd32a0e6d81746013d2782e2a3afe7e8953e4049299f6f8840424",
+      "gitIndexBlob": "9e0337d5eeafbc14a6dab328491afdaff492a8aa",
+      "baselineGitBlob": "8775ae5eced687af83c1335ab4a4c7df8c051bf5",
+      "byteLength": 28933,
+      "workingTreeByteLength": 29813,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/components/approval-prompt.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval"
+      ],
+      "sha256": "328fbbbbc525ba9a910997f89aa667f6f60835adbb413852e4d43e3b81928675",
+      "workingTreeSha256": "5c75ca5509edec926866fc83cccfe063f0c2fbeabe818261f7a54a282c108645",
+      "gitIndexBlob": "ddce47aec0c676dc3f98874a1cd8a1ad7bb23161",
+      "baselineGitBlob": "61b1709f9687e96c6b2b8b4e15991257a4ec25cd",
+      "byteLength": 1796,
+      "workingTreeByteLength": 1842,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/components/select-list.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval"
+      ],
+      "sha256": "52add52094c307274437427272ae079de536ae44b87a789ae8a00109f663e3b5",
+      "workingTreeSha256": "4f910699ef8e76f19879a2aabe8c3efa0f8ebf68bd13d1296b24ea862cebea59",
+      "gitIndexBlob": "f94080c9878137a5303198b9376d70a8dc28b22a",
+      "baselineGitBlob": "ee0109cf52b9f52fc5ad61077fb756d9994eb194",
+      "byteLength": 5698,
+      "workingTreeByteLength": 5873,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/components/tool-event.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval"
+      ],
+      "sha256": "18c6a78d58e3c3e781a2335d9fdfdff58b0bcf90095c422b7ec7a5db57cd840c",
+      "workingTreeSha256": "31ee894f7d8b1aae7e8b815a610c09dd633cf2bb78e2d0755020cdf368087e8f",
+      "gitIndexBlob": "2db72555653c34844bf22960f20058a363d16b4e",
+      "baselineGitBlob": "47cc3dadeb08287768f9957f7fbaa1657d3bf837",
+      "byteLength": 6117,
+      "workingTreeByteLength": 6303,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/controllers/agent-runner.test.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "rc2_integration_compatibility"
+      ],
+      "sha256": "ce520e6f795240c5f6545249f43470d1ab245caca6653aacb3abfec7078be9a8",
+      "workingTreeSha256": "4e5c18c3127891fa962a086f0520d97291aab2ad3955e2561638700ff2b531fc",
+      "gitIndexBlob": "bcb398f9c775bcd4da5ec4f654fd984b522c2e21",
+      "baselineGitBlob": "50a93c3c059704656acb1b63696d21dc9ecaf4f8",
+      "byteLength": 8877,
+      "workingTreeByteLength": 9156,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/controllers/agent-runner.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "7302f75f86bf2c6b3a7f4f0a7b48d70077a3f40d81c846e858b162fac3663f34",
+      "workingTreeSha256": "00f376f9b94a6a160e3b327cbdc93920a12ebb4a2cc7b872a6dc20de4533f0ed",
+      "gitIndexBlob": "29f957d43616b50329b4a30e5f9a423e4b533736",
+      "baselineGitBlob": "68dafab541353c79a059201de9bef5d94420f774",
+      "byteLength": 14855,
+      "workingTreeByteLength": 15310,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/acceptance/acceptance.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase8_practical_acceptance"
+      ],
+      "sha256": "218d96db05ae31f92095d62b13edf8c0abb2071521128daa86e580015c6f2f48",
+      "workingTreeSha256": "dfcae3ced30f0cda29594bec3838d9e5c189342d724114066aeed4c873e8992f",
+      "gitIndexBlob": "3b521173ca2abfcb438fdbf6f5861223bf872b2d",
+      "baselineGitBlob": null,
+      "byteLength": 6042,
+      "workingTreeByteLength": 6176,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/acceptance/cli.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase8_practical_acceptance"
+      ],
+      "sha256": "e6b68127caa6eb6cd12a3df9d19ec6d910511fc462d3d51bfc305f360b94c911",
+      "workingTreeSha256": "7406ac1ca1382b291d5d0fcd09a8ab067e4775bbf46809723af03a9016e91347",
+      "gitIndexBlob": "790d68ad94850e78cb35dbc3df4cb829aab37129",
+      "baselineGitBlob": null,
+      "byteLength": 1947,
+      "workingTreeByteLength": 1999,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/acceptance/evaluate.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase8_practical_acceptance"
+      ],
+      "sha256": "b35e2e43ac951c7bfa1d7a126d4c0928b9b218772f1b431b9496f17a6cd2f38c",
+      "workingTreeSha256": "4155ddd0145abe10942317af98fd6a091788defd7f68c62d2a0c4bacdbccf98c",
+      "gitIndexBlob": "1b69a8142a817b3423787494b5351fdf0d4a110b",
+      "baselineGitBlob": null,
+      "byteLength": 16229,
+      "workingTreeByteLength": 16596,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/acceptance/harness.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase8_practical_acceptance"
+      ],
+      "sha256": "1c39e1070c00f92e5082d45fdd50877087d710a6520c385dc849b3526600c14e",
+      "workingTreeSha256": "844aeb67b4fd5f62c15c0a00275774571e039224ec56cfbf4510eaa1afc9957e",
+      "gitIndexBlob": "093fa185ece6b0b2785a570a4b1e3acd804497c4",
+      "baselineGitBlob": null,
+      "byteLength": 27901,
+      "workingTreeByteLength": 28530,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/acceptance/runner.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase8_practical_acceptance"
+      ],
+      "sha256": "30b30fb35896ae17de6ab5ab3a088e02e97797a50ab590f06b54097e081cd2a1",
+      "workingTreeSha256": "3eb80b6334fa7ac78e212fd41c541425f98e460ddbbe680b602e14dcbf7aad62",
+      "gitIndexBlob": "a34c1d8c1a6751dcee55768ed7a4f3fcb2b83cfc",
+      "baselineGitBlob": null,
+      "byteLength": 5420,
+      "workingTreeByteLength": 5573,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/acceptance/scenarios.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase8_practical_acceptance"
+      ],
+      "sha256": "be882fad7bcb374c6db2c6e640923e85319792b3985119c5ba63a024a39575d3",
+      "workingTreeSha256": "e7fe2bf77cf3a31d8e7e2c86a42231dbd55e6c935365adaaabca6d3e768a3ea9",
+      "gitIndexBlob": "e165f03a432a0df755c3d46e9a5d61f92355037f",
+      "baselineGitBlob": null,
+      "byteLength": 24920,
+      "workingTreeByteLength": 25438,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/acceptance/types.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase8_practical_acceptance"
+      ],
+      "sha256": "c318665c2ba97a953d02667b9a0835f1cbc13b648b42f81544b9b1ea866ae03f",
+      "workingTreeSha256": "6c15fbcf9211f7b3977301a5ba388e55972aa03693a423442b5a44d5a752f15b",
+      "gitIndexBlob": "21231e53af170de19bb18583b35ffb9ff226ceb2",
+      "baselineGitBlob": null,
+      "byteLength": 6842,
+      "workingTreeByteLength": 7104,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/baseline.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "d0a1fab9d70433f48c98b41e9da1887e0a97e1c5892b09ecdff844d8590883bb",
+      "workingTreeSha256": "f03d640cdb776ea426973e2f04320fa7a54d787693161d940297482436c3d22a",
+      "gitIndexBlob": "b5d463518af4d47117153010bf9a1c5c0fdbc529",
+      "baselineGitBlob": null,
+      "byteLength": 18511,
+      "workingTreeByteLength": 18923,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/behavioral-eval.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "681eb74c9258d199da2ba7dc71bea03b03105bc7c635d60bc44c61a388196bc9",
+      "workingTreeSha256": "d35133db5d03019a9513cdbd0eba9c4a7ffe53124d4248a2d5f83654502aea66",
+      "gitIndexBlob": "bdc2f7c7d4e4acb69b4a9d79c18397e2a9484a30",
+      "baselineGitBlob": null,
+      "byteLength": 8862,
+      "workingTreeByteLength": 9045,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/cases.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "9644a21b72d5d6264103ac9322c3e1d1db406c8032ad17a914bfd6f0852829ab",
+      "workingTreeSha256": "ce8b7e927604e3fa09814b02b8c700035e729ab33aa2bbb8bd724a727baba883",
+      "gitIndexBlob": "c5c57363d5bffb2086dd97fb67ffdd9dc378d78b",
+      "baselineGitBlob": null,
+      "byteLength": 9988,
+      "workingTreeByteLength": 10057,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/cli.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "20e90a8769eafb2a6a880b25f5f3ad1fa355e7e6cfd1fe2f9ced7c3af8aae37d",
+      "workingTreeSha256": "34d71933eb56bf77c05920c60f995ce307aaa09d038ac551971e1aea739932ec",
+      "gitIndexBlob": "85a8646ba84a72213f309a1d862a1346531e9af1",
+      "baselineGitBlob": null,
+      "byteLength": 581,
+      "workingTreeByteLength": 600,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/evaluate.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "aa78ba931541de800b36760aead00a0e6f7d6f369ccef713f64ddda4471e1d81",
+      "workingTreeSha256": "96f184fc8aa21df40ce67d29a9c529834a4523b35d7a76e048c86772b9d34f6e",
+      "gitIndexBlob": "94051b074e669bdac2fd2d5ef313abca28d36b34",
+      "baselineGitBlob": null,
+      "byteLength": 11622,
+      "workingTreeByteLength": 11906,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/materialize.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "ec63b27137194fa9db40e0a6490a7e8526ecb07f57d07b09036e72e7181d4101",
+      "workingTreeSha256": "8358f96ebd702c19f67ccb304249a496548109b4ceb92178e51c6fd07c2686cd",
+      "gitIndexBlob": "01d2f1d5ed7d157ab3edfb83dd74d615c5016b3d",
+      "baselineGitBlob": null,
+      "byteLength": 21989,
+      "workingTreeByteLength": 22577,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/matrix.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "a6d35b94d899cea7c1c7b6ee6e8cff6e8f20a9f291d39832864c5515553c9f0c",
+      "workingTreeSha256": "4e6e0ef6fdd328aefc1e12a29b38766e7fd34ac6571b75fa39a585ecd11843a5",
+      "gitIndexBlob": "aa4feb25cba146088341aa7bca6e33841a18d4ef",
+      "baselineGitBlob": null,
+      "byteLength": 2086,
+      "workingTreeByteLength": 2143,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/normalize.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "ca9605cc479a26c7861ea041d165450a16e53349ad0a8460d17d8e5ca2a9c6ff",
+      "workingTreeSha256": "1d2388d02bb604430b055300942b8e2b65e7ba6b9e91a34ac098de4c9cf2353b",
+      "gitIndexBlob": "7a7cdce653e953ffdb9ab1da033d0ec675d26d8d",
+      "baselineGitBlob": null,
+      "byteLength": 4659,
+      "workingTreeByteLength": 4810,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/runner.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "9d8b19fa51976011550d8599b558a9f5212c4958483741fc72a6345018f58077",
+      "workingTreeSha256": "ee059d90da91585e52f904a4a03fa2baf99e54183657f7f39138d0eb59bbaf1b",
+      "gitIndexBlob": "4652d2f3c74aeb672ac44db9e5fdc93ca1c14c84",
+      "baselineGitBlob": null,
+      "byteLength": 7151,
+      "workingTreeByteLength": 7352,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/evals/behavioral/types.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase7_offline_behavioral_eval"
+      ],
+      "sha256": "45cf3e4d75935ab14ef0dac40e899f24eb0aa860ec06886e2843371060f599fa",
+      "workingTreeSha256": "3e6e764abdce021eb29993e8673d1b7c4cce54200fb6b24beacf859db3a085ee",
+      "gitIndexBlob": "375ba7875300444eda1d458bcdb609a7fddffe34",
+      "baselineGitBlob": null,
+      "byteLength": 6681,
+      "workingTreeByteLength": 6916,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/gateway/agent-runner.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "42ead1e6767bbec619e6165e13a20a96168def60600b18493feb974a27988b55",
+      "workingTreeSha256": "c8cd8bfb6de7dcaeb99199b7e15bc7df2f1765c14846442305154676d7426c6c",
+      "gitIndexBlob": "326d4258ad567797fc7e9f9009314e444ccba054",
+      "baselineGitBlob": "658667a76124bafa42fdfc8fdc25110a4113ef57",
+      "byteLength": 4465,
+      "workingTreeByteLength": 4617,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memo/document.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "21968a843ed62c963743c2bf44a03a14e51f8ece1807d859fffe1d75d1aabbd9",
+      "workingTreeSha256": "5626d07b3503a693c4b0559db24b90dc19edbd88d2384cfc41ddf799587c0f57",
+      "gitIndexBlob": "4a26b307b4edc3ffed15f736573fd1df5b7d67dd",
+      "baselineGitBlob": null,
+      "byteLength": 4762,
+      "workingTreeByteLength": 4879,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memo/document.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "4c22d930a369c6ceb8f6f1c405998ddb933f86e76b73fa2b3ec0b64f865ac5c9",
+      "workingTreeSha256": "dd296cd6163558e4252d709f577603723739c4d389d8c696a13adc964a8049d1",
+      "gitIndexBlob": "89291ef20545dfd0b103ce60c0f986ee3affc567",
+      "baselineGitBlob": null,
+      "byteLength": 6387,
+      "workingTreeByteLength": 6553,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memo/renderer.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "ff47d387c390f7bfe4903b3b06fec7e0057c97ceff52680a3c465cbb938f4e4c",
+      "workingTreeSha256": "327d19a00c33bd08bc9e46736774ea75ae472afdb8f476031bd8184dd6e46875",
+      "gitIndexBlob": "6ab230a3ac8bf9adb0fe86dfa27e8d316846fc0a",
+      "baselineGitBlob": null,
+      "byteLength": 2713,
+      "workingTreeByteLength": 2805,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memory/database.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "831a2c45025293e0ab904b61e06c8ecb4845424d533a925808917d7db4bc694d",
+      "workingTreeSha256": "d8223c33e9ab230bd7b182ebc7392363188d2943fa1a2b275a72199db9a50a5f",
+      "gitIndexBlob": "d81fd6cf86b0ac07df52033871d7a757a47d7a6e",
+      "baselineGitBlob": "0bbeff87724f7ebfff0f11a73df465f86258e293",
+      "byteLength": 11322,
+      "workingTreeByteLength": 11688,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memory/index.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "eb2f28023162275004c06e70a4bf74e4efddc474356eccbc1e3e23fb051e9bbe",
+      "workingTreeSha256": "d3682a97f393633dc96ff0da77b77bf03a8d4fdc3a35ccd15454da0a1310680a",
+      "gitIndexBlob": "eda44010722c6bd0431a047dd3c059a0e8da1dea",
+      "baselineGitBlob": "94451b254dcb82da373b9b7ab6d9a0a36c521997",
+      "byteLength": 6015,
+      "workingTreeByteLength": 6222,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memory/indexer.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "09beade1c558da39497447124feaa6f73b3f40bc13e873589e02183538fb7241",
+      "workingTreeSha256": "726ce6ee0c96307f7ef01a6bc7c4fbece2a645c353f99fb99a1de9f23c4dd582",
+      "gitIndexBlob": "7bf42a6bed51340eb57d8e68d875dc6fa906497f",
+      "baselineGitBlob": "2e4531dc73835d63ac44b11c655b0ef7026a9948",
+      "byteLength": 5728,
+      "workingTreeByteLength": 5917,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memory/persistence.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "db8b71ee648b11469116355a2ba47c56f89a8c610b5695662bda8bf94719d720",
+      "workingTreeSha256": "b0741dfd368beb11caaf21abe87fd354844c00276672c21e17c54574712b988f",
+      "gitIndexBlob": "7eaf02434d42f87b00978f90c559b7a5ebe0d3b0",
+      "baselineGitBlob": null,
+      "byteLength": 1701,
+      "workingTreeByteLength": 1755,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memory/privacy-boundaries.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "7754d57ae3fd578aeb58ad96b8f8df1db1f3bffa9781512490219db9c9b2543b",
+      "workingTreeSha256": "630745592ca020064c037409bd9d5d1dfa43ce9d0ee9595ade54977a4ae285ff",
+      "gitIndexBlob": "785ae4735ced9b1f2d9501199861ff0fc5e5f109",
+      "baselineGitBlob": null,
+      "byteLength": 7397,
+      "workingTreeByteLength": 7599,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memory/store.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "4aa8c9a2a606fb0aaa896c10abb2f86e54dd9f50ffabb8a6120012a2e9c69cf1",
+      "workingTreeSha256": "f2389c6fecddd0b8c6f3eb918843b4c9c4c34b60d2dfa61d878b3aedf7115c32",
+      "gitIndexBlob": "3b8e473f17cf4dbeb0369b6f43badb7cd15548a7",
+      "baselineGitBlob": "4a4ebbf68e89c75f58cfd7c78bab1d64ec02f711",
+      "byteLength": 5226,
+      "workingTreeByteLength": 5380,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memory/temporal-decay.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "3ea3fbe6a8df1ae89f78b3f74338378a8381a771302510be2521bc27a2129d11",
+      "workingTreeSha256": "7328bb168d6e912c38fe68cf0f81214d7435cabdc2fcc69969dbce7a2cb50b5d",
+      "gitIndexBlob": "3a05f48cc020e05e569945205aa8d9747bf21cc9",
+      "baselineGitBlob": "7cdbfc23ddb8437264457d5dd9f9293f626b7aaa",
+      "byteLength": 3245,
+      "workingTreeByteLength": 3368,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/memory/types.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "b2ce36253d61fa29d60700125633e4b998e2395d8684484f60d7c8e1a8ca5705",
+      "workingTreeSha256": "5f68d3e21326f73261aa14f69ce0992af65b69cbc97cb9a26c124623d70a2cb8",
+      "gitIndexBlob": "28692617fc4e70e37a584a7ccffa75e5f706213b",
+      "baselineGitBlob": "7f87dc05b146237e81f930e5f9ba12e8825d60ab",
+      "byteLength": 1916,
+      "workingTreeByteLength": 2012,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/dcf/SKILL.md",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x"
+      ],
+      "sha256": "81f65205b93d6d4e2dd8ed8d149458fd6dec00b2f4dcb22ce50af0b4f77192b1",
+      "workingTreeSha256": "cf4282e5dcc01357b05ae92ea77ca84a868d2a5972a70a2ba0af9d87041bdaed",
+      "gitIndexBlob": "f2cd6f1a1d4f118a973d1ebac1ade0f9949b4572",
+      "baselineGitBlob": "71758b241d028c9df4459ca1562ce4f2471ba517",
+      "byteLength": 3132,
+      "workingTreeByteLength": 3187,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/dcf/references/japan-market-inputs.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x"
+      ],
+      "sha256": "af0941465b72fa2ee8412213622984fe94c56c789266f00b637bac4975370c01",
+      "workingTreeSha256": "4d2c77622d82e2617d29307dc889c8e5d80c3e44bea743536bf9b8c0415ca2b3",
+      "gitIndexBlob": "c782ff3a9765a47fadd7294cb41c910663cc6b3d",
+      "baselineGitBlob": null,
+      "byteLength": 1382,
+      "workingTreeByteLength": 1402,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/dcf/references/methodology.md",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x"
+      ],
+      "sha256": "2515b2d3ba16f558ddb24b9c3526dad99773841e9e5b7b743932aa1df622fc81",
+      "workingTreeSha256": "ad3c717562b1d547668d8860fcf28663a5cb24b930c173ba4220a344827c0b4d",
+      "gitIndexBlob": "59fe08cf2188a28e464181f0d60f6d01da129b32",
+      "baselineGitBlob": null,
+      "byteLength": 1893,
+      "workingTreeByteLength": 1926,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/index.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "0a44366ef28e9d69eae47c82bc5d640dfdd8cf32ebbb9d9803fd0fc957a8d5dd",
+      "workingTreeSha256": "cf4cd69fed4aacc64c19b0b58d54fe7c04245f9bfabecd11533dda9fe2dad58e",
+      "gitIndexBlob": "63edfac4a227ff06f85731b651bb0f1fdcee8806",
+      "baselineGitBlob": "d3a9455544e7ae62faa595c4f23ec237f15bccb4",
+      "byteLength": 490,
+      "workingTreeByteLength": 516,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/loader.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "1f11653cd208dfa9fc464ee3ed7410033d9dc060875af50153166e934cb68c8b",
+      "workingTreeSha256": "2f2b51c0efa952046c62d12ecc54d7de74e435f068b78ab538d98769f1a2f6c2",
+      "gitIndexBlob": "2d9cb7d935df9b4d632984d0ecc00f66714d9635",
+      "baselineGitBlob": "7695bc50ef12400a96ee58ccc722a69b4f47487a",
+      "byteLength": 4294,
+      "workingTreeByteLength": 4426,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/memo-intent.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "c2aac34535cdffcbb075d90e0a4e5523cce38804adbf69a74cdc8ed1f14c24c1",
+      "workingTreeSha256": "909bbcdeb03d1342d5c0eef03b94fcbadca769b8351ec9dc3234ba70e700a410",
+      "gitIndexBlob": "09a409ff034149acbc2f0aa74e7bf9f5bca97556",
+      "baselineGitBlob": null,
+      "byteLength": 1314,
+      "workingTreeByteLength": 1358,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/memo-intent.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "5e8ea7be038e8ed60fe8e7293f9b1b8dd745c449538b6fa16c70f4750d6e3c75",
+      "workingTreeSha256": "3fcd973692df653aaa5a20aa4d55817d6e91a55d26f70dd84e99fddd0d0ded08",
+      "gitIndexBlob": "2569d3b483e465a4c253a90d9021ed95ccd2c48d",
+      "baselineGitBlob": null,
+      "byteLength": 2025,
+      "workingTreeByteLength": 2077,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/registry.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "46ac4867d8770bae32651a2db2fc9bbf45265725c61cb222676311cb1bd01853",
+      "workingTreeSha256": "825f5ebef3d6f0b6940509dc4ce79525be831acad0e5f12f96fe7959d1cf099d",
+      "gitIndexBlob": "4815ac691f7593b85f8e962cb0dbaaca12ab5f0e",
+      "baselineGitBlob": null,
+      "byteLength": 6276,
+      "workingTreeByteLength": 6430,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/registry.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "0ec5b48f7a6a7ca20e8523bcfc1fddb5a2bc0351c7cd9973fc93df11d081f244",
+      "workingTreeSha256": "99dfd3d1b4c9b41ef81453a659be72b9065a142515bc650031bf2b14c70517a2",
+      "gitIndexBlob": "a6f993c95fac38190d52c1c7c33b90e6725b4506",
+      "baselineGitBlob": "8fe4557ba1e3902e7c0d9c294d0862d895c5d9e3",
+      "byteLength": 4919,
+      "workingTreeByteLength": 5073,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/types.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "e0a181d5236f8a48287f7b86993d2723b4d39738d71461bd0e6966bd5e7d1d3c",
+      "workingTreeSha256": "bcbcaeb2e1f3bcbf2f2c0de65607956152e20312cf9e8eebb206695fa25dd467",
+      "gitIndexBlob": "6f833261e047372601b224913da6993614e74d2a",
+      "baselineGitBlob": "77005de3509e74d1bf3dc7cc08a236aaa7a9458e",
+      "byteLength": 1584,
+      "workingTreeByteLength": 1631,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/write-memo/SKILL.md",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "f871573fdeba3aa96931b3fcab5bdc6b23cb3ccbc7e3a930db7acb99e0ce8727",
+      "workingTreeSha256": "d12eeebc520f8eed8148e8093dcac6e849a139a6a62d4c1532e699fef7f3260f",
+      "gitIndexBlob": "fe54a2ce4d1f57e35d6bb37618655db0c98cf91f",
+      "baselineGitBlob": "0e5a28aa7c7d40976e50c02fc8c0bb29e5a4e6d0",
+      "byteLength": 3172,
+      "workingTreeByteLength": 3234,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/skills/x-research/SKILL.md",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x"
+      ],
+      "sha256": "45fd699970047b9c7f21dbc861fea84067f8ec7d20f919bb10116c25578bd2ca",
+      "workingTreeSha256": "30f1fc2bb47a8cf7dc198e15731089ef543c287de4f9ba1f98f3d368fdd5893e",
+      "gitIndexBlob": "f26d901ea34711893aa9214de1273dd340988b4d",
+      "baselineGitBlob": "72718127cb81e5d79ca039539155016cac35b534",
+      "byteLength": 1890,
+      "workingTreeByteLength": 1930,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/bash/shell-runner.test.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "rc2_integration_compatibility"
+      ],
+      "sha256": "2edeac1041c20a881d993910dce27dc81a32b96885543f7f7980043799d0e96a",
+      "workingTreeSha256": "8e507d95b176a5e595ffd503261aa003af1ad45132fb52261256fac47c3aa6c6",
+      "gitIndexBlob": "9f8e7e768e5be3517d245391cea7d9f6eecdf854",
+      "baselineGitBlob": "4f848a7dfefdfd50cd53e262cda7abdc766a85df",
+      "byteLength": 3294,
+      "workingTreeByteLength": 3384,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/browser/browser.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase5_operation_approval"
+      ],
+      "sha256": "40b9efa80771e0e27bb76eb2eee52034a224ed898cf2e12214c86c6516e739a9",
+      "workingTreeSha256": "734d7038311b8031ced69ada24f1eea91c063320d00ce58d4ae4ab362e51fa7a",
+      "gitIndexBlob": "ad4925d77bb6f05abaf4f606daa3906000e7ad84",
+      "baselineGitBlob": "3a375e2ee7e9b4b1421b38765890227c5765c4f6",
+      "byteLength": 16614,
+      "workingTreeByteLength": 17060,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/finance/calculate-dcf.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x"
+      ],
+      "sha256": "6c2c998c5f8cde300f473e12b7f8e2a3335d910d8dd84edf0c1259e9ffd4a3bf",
+      "workingTreeSha256": "ef08c72558cca2ea38e3f31174b7cdaf87c5cbcac7e03f900b1149fed1eb26a2",
+      "gitIndexBlob": "7193174294d66e2efe3374f335cc12f878077825",
+      "baselineGitBlob": null,
+      "byteLength": 4606,
+      "workingTreeByteLength": 4727,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/finance/calculate-dcf.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x"
+      ],
+      "sha256": "91a9f4000e3bd493a1ba34fcefc5778f3d0dcf30ded51b999a7c08e9b1d3841c",
+      "workingTreeSha256": "3186ad1bf9941c0cdc0d9186248c8820f668b6edabfa12fbf125488a9d8d334d",
+      "gitIndexBlob": "1b14a04ce223f0a566f4735f6cbbc0063e6c8bac",
+      "baselineGitBlob": null,
+      "byteLength": 7717,
+      "workingTreeByteLength": 7931,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/finance/index.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x"
+      ],
+      "sha256": "6128c7952d914b7f9072989e35ed0befc49b8dfdad931d43d2a2742985caff6e",
+      "workingTreeSha256": "4797edbecc9c7e521a194497738d2879b5b2610c34c5f18fe524a253e2919b45",
+      "gitIndexBlob": "fb38734dc3ea35f08088e2ced60d20b578dcf5af",
+      "baselineGitBlob": "54b024ada840842eeff50e6bd908b870bb1415ea",
+      "byteLength": 740,
+      "workingTreeByteLength": 751,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/memo/write-memo.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "91df04337318beaa99cab103a374f4e99ec347583ced037ab50ef82d1a1947ec",
+      "workingTreeSha256": "41cf43b65cf2c6102d79a9ea846eb9ed25de817cef33ae633c047247e462c387",
+      "gitIndexBlob": "5ca068b78cea0521d502430c029748bd3619e02e",
+      "baselineGitBlob": null,
+      "byteLength": 3530,
+      "workingTreeByteLength": 3627,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/memo/write-memo.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase6_memo_renderer"
+      ],
+      "sha256": "2f1bb82400482e80b2a594374c6fc8d9add2e84c72f09aeb67028795712a4dc3",
+      "workingTreeSha256": "e0d9f2f7a566e5f85072fbbe53bd3a30d2426ffb9780fd2a38ad7e0c37c0a22e",
+      "gitIndexBlob": "88c2837a3d6e3c52379b2853a89bc12980f430b8",
+      "baselineGitBlob": null,
+      "byteLength": 2622,
+      "workingTreeByteLength": 2699,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/memory/memory-search.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "b297fb012681f5a31a61890dabaeb6c72f27db393b1b5f9132552226724c28d6",
+      "workingTreeSha256": "5ecb471a8c585414433cc280948b7454aa1241f18141e1cedfe85b71b8705323",
+      "gitIndexBlob": "6a27c41dad5f390aa8a422dcd10f2182b13e29c7",
+      "baselineGitBlob": "5aefeb0edec50026cef21ca99675d67788df0d72",
+      "byteLength": 1582,
+      "workingTreeByteLength": 1628,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/memory/memory-update.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "828ca3c4a9f4eaac2917f0caab19c206bd941bbc8d38500861b49c9e0792cafc",
+      "workingTreeSha256": "e77d0d25f2898f925b54a6f17fd2530c6521388fd5c1124337c21d8d070ddc48",
+      "gitIndexBlob": "1386154fc43878e39ae2e5ab84d199e067c85c03",
+      "baselineGitBlob": "68a66b2f35a83eaa30fbcce358a0f656d772717e",
+      "byteLength": 4884,
+      "workingTreeByteLength": 5025,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/registry.test.ts",
+      "status": "added",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "eae6946661a201837bde598f648a849f21d16dceb4b20864f7712fd32ee1c277",
+      "workingTreeSha256": "a510f9d98c9d60ffea1c7586c1b2b53497e99d7a7761fb793ef8cc7123ea334e",
+      "gitIndexBlob": "14ed65f2411a5f63769e8639d7c9a4261354dfc1",
+      "baselineGitBlob": null,
+      "byteLength": 802,
+      "workingTreeByteLength": 820,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/registry.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase4_memory_privacy",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "5949d33f0fcf02bed6c6ec527b548db5f10e66f532644e2aae08c2287041c1fe",
+      "workingTreeSha256": "3b5d0fbddb92b9c875c83bc220bd528c8262b2ecd2b8bdaaf726315f254ab19f",
+      "gitIndexBlob": "684e6af62df130abd71e1ffafb29f7bf9d8b603a",
+      "baselineGitBlob": "15be5ed11e8a24ceb2fc3c1a27d0842844ac4fde",
+      "byteLength": 12169,
+      "workingTreeByteLength": 12479,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/tools/skill.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x",
+        "phase6_memo_renderer"
+      ],
+      "sha256": "8d886d2e86b01a5dda20f5b7374dcbe3ffe14df722433d307a98c25dbcd6c96c",
+      "workingTreeSha256": "74cdb348367b73c29d87cf60affaec4df52212a6dfaf2290194c600aa7b2c88a",
+      "gitIndexBlob": "b929cfb60e7bddee6efb84db95085a17a69d226b",
+      "baselineGitBlob": "ee8e60c67e61922c181cd293a551bfd83551aa87",
+      "byteLength": 3033,
+      "workingTreeByteLength": 3116,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/utils/tokens.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "90e571edc68b61c643c34f18aff7fa18b352727bb27e6422647a8a40bd8e5ed1",
+      "workingTreeSha256": "4628fd1900968e3772d6d62394941445b6379af7bf4a6eaefe4800ac7c3fee91",
+      "gitIndexBlob": "09481e3af959c2a7c856915dfae17534985216cd",
+      "baselineGitBlob": "247d27bd685f797d360c934a3f87d585c95cbb1a",
+      "byteLength": 2143,
+      "workingTreeByteLength": 2204,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/utils/tool-result-budget.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "edddaca9a1e3369289eedbcf6307b98b154d91c27fe859bc86f97a8824fcdc88",
+      "workingTreeSha256": "35ee9c96f10fc1c4c28ea2ae461d6cd08fc8945c4787b0295abdac05de78d421",
+      "gitIndexBlob": "47aae140dbb8cba872581df67438155c714e5c6e",
+      "baselineGitBlob": "f823b3e81c498846f52d87135af480e2f5563015",
+      "byteLength": 2247,
+      "workingTreeByteLength": 2317,
+      "contentComparison": "eol_normalized_equivalent"
+    },
+    {
+      "path": "src/utils/tool-result-storage.ts",
+      "status": "modified",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "sha256": "d60c86f6bbee97e004aefc9ce77d34735e678b12a2772633b38f7f3cccb04865",
+      "workingTreeSha256": "85f1169237f7df9be1a0cdeafed937c3d0aa8c4483c31067f98977f339ed50f4",
+      "gitIndexBlob": "381d84feab1abb446347d16b78048ca2e908f928",
+      "baselineGitBlob": "d245c8cb4b9a0e5dd18a5f3b6618e1b88b9cf1a4",
+      "byteLength": 2848,
+      "workingTreeByteLength": 2944,
+      "contentComparison": "eol_normalized_equivalent"
+    }
+  ],
+  "deleted": [
+    {
+      "path": "src/memory/flush.ts",
+      "status": "deleted",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "baselineGitBlob": "8c1218957a4d50dc9b322b9aefb0ab876621e104",
+      "baselineSha256": "cfbb99a9f11934000f0546d2827b40be4c2634307407012f9a293d41968f4265",
+      "baselineBytes": 2387
+    },
+    {
+      "path": "src/memory/session-files.ts",
+      "status": "deleted",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase4_memory_privacy"
+      ],
+      "baselineGitBlob": "aa544effce9e8678a6f7278e6c6ee92f180f05ad",
+      "baselineSha256": "9f38253ac86743e9942a6e8a7163745a9decc0c052b7876900a773c67c52594b",
+      "baselineBytes": 1883
+    },
+    {
+      "path": "src/skills/dcf/sector-wacc.md",
+      "status": "deleted",
+      "classification": "RC2_INTENDED",
+      "scopes": [
+        "phase3_skills_dcf_x"
+      ],
+      "baselineGitBlob": "2be81fbe135afb610a5e40dad0a552be7c9efbb4",
+      "baselineSha256": "4ec32405ea461c5161e73abe5f64b8d8a94be41504687896f120f8835c923e8e",
+      "baselineBytes": 1617
+    }
+  ],
+  "deletionAudit": [
+    {
+      "path": "src/memory/flush.ts",
+      "classification": "RC2_INTENDED",
+      "decision": "include deletion",
+      "evidence": "Removes implicit pre-compaction promotion into durable memory."
+    },
+    {
+      "path": "src/memory/session-files.ts",
+      "classification": "RC2_INTENDED",
+      "decision": "include deletion",
+      "evidence": "Removes automatic conversation-transcript indexing as durable memory."
+    },
+    {
+      "path": "src/skills/dcf/sector-wacc.md",
+      "classification": "RC2_INTENDED",
+      "decision": "include deletion",
+      "evidence": "Replaces stale static WACC guidance with scoped methodology and deterministic calculation references."
+    }
+  ],
+  "validation": {
+    "typecheck": {
+      "command": "bun run typecheck",
+      "status": "PASS"
+    },
+    "targetedTests": {
+      "status": "PASS",
+      "passed": 198,
+      "skipped": 8,
+      "failed": 0,
+      "assertions": 401,
+      "testFiles": 10
+    },
+    "fullTestSuite": {
+      "command": "bun test",
+      "status": "PASS",
+      "passed": 491,
+      "skipped": 8,
+      "failed": 0,
+      "assertions": 1087,
+      "testFiles": 41
+    },
+    "behavioralEval": {
+      "command": "bun run eval",
+      "status": "PASS",
+      "mode": "offline-fixture",
+      "configurations": 19,
+      "architectureBaseline": "34/34",
+      "criticalFailures": 0
+    },
+    "practicalAcceptance": {
+      "command": "bun run acceptance",
+      "status": "PASS",
+      "mode": "offline-scripted-workflow",
+      "scenarios": "30/30",
+      "turns": 38,
+      "multiTurnScenarios": 8,
+      "criticalFailures": 0
+    },
+    "browserFast": {
+      "status": "PASS",
+      "ruff": "PASS",
+      "pytest": "61/61 PASS",
+      "liveBrowserUsed": false,
+      "networkRequired": false
+    },
+    "diffChecks": {
+      "workingTree": "PASS",
+      "staged": "PASS"
+    },
+    "secretCredentialCheck": {
+      "status": "PASS",
+      "realCredentialsFound": 0
+    },
+    "liveOrPaidExecution": "NOT_RUN"
+  },
+  "contractRegression": {
+    "skill": "PASS",
+    "dcf": "PASS",
+    "privacy": "PASS",
+    "approval": "PASS",
+    "bash": {
+      "status": "PASS",
+      "exactCommandBinding": "PASS",
+      "queryScopedReuse": "PASS",
+      "denyFailClosed": "PASS"
+    },
+    "memo": {
+      "status": "PASS",
+      "deterministicRenderer": "PASS",
+      "createOnly": "PASS",
+      "memorySeparation": "PASS"
+    }
+  },
+  "stagingPolicy": {
+    "expectedPathCount": 123,
+    "manifestPathSetMustEqualStagedPathSet": true,
+    "allowedEvidenceUpdates": [
+      "docs/release-candidate-baseline.md",
+      "docs/release-candidate-baseline.json",
+      "docs/rc-snapshot-manifest.json"
+    ],
+    "broadGitAddUsed": false
+  },
+  "commitPolicy": {
+    "authorized": true,
+    "message": "chore: freeze Dexter v1.0.0-jp RC2 candidate",
+    "expectedParentSha": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+    "amendForSelfShaMetadata": false,
+    "pushAuthorized": false,
+    "tagAuthorized": false
+  }
+}

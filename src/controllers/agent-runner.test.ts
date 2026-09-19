@@ -1,7 +1,9 @@
+import { resolve } from 'node:path';
 import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
 import { AgentRunnerController } from './agent-runner.js';
 import { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
 import type { AgentConfig, AgentEvent, ApprovalDecision } from '../agent/types.js';
+import { createOperationApprovalRequest, normalizeToolOperation } from '../approval/operation-policy.js';
 
 /**
  * Helper to create an AgentRunnerController with a change counter
@@ -37,7 +39,11 @@ describe('AgentRunnerController', () => {
           // Capture the approval request function from config
           const requestApproval = this.config.requestToolApproval;
           if (requestApproval) {
-            const promise = requestApproval({ tool: 'write_file', args: { path: '.dexter/RULES.md', content: 'test' } });
+            const operation = normalizeToolOperation('write_file', {
+              path: '.dexter/RULES.md',
+              content: 'test',
+            });
+            const promise = requestApproval(createOperationApprovalRequest(operation));
             await promise;
           }
 
@@ -88,7 +94,7 @@ describe('AgentRunnerController', () => {
       expect(controller.pendingApproval).not.toBeNull();
       expect(controller.pendingApproval?.tool).toBe('write_file');
       expect(controller.pendingApproval?.args).toMatchObject({
-        path: '.dexter/RULES.md',
+        path: resolve('.dexter/RULES.md'),
         content: 'test',
       });
 
@@ -253,19 +259,18 @@ describe('AgentRunnerController', () => {
     });
   });
 
-  describe('query-scoped bash session grants', () => {
-    test('prunes bash: keys at the start of a new query, keeps file:write', async () => {
+  describe('exact-operation session grants', () => {
+    test('keeps exact fingerprints in controller session state across queries', async () => {
       const { controller } = createController();
-      const grants: Set<string> = (controller as unknown as { sessionApprovedTools: Set<string> }).sessionApprovedTools;
-      grants.add('bash:Bash(ls:*)');
-      grants.add('file:write');
+      const grants: Set<string> = (
+        controller as unknown as { sessionApprovedOperations: Set<string> }
+      ).sessionApprovedOperations;
+      grants.add('exact-operation-fingerprint');
 
       const runPromise = controller.runQuery('test query');
       await new Promise(resolve => setTimeout(resolve, 10));
 
-      // bash grant pruned at query start; file:write preserved.
-      expect(grants.has('bash:Bash(ls:*)')).toBe(false);
-      expect(grants.has('file:write')).toBe(true);
+      expect(grants.has('exact-operation-fingerprint')).toBe(true);
 
       controller.respondToApproval('deny');
       await runPromise;
