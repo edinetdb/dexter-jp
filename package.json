@@ -18,6 +18,7 @@
     "test:watch": "bun test --watch",
     "eval": "bun run src/evals/behavioral/cli.ts",
     "eval:json": "bun run src/evals/behavioral/cli.ts --json",
+    "eval:astra-live": "bun run src/evals/astra/live-cli.ts",
     "acceptance": "bun run src/evals/acceptance/cli.ts",
     "acceptance:json": "bun run src/evals/acceptance/cli.ts --json",
     "postinstall": "playwright install chromium"

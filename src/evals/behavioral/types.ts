@@ -1,4 +1,5 @@
 import type { NormalizedOperation, OperationRisk } from '../../approval/operation-policy.js';
+import type { AstraOfflineReport } from '../astra/types.js';
 
 export const BEHAVIORAL_EVAL_SUITE_VERSION = 'phase7-v1' as const;
 
@@ -229,6 +230,7 @@ export interface BehavioralEvalReport {
     xCapability: 'scripted-only';
   };
   baseline: ArchitectureBaselineResult;
+  astraOffline: AstraOfflineReport;
   suites: Record<EvalSuite, { behavioralCases: number; baselineCases: number }>;
   configurations: ConfigurationResult[];
   criticalFailures: CriticalFailure[];

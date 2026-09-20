@@ -3,6 +3,7 @@ import { evaluateMaterializedCase } from './evaluate.js';
 import { getBehavioralEvalConfigurations } from './matrix.js';
 import { materializeEvalCase } from './materialize.js';
 import { runArchitectureBaseline } from './baseline.js';
+import { runAstraOfflineCompatibility } from '../astra/offline.js';
 import {
   BEHAVIORAL_EVAL_SUITE_VERSION,
   type BehavioralEvalReport,
@@ -114,6 +115,7 @@ export async function runBehavioralEval(
   const cases = options.cases ?? BEHAVIORAL_EVAL_CASES;
   const configurations = options.configurations ?? getBehavioralEvalConfigurations();
   const baseline = await runArchitectureBaseline();
+  const astraOffline = await runAstraOfflineCompatibility();
   const results: ConfigurationResult[] = [];
   for (const configuration of configurations) {
     results.push(await evaluateConfiguration(configuration, cases));
@@ -129,6 +131,7 @@ export async function runBehavioralEval(
     schemaVersion: 1,
     suiteVersion: BEHAVIORAL_EVAL_SUITE_VERSION,
     result: baseline.result === 'PASS'
+      && astraOffline.result === 'PASS'
       && results.every((result) => result.result === 'PASS')
       && criticalFailures.length === 0
       ? 'PASS'
@@ -142,6 +145,7 @@ export async function runBehavioralEval(
       xCapability: 'scripted-only',
     },
     baseline,
+    astraOffline,
     suites,
     configurations: results,
     criticalFailures,
@@ -164,6 +168,8 @@ export function renderHumanReport(report: BehavioralEvalReport): string {
     `Suite: ${report.suiteVersion}  Mode: ${report.mode}  Git: ${report.gitSha ?? 'unavailable'}`,
     `Architecture baseline (excluded from cross-model scores): ${report.baseline.passed}/${report.baseline.testCount}`,
     `Critical failures: ${report.criticalFailures.length}`,
+    `ASTRA OFFLINE COMPATIBILITY: ${report.astraOffline.result}`,
+    'ASTRA LIVE VALIDATION: NOT EXECUTED',
     '',
     'Suites:',
     ...SUITES.map((suite) =>
@@ -186,14 +192,16 @@ export function renderHumanReport(report: BehavioralEvalReport): string {
     );
   }
 
+  const failedAstra = report.astraOffline.cases.filter((item) => !item.passed);
   const failedBaseline = report.baseline.cases.filter((item) => !item.passed);
   const failedCases = report.configurations.flatMap((configuration) =>
     configuration.cases
       .filter((item) => !item.skipped && !item.passed)
       .map((item) => `${configuration.configuration.id}:${item.id}`)
   );
-  if (failedBaseline.length || failedCases.length) {
+  if (failedAstra.length || failedBaseline.length || failedCases.length) {
     lines.push('', 'Failures:');
+    for (const item of failedAstra) lines.push(`- ${item.id}: ${item.evidence}`);
     for (const item of failedBaseline) lines.push(`- baseline:${item.id}: ${item.message}`);
     for (const item of failedCases) lines.push(`- ${item}`);
   }

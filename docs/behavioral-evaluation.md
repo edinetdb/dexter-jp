@@ -4,7 +4,7 @@ Phase 7 adds an offline-first behavioral contract harness. It does not invoke a 
 
 ## Audited runtime surface
 
-The formal provider registry is `src/providers.ts`; selectable static model IDs come from `src/utils/model.ts`. LangChain supports OpenAI, Anthropic, Google, xAI, Moonshot, DeepSeek, OpenRouter, and Ollama. OpenRouter accepts a user-supplied model ID and Ollama discovers local IDs, so the offline matrix records those entries without inventing a model name. Claude Agent SDK is a separate runtime/provider selection with its three registered Claude model IDs.
+The formal provider registry is `src/providers.ts`; selectable static model IDs come from `src/utils/model.ts`. OpenAI's static matrix includes explicitly selectable GPT-6 Astra while GPT-5.6 Sol remains the default. LangChain supports OpenAI, Anthropic, Google, xAI, Moonshot, DeepSeek, OpenRouter, and Ollama. OpenRouter accepts a user-supplied model ID and Ollama discovers local IDs, so the offline matrix records those entries without inventing a model name. Claude Agent SDK is a separate runtime/provider selection with its three registered Claude model IDs.
 
 The LangChain loop binds tools from `src/tools/registry.ts`, receives provider-normalized `AIMessage.tool_calls`, executes through `AgentToolExecutor`, and emits `AgentEvent` records. Provider-specific details are handled before that boundary: Anthropic system-message cache annotations, Gemini schema sanitization, OpenAI-compatible endpoints, and Ollama's local model adapter. LangChain calls use provider defaults for sampling because no general temperature/top-p override is set. The wrapper retries transient calls up to three attempts with 500 ms and 1,000 ms backoff. DeepSeek thinking models explicitly request high reasoning effort as an existing provider option.
 
@@ -55,6 +55,8 @@ Japanese cases are native cases, not translations. They cover pure Japanese, mix
 
 - `bun run eval` prints the human-readable offline report.
 - `bun run eval:json` prints the complete machine-readable JSON report.
-- `bun test src/evals/behavioral/behavioral-eval.test.ts` runs the harness regression tests, including negative critical-failure detection.
+- `bun test src/evals/behavioral/behavioral-eval.test.ts src/evals/astra/offline.test.ts` runs the harness and Astra offline regression tests.
+- `bun run eval:astra-live` lists the bounded Astra live smoke cases and prints `ASTRA LIVE VALIDATION: NOT EXECUTED` without using credentials.
+- `DEXTER_ASTRA_LIVE=1 bun run eval:astra-live -- --execute` is the explicit paid/live entry point and is never called by normal tests.
 
-Optional live cross-model execution is deliberately deferred. Credentials being absent never fails the offline command.
+The human report prints `ASTRA OFFLINE COMPATIBILITY: PASS` only for deterministic repository compatibility. It separately prints `ASTRA LIVE VALIDATION: NOT EXECUTED`; the offline result is not a claim about live model behavior. Credentials being absent never fails the offline command.

@@ -200,13 +200,15 @@ CLIで `/rules` と入力すると現在のルールを確認できる。
 
 `/model`コマンドでCLI上から切替可能:
 
-- OpenAI（GPT-4o, GPT-4o-mini 等）
+- OpenAI（GPT-6 Astra、GPT 5.6 Sol / Terra / Luna。既定はSol）
 - Anthropic（Claude）
 - Google（Gemini）
 - xAI（Grok）
 - OpenRouter
 - Ollama（ローカルLLM）
 - Claude Agent SDK（後述）
+
+GPT-6 Astraは明示選択時のみ使用され、正式なAPI契約・offline評価・opt-in live smokeの詳細は[GPT-6 Astra support](docs/astra-support.md)を参照。
 
 ### Claude Agent SDK モード
 

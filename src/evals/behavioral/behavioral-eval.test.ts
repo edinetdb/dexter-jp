@@ -73,6 +73,8 @@ describe('Phase 7 behavioral evaluation', () => {
     expect(report.result).toBe('PASS');
     expect(report.mode).toBe('offline-fixture');
     expect(report.relevantConfig.liveCalls).toBe(false);
+    expect(report.astraOffline.result).toBe('PASS');
+    expect(report.astraOffline.cases).toHaveLength(10);
     expect(report.relevantConfig.llmJudge).toBe(false);
     expect(report.criticalFailures).toEqual([]);
     expect(report.baseline.excludedFromCrossModelScores).toBe(true);
