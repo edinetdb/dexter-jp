@@ -1,71 +1,66 @@
 {
   "schemaVersion": 2,
-  "baselineId": "dexter-rc2-20260919-188a146",
-  "status": "rc2_candidate_precommit",
-  "releaseCandidate": "v1.0.0-jp-rc2",
-  "freezeType": "manifest_bound_staged_snapshot",
-  "recordedAt": "20260919",
+  "baselineId": "dexter-rc3-20260920-188a146",
+  "status": "rc3_candidate_precommit",
+  "releaseCandidate": "v1.0.5-jp-rc3",
+  "freezeType": "manifest_bound_source_snapshot",
+  "recordedAt": "20260920",
   "timezone": "Asia/Tokyo",
   "packageVersion": "1.0.5-jp",
   "integrationBase": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+  "preEvidenceHead": "4bce551f1d81928b106ad7bd05f12eb6c65a8858",
   "commitSha": null,
-  "commitShaAssignment": "assigned_after_commit_and_recorded_in_freeze_report_or_tag",
-  "previousRcCommit": "299e6990dc3feeb126052479d35f5008c17dd560",
-  "previousRcTag": "v1.0.0-jp-rc1",
+  "commitShaAssignment": "assigned_after_commit_and_recorded_in_freeze_report_or_later_tag",
+  "previousRcCommit": "931ddc5684f8b8168d16c48656edc0a29d145e6a",
+  "previousRcTag": "v1.0.5-jp-rc2",
   "documents": [
+    "docs/astra-support.md",
     "docs/memory-privacy-boundaries.md",
     "docs/operation-approval-architecture.md",
     "docs/memo-architecture.md",
     "docs/behavioral-evaluation.md",
     "docs/practical-acceptance.md",
     "docs/release-candidate-baseline.md",
+    "docs/release-candidate-baseline.json",
     "docs/rc-snapshot-manifest.json"
   ],
   "source": {
     "branch": "rc/v1.0.0-jp-rc2-integration",
     "integrationBase": "188a146823b1a06f632bbcb4ab6236beb70e681b",
-    "expectedParentSha": "188a146823b1a06f632bbcb4ab6236beb70e681b",
     "originMainAfterFetch": "188a146823b1a06f632bbcb4ab6236beb70e681b",
-    "originMainMatchesIntegrationBase": true,
-    "previousRcCommit": "299e6990dc3feeb126052479d35f5008c17dd560",
-    "previousRcTag": "v1.0.0-jp-rc1",
-    "stateAtEvidenceCapture": {
-      "clean": false,
-      "stagedOnly": true,
-      "stagedPathCount": 123,
-      "added": 73,
-      "modified": 47,
-      "deleted": 3,
-      "unstagedPathCount": 0,
-      "commitCreated": false,
-      "tagCreated": false,
-      "headAloneReconstructsSnapshot": false
-    }
-  },
-  "integration": {
-    "method": "origin/main plus validated RC1 delta applied without an intermediate commit",
-    "remoteUniqueCommitsPreserved": 61,
-    "rc1ManifestPathsPreserved": 121,
-    "compatibilityRegressionTestPaths": [
-      "src/controllers/agent-runner.test.ts",
-      "src/tools/bash/shell-runner.test.ts"
+    "originMainIsAncestorOfPreEvidenceHead": true,
+    "originMainFastForwardToRc3Line": true,
+    "preEvidenceHead": "4bce551f1d81928b106ad7bd05f12eb6c65a8858",
+    "preFreezeWorkingTreeClean": true,
+    "commitsAheadOfOriginMainBeforeFreeze": 3,
+    "commitChain": [
+      "931ddc5684f8b8168d16c48656edc0a29d145e6a",
+      "b77942909fcc4198f9a466c6523e08e9f6d283f0",
+      "4bce551f1d81928b106ad7bd05f12eb6c65a8858"
     ],
-    "semanticConflicts": {
-      "encountered": 12,
-      "resolved": 12,
-      "unresolved": 0
-    }
+    "evidenceFreezePaths": [
+      "docs/release-candidate-baseline.md",
+      "docs/release-candidate-baseline.json",
+      "docs/rc-snapshot-manifest.json"
+    ],
+    "tagCreated": false,
+    "pushPerformed": false
+  },
+  "architectureBaseline": {
+    "phase1Through8": "PRESERVED",
+    "astraCompatibilityPatch1": "INCLUDED",
+    "astraCompatibilityPatch2": "INCLUDED",
+    "gpt6AstraFormalRuntimeSupport": "INCLUDED"
   },
   "manifest": {
     "path": "docs/rc-snapshot-manifest.json",
-    "pathCount": 123,
-    "presentPaths": 120,
+    "comparisonBase": "origin/main",
+    "pathCount": 146,
+    "addedPaths": 88,
+    "modifiedPaths": 55,
     "deletedPaths": 3,
-    "stagedSetMustMatch": true,
-    "presentPathHash": "sha256_of_git_index_bytes",
-    "workingTreeHash": "sha256_of_raw_working_tree_bytes",
-    "eolNormalizationRecorded": true,
-    "selfHashEmbedded": false,
+    "hashAlgorithm": "SHA-256",
+    "manifestSelfHashEmbedded": false,
     "completedManifestHashLocation": "final_freeze_report"
   },
   "validation": {
@@ -73,34 +68,25 @@
       "status": "PASS",
       "command": "bun run typecheck"
     },
-    "targetedTests": {
-      "status": "PASS",
-      "command": "bun test src/approval/operation-policy.test.ts src/agent/tool-executor.approval.test.ts src/controllers/agent-runner.test.ts src/agent/prompts.test.ts src/memory/privacy-boundaries.test.ts src/tools/registry.test.ts src/skills/registry.test.ts src/permissions/engine.test.ts src/permissions/command-parser.test.ts src/tools/bash/shell-runner.test.ts",
-      "passed": 198,
-      "skipped": 8,
-      "failed": 0,
-      "assertions": 401,
-      "testFiles": 10
-    },
     "fullTestSuite": {
       "status": "PASS",
       "command": "bun test",
-      "passed": 491,
+      "passed": 535,
       "skipped": 8,
       "failed": 0,
-      "assertions": 1087,
-      "testFiles": 41
+      "assertions": 1216,
+      "testFiles": 47
     },
     "behavioralEval": {
       "status": "PASS",
       "command": "bun run eval",
       "mode": "offline-fixture",
-      "configurations": 19,
       "architectureBaseline": {
         "passed": 34,
         "total": 34
       },
       "criticalFailures": 0,
+      "astraOfflineCompatibility": "PASS",
       "liveModelsInvoked": false
     },
     "practicalAcceptance": {
@@ -117,20 +103,21 @@
       "xCapability": "observable-stub",
       "liveCalls": false
     },
-    "browserFast": {
+    "astraLiveList": {
       "status": "PASS",
-      "ruff": {
-        "command": "python -m uv run --frozen --offline ruff check --no-cache .",
-        "status": "PASS"
-      },
-      "pytest": {
-        "command": "python -m uv run --frozen --offline pytest -p no:cacheprovider -o addopts=''",
-        "status": "PASS",
-        "passed": 61,
-        "failed": 0
-      },
-      "liveBrowserUsed": false,
-      "networkRequired": false
+      "command": "bun run eval:astra-live -- --list",
+      "cases": 8,
+      "liveCalls": false
+    },
+    "astraLiveSmokeEvidence": {
+      "status": "PASS",
+      "model": "gpt-6-astra",
+      "reasoning": "medium",
+      "serviceTier": "standard",
+      "passed": 8,
+      "total": 8,
+      "criticalFailures": 0,
+      "rerunForFreeze": false
     },
     "diffChecks": {
       "workingTree": {
@@ -142,102 +129,93 @@
         "status": "PASS"
       }
     },
-    "secretCredentialCheck": {
+    "secretArtifactCheck": {
       "status": "PASS",
-      "scope": "staged paths and staged diff",
-      "realCredentialsFound": 0
-    },
-    "liveOrPaidExecution": "NOT_RUN"
+      "realCredentialsFound": 0,
+      "liveCredentialArtifactsFound": 0
+    }
   },
   "evidenceLevels": {
     "unitDeterministic": {
       "status": "PASS",
-      "command": "bun test",
-      "scope": [
-        "skill_capability_filtering",
-        "dcf_calculator",
-        "memory_persistence_boundary",
-        "scratchpad_restart_boundary",
-        "compaction_source_sanitization",
-        "operation_policy",
-        "approval_fingerprint",
-        "bash_permission_integration",
-        "memo_renderer",
-        "memo_filename_sanitizer",
-        "memo_create_only_persistence"
-      ]
+      "command": "bun test"
     },
     "offlineBehavioral": {
       "status": "PASS",
-      "mode": "offline-fixture",
       "command": "bun run eval",
       "criticalFailures": 0
     },
     "offlinePracticalAcceptance": {
       "status": "PASS",
-      "mode": "offline-scripted-workflow",
       "command": "bun run acceptance",
       "criticalFailures": 0
     },
-    "liveValidation": {
-      "status": "NOT YET VALIDATED",
-      "commandsRun": [],
-      "credentialsUsed": false
+    "astraLiveSmoke": {
+      "status": "PASS",
+      "passed": 8,
+      "total": 8,
+      "criticalFailures": 0,
+      "verified": [
+        "multi_part_completion_structure",
+        "missing_required_input_non_fabrication_structure",
+        "explicit_dcf_routing",
+        "implicit_non_dcf_routing",
+        "explicit_memo_routing",
+        "memory_memo_separation",
+        "explicit_x_routing",
+        "adversarial_non_action_routing"
+      ],
+      "notFullyValidated": [
+        "dcf_supplied_argument_preservation",
+        "real_calculator_result_propagation",
+        "real_x_api_behavior",
+        "real_memo_filesystem_mutation",
+        "real_durable_memory_mutation",
+        "long_multi_turn_compaction",
+        "detailed_clarification_prose",
+        "internal_http_retry_count"
+      ]
     }
   },
-  "verifiedContracts": [
-    "skill_capability_filtering",
-    "dcf_explicit_behavior_contract",
-    "dcf_deterministic_execution",
-    "x_explicit_activation_offline_contract",
-    "memory_privacy_boundary",
-    "scratchpad_privacy",
-    "compaction_safety",
-    "operation_based_approval",
-    "exact_operation_binding",
-    "bash_exact_command_binding",
-    "bash_query_scoped_reuse",
-    "bash_deny_fail_closed",
-    "memo_deterministic_rendering",
-    "memo_create_only_write",
-    "memo_memory_separation",
-    "offline_behavioral_evaluation",
-    "offline_practical_acceptance"
+  "nonBlockingFindings": [
+    {
+      "id": "astra-live-clarification-heuristic",
+      "status": "NON_BLOCKING",
+      "finding": "clarificationLikely can false-positive on ordinary explanatory use of 確認",
+      "actualBehaviorFailure": false
+    }
   ],
-  "knownLimitations": [
-    "Live model routing is not validated.",
-    "Live X integration is not validated; practical acceptance uses an observable stub.",
-    "X intent has no deterministic string gate; actual selection depends on live-model adherence to the Skill/prompt contract.",
-    "Live compaction-model behavior is not validated.",
-    "Offline provider fixtures do not prove real-provider behavior, availability, or quality.",
-    "Eight POSIX shell-runner tests are skipped on Windows; Bash is not exposed by the production Windows registry.",
-    "Memo overwrite, append, and update workflows are not implemented.",
-    "Claude Agent SDK capabilities differ from the LangChain runtime.",
-    "The requested RC label is v1.0.0-jp-rc2 while the preserved latest-main package version is 1.0.5-jp.",
-    "External browser mutations, publishing, destructive remote operations, and paid/live data paths are not validated."
-  ],
+  "secretArtifactPolicy": {
+    "realCredentialsAllowed": false,
+    "authorizationHeadersAllowed": false,
+    "liveRequestResponseDumpsAllowed": false,
+    "envFilesAllowed": false,
+    "runtimeCacheAllowed": false,
+    "dexterRuntimeStateAllowed": false,
+    "syntheticFixturesClassifiedSeparately": true
+  },
   "deferred": [
-    "optional live model smoke evaluation",
-    "memo overwrite / append / update workflow",
-    "dogfooding-derived regressions"
+    "P3 RULES restructuring",
+    "S3 memo schema cleanup",
+    "U2 legacy memo cleanup",
+    "deeper Astra live end-to-end validation",
+    "clarification observability heuristic refinement"
   ],
   "reproduction": [
     "bun run typecheck",
     "bun test",
     "bun run eval",
     "bun run acceptance",
+    "bun run eval:astra-live -- --list",
     "git diff --check",
-    "git diff --cached --check",
-    "cd mcp/browser-fast && python -m uv run --frozen --offline ruff check --no-cache .",
-    "cd mcp/browser-fast && python -m uv run --frozen --offline pytest -p no:cacheprovider -o addopts=''"
+    "git diff --cached --check"
   ],
-  "prohibitedValidationNotRun": [
-    "live LLM API",
-    "paid API",
-    "X API",
-    "real market API",
-    "browser external mutation",
-    "external publish",
-    "remote destructive operation"
+  "prohibitedDuringFreeze": [
+    "Astra live smoke rerun",
+    "product behavior changes",
+    "tag creation",
+    "push",
+    "release",
+    "publish"
   ]
 }
