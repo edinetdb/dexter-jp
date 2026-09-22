@@ -12,67 +12,118 @@ import { segmentIntoParagraphs, type RawClaimFromModel } from './core/index.js';
 import type { CheckPorts, DisclosureSource } from './index.js';
 import type { CheckPanel } from './panel.js';
 
-/** 証拠に使う節（design §4.2 = 有報の MD&A・リスク・方針。短信の本文は使わない）。 */
-export const EVIDENCE_SECTIONS = ['mda', 'risks', 'policy'] as const;
+/**
+ * 証拠に使う節（design §4.2 = 有報の MD&A・リスク・方針。短信の本文は使わない）。
+ *
+ * **EDINET DB の `text-blocks` は節名を日本語で返す**（`mda` 等のキーではない。2026-09-23 実測）。
+ * 内部の呼び名 → 応答の節名の対応をここに固定する。応答の実キーは 18 節ある。
+ */
+export const EVIDENCE_SECTIONS: ReadonlyArray<{ key: string; sectionName: string }> = [
+  { key: 'mda', sectionName: '経営者による分析' },
+  { key: 'risks', sectionName: '事業等のリスク' },
+  { key: 'policy', sectionName: '事業方針・経営環境' },
+];
 
-/** EDINET DB の text-blocks の応答から、節ごとの本文を拾う。 */
-function sectionTexts(payload: unknown): Record<string, string> {
-  const out: Record<string, string> = {};
-  const data = (payload as { data?: unknown })?.data ?? payload;
-  if (!data || typeof data !== 'object') return out;
-  const record = data as Record<string, unknown>;
-  for (const section of EVIDENCE_SECTIONS) {
-    const value = record[section];
-    if (typeof value === 'string' && value.trim()) out[section] = value;
+/** `text-blocks` の 1 節。 */
+interface TextBlockSection {
+  section: string;
+  text: string;
+}
+
+/**
+ * 応答から対象節の**全文**を拾う。
+ *
+ * ★ `full=true` を付けないと、各節は **2,000 字の要約版**が返る
+ * （`meta.truncated: true`、応答の note が明記。トヨタの「経営者による分析」は
+ * 全文 24,544 字 / 要約 2,007 字、2026-09-23 実測）。
+ * 要約を有報の逐語として引用すると、出典表記と中身が食い違う。必ず全文を取る。
+ */
+export function extractSections(payload: unknown): { key: string; sectionName: string; text: string }[] {
+  const data = (payload as { data?: unknown })?.data;
+  if (!Array.isArray(data)) return [];
+  const bySection = new Map<string, string>();
+  for (const item of data as TextBlockSection[]) {
+    if (item && typeof item.section === 'string' && typeof item.text === 'string') {
+      bySection.set(item.section, item.text);
+    }
+  }
+  const out: { key: string; sectionName: string; text: string }[] = [];
+  for (const { key, sectionName } of EVIDENCE_SECTIONS) {
+    const text = bySection.get(sectionName);
+    if (text && text.trim()) out.push({ key, sectionName, text });
   }
   return out;
 }
 
-function pickString(record: Record<string, unknown>, ...keys: string[]): string | undefined {
-  for (const key of keys) {
-    const v = record[key];
-    if (typeof v === 'string' && v) return v;
-  }
-  return undefined;
+/** 応答が要約版のまま（`full=true` を付け忘れた）かどうか。 */
+export function isTruncated(payload: unknown): boolean {
+  return (payload as { meta?: { truncated?: unknown } })?.meta?.truncated === true;
+}
+
+/** 有報（`event_type=yuhou`）の最新の書類 ID を取り出す。出所メタの `doc_id` に要る。 */
+export function latestYuhouDocId(payload: unknown): string | null {
+  const data = (payload as { data?: unknown })?.data;
+  if (!Array.isArray(data)) return null;
+  const yuhou = (data as { event_type?: string; source_id?: string; event_date?: string }[])
+    .filter(e => e.event_type === 'yuhou' && typeof e.source_id === 'string')
+    .sort((a, b) => String(b.event_date ?? '').localeCompare(String(a.event_date ?? '')));
+  return yuhou[0]?.source_id ?? null;
+}
+
+/** `/companies/{code}` から会社の見出しを取る。 */
+export function companyHeader(payload: unknown): { name?: string; secCode?: string; fiscalYear?: number } {
+  const d = ((payload as { data?: unknown })?.data ?? payload) as Record<string, unknown>;
+  const name = typeof d.name_ja === 'string' ? d.name_ja : typeof d.name === 'string' ? d.name : undefined;
+  const secCode = typeof d.sec_code === 'string' ? d.sec_code : undefined;
+  const fiscalYear = typeof d.latest_fiscal_year === 'number' ? d.latest_fiscal_year : undefined;
+  return {
+    ...(name ? { name } : {}),
+    ...(secCode ? { secCode } : {}),
+    ...(fiscalYear ? { fiscalYear } : {}),
+  };
 }
 
 /**
  * 有報の対象節を取って段落化する。
- * EDINET DB の呼び出しは 1 回（design §4.2「1 回の `/check` で 6 回以内」の内数）。
+ *
+ * EDINET DB の呼び出しは 3 回（会社の見出し / 対象節の全文 / 有報の書類 ID）。
+ * design §4.2 の「1 回の `/check` で 6 回以内」の内数。
  */
 export async function fetchDisclosure(ticker: string): Promise<DisclosureSource> {
   const edinetCode = await resolveEdinetCode(ticker);
-  const { data } = await api.get(`/companies/${edinetCode}/text-blocks`, {}, { cacheable: true });
-  const payload = (data.data ?? data) as Record<string, unknown>;
 
+  const [{ data: companyPayload }, { data: blocks }, { data: events }] = await Promise.all([
+    api.get(`/companies/${edinetCode}`, {}, { cacheable: true }),
+    api.get(`/companies/${edinetCode}/text-blocks`, { full: 'true' }, { cacheable: true }),
+    api.get('/events', { edinet_code: edinetCode, event_type: 'yuhou', limit: 5 }, { cacheable: true }),
+  ]);
+
+  const header = companyHeader({ data: companyPayload });
   const company = {
-    name: pickString(payload, 'filerName', 'companyName', 'name') ?? ticker,
+    name: header.name ?? ticker,
     edinetCode,
-    ...(pickString(payload, 'secCode', 'securitiesCode')
-      ? { secCode: pickString(payload, 'secCode', 'securitiesCode')! }
-      : {}),
+    ...(header.secCode ? { secCode: header.secCode } : {}),
   };
-  const fiscalYearRaw = payload.fiscalYear ?? payload.fiscal_year;
-  const fiscalYear = typeof fiscalYearRaw === 'number' ? fiscalYearRaw : undefined;
-  const docId = pickString(payload, 'docID', 'doc_id', 'docId') ?? '';
+  const fiscalYear = header.fiscalYear;
+  const docId = latestYuhouDocId({ data: events }) ?? '';
 
-  const texts = sectionTexts(data);
-  const paragraphs = Object.entries(texts).flatMap(([section, text]) =>
+  const sections = extractSections({ data: blocks, meta: (blocks as { meta?: unknown })?.meta });
+  const paragraphs = sections.flatMap(({ key, sectionName, text }) =>
     segmentIntoParagraphs(text, {
       docId,
       company: company.name,
       ...(company.edinetCode ? { edinetCode: company.edinetCode } : {}),
       filer: company.name,
       docType: '有価証券報告書',
-      section,
+      section: key,
       ...(fiscalYear ? { fiscalYear } : {}),
-    }),
+    }).map(p => ({ ...p, id: `${key}-${p.id}`, sectionName })),
   );
 
   return {
     company,
     ...(fiscalYear ? { fiscalYear } : {}),
-    sections: Object.keys(texts),
+    sections: sections.map(s => s.key),
     paragraphs,
   };
 }

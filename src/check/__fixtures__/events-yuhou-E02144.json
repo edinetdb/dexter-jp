@@ -1,0 +1,55 @@
+{
+  "data": [
+    {
+      "corrects_event_id": null,
+      "detected_at": "2026-04-28T13:31:54.705654+00:00",
+      "edinet_code": "E02144",
+      "event_category": "legal_filing",
+      "event_date": "2025-06-18",
+      "event_id": "f9f03ae6f35563666e75f383162ffa65d21ac3f63797725221a073d5e06df0a0",
+      "event_timestamp": "2025-06-18T06:30:00+00:00",
+      "event_type": "yuhou",
+      "filer_name": "トヨタ自動車株式会社",
+      "fiscal_year": 2025,
+      "metadata": {
+        "csv_flag": "1",
+        "doc_type_code": "120",
+        "form_code": "030000",
+        "parent_doc_id": null,
+        "pdf_flag": "1",
+        "period_end": "2025-03-31",
+        "period_start": "2024-04-01",
+        "xbrl_flag": "1"
+      },
+      "quarter": null,
+      "sec_code": "7203",
+      "severity": "high",
+      "source": "edinet",
+      "source_id": "S100VWVY",
+      "summary": null,
+      "title": "有価証券報告書－第121期(2024/04/01－2025/03/31)"
+    }
+  ],
+  "meta": {
+    "data_as_of": "2026-09-23",
+    "filters": {
+      "detected_since": null,
+      "edinet_code": "E02144",
+      "event_category": null,
+      "event_type": [
+        "yuhou"
+      ],
+      "sec_code": null,
+      "severity": null,
+      "since": "2025-01-01",
+      "until": "2025-12-31"
+    },
+    "freshness": "fresh",
+    "pagination": {
+      "limit": 5,
+      "next_offset": null,
+      "offset": 0,
+      "total": 1
+    }
+  }
+}

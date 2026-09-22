@@ -16,9 +16,27 @@ export interface DeepLink {
   url: string;
 }
 
-/** 4 桁の証券コードとして扱える形か（東証の内国株 = 4 桁）。 */
-export function isTseFourDigit(code: string | null | undefined): code is string {
-  return typeof code === 'string' && /^[0-9]{4}$/.test(code);
+/**
+ * 東証の 4 桁コードに正規化する。
+ *
+ * EDINET DB の `sec_code` は **5 桁**で返る（トヨタ = `72030`。EDINET / 金商法系の
+ * 書式で、末尾に 0 を足した形）。4 桁だけを受ける実装にしていると、
+ * **実データでは TradingView のリンクが 1 本も出ない**（実測 2026-09-23）。
+ *
+ * 5 桁で末尾が `0` のときだけ落とす。`7203A` のような英字付き（2024 年以降の新形式）は
+ * 4 桁に落とさず、リンクを出さない側に倒す（誤ったチャートへ飛ばさないため）。
+ */
+export function toTseFourDigit(code: string | null | undefined): string | null {
+  if (typeof code !== 'string') return null;
+  const trimmed = code.trim();
+  if (/^[0-9]{4}$/.test(trimmed)) return trimmed;
+  if (/^[0-9]{4}0$/.test(trimmed)) return trimmed.slice(0, 4);
+  return null;
+}
+
+/** 4 桁の証券コードとして扱える形か（5 桁の EDINET 形式も含む）。 */
+export function isTseFourDigit(code: string | null | undefined): boolean {
+  return toTseFourDigit(code) !== null;
 }
 
 /**
@@ -33,10 +51,11 @@ export function deepLinksFor(params: {
   edinetCode?: string | null;
 }): DeepLink[] {
   const links: DeepLink[] = [];
-  if (isTseFourDigit(params.secCode)) {
+  const four = toTseFourDigit(params.secCode);
+  if (four) {
     links.push({
       label: 'チャート（TradingView）',
-      url: `https://jp.tradingview.com/symbols/TSE-${params.secCode}/`,
+      url: `https://jp.tradingview.com/symbols/TSE-${four}/`,
     });
   }
   if (params.edinetCode) {
