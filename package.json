@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "postinstall": "playwright install chromium"
+    "postinstall": "bun scripts/postinstall.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.195",
