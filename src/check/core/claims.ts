@@ -60,7 +60,7 @@ export const DEFAULT_CONFIRMATION_THRESHOLD = 0.8;
  */
 export function resolveClaim(
   claim: Pick<Claim, 'negated'>,
-  judgments: ParagraphJudgment[],
+  judgments: readonly ParagraphJudgment[],
   threshold = DEFAULT_CONFIRMATION_THRESHOLD
 ): ClaimResolution {
   const supportingParagraphIds: string[] = [];
