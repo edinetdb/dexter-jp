@@ -1,0 +1,181 @@
+/**
+ * 送信先の台帳が**実態と合っている**ことを測る（go-decision G-D2、review r2 H1 / M8）。
+ *
+ * README の文言を grep で固定するだけでは「その文がある」しか測れない。
+ * ここは**許可リスト方式** = ソースに現れる外部ホストのうち、台帳にも
+ * 「送信先ではない」一覧にも無いものがあれば赤。新しい `fetch` 先を足した瞬間に落ちる。
+ */
+import { describe, expect, test } from 'bun:test';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import {
+  EGRESS_DESTINATIONS,
+  NON_EGRESS_HOSTS,
+  activeDestinations,
+  registeredHosts,
+  renderEgressScreen,
+  renderEgressTable,
+} from './egress.js';
+import { PROVIDERS } from '../providers.js';
+import { lintOutput } from '../guard/output-linter.js';
+
+const SRC = join(import.meta.dir, '..');
+
+function sourceFiles(dir: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      if (entry === '__fixtures__' || entry === 'node_modules') continue;
+      sourceFiles(full, out);
+    } else if (/\.tsx?$/.test(entry) && !entry.endsWith('.test.ts') && !entry.endsWith('.test.tsx')) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+/** ソースに literal で現れる https ホストを、ファイルごとに集める。 */
+function literalHosts(): Map<string, string[]> {
+  const found = new Map<string, string[]>();
+  for (const file of sourceFiles(SRC)) {
+    const text = readFileSync(file, 'utf-8');
+    for (const m of text.matchAll(/https:\/\/([a-zA-Z0-9._-]+)/g)) {
+      const host = m[1];
+      // 説明文の中の `https://...` のようなプレースホルダはホストではない
+      if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(host)) continue;
+      const where = found.get(host) ?? [];
+      where.push(file.slice(SRC.length + 1));
+      found.set(host, where);
+    }
+  }
+  return found;
+}
+
+describe('送信先の台帳 — 許可リスト方式', () => {
+  test('★ ソースに現れる外部ホストは全部、台帳か「送信先ではない」一覧にある', () => {
+    const registered = registeredHosts();
+    const unregistered: Record<string, string[]> = {};
+    for (const [host, files] of literalHosts()) {
+      // 台帳のホストを接尾辞として持つもの（api.edinetdb.jp 等）も登録済みとみなす
+      const known = registered.has(host) || [...registered].some(r => host.endsWith(`.${r}`));
+      if (!known) unregistered[host] = files;
+    }
+    expect(unregistered).toEqual({});
+  });
+
+  test('台帳の主要ホストが実際にソースに現れる（台帳が絵空事でない）', () => {
+    const hosts = literalHosts();
+    for (const host of ['edinetdb.jp', 'api.typesafe.ai', 'api.jquants.com']) {
+      expect({ host, present: hosts.has(host) }).toEqual({ host, present: true });
+    }
+  });
+
+  test('「送信先ではない」一覧に、通信する先が紛れていない', () => {
+    // deep link の TradingView は URL を組み立てるだけ。**同じ行で** fetch されていないことを見る。
+    // ファイル単位の同居で判定すると、tweet の表示 URL や User-Agent の中の github.com を
+    // 「通信している」と誤って読む（= 赤の理由が守りたい性質と対応しない）。
+    const offenders: string[] = [];
+    for (const file of sourceFiles(SRC)) {
+      const lines = readFileSync(file, 'utf-8').split('\n');
+      lines.forEach((line, i) => {
+        for (const { host } of NON_EGRESS_HOSTS) {
+          if (!line.includes(`https://${host}`)) continue;
+          if (/\bfetch\s*\(|\baxios\b|\brequest\s*\(/.test(line)) {
+            offenders.push(`${file.slice(SRC.length + 1)}:${i + 1} で ${host} を取得しようとしている`);
+          }
+        }
+      });
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test('その同居チェックに判別力がある（fetch している行を入れれば赤になる）', () => {
+    const line = `  await fetch('https://jp.tradingview.com/api/x');`;
+    const wouldFlag = NON_EGRESS_HOSTS.some(
+      ({ host }) => line.includes(`https://${host}`) && /\bfetch\s*\(/.test(line),
+    );
+    expect(wouldFlag).toBe(true);
+  });
+
+  test('LLM プロバイダの一覧は providers.ts が正本で、台帳はそれを 1 行で指す', () => {
+    // プロバイダごとにホストを書き写すと二重管理になるので、台帳は hosts を空にして
+    // providers.ts を正本にしている。ここでは「正本が空になっていない」ことだけ固定する。
+    expect(PROVIDERS.length).toBeGreaterThan(3);
+    expect(EGRESS_DESTINATIONS.find(d => d.id === 'llm-provider')?.hosts).toEqual([]);
+  });
+});
+
+describe('起動画面（G-D2）— プロバイダの切り替えに追随する', () => {
+  test('鍵が無ければ「外には出ません」', () => {
+    const lines = renderEgressScreen({} as NodeJS.ProcessEnv);
+    // llm-provider は常に有効扱いなので、その 1 件だけが出る
+    expect(lines.join('\n')).toContain('選択中の LLM プロバイダ');
+    expect(lines.join('\n')).not.toContain('TypeSafe');
+  });
+
+  test('TYPESAFE_API_KEY を足すと一覧に TypeSafe が増える', () => {
+    const before = renderEgressScreen({} as NodeJS.ProcessEnv).join('\n');
+    const after = renderEgressScreen({ TYPESAFE_API_KEY: 'x' } as NodeJS.ProcessEnv).join('\n');
+    expect(before).not.toContain('TypeSafe');
+    expect(after).toContain('TypeSafe（Jev、米国）');
+  });
+
+  test('★ OPENAI_API_KEY だけで、会話履歴の埋め込みが一覧に出る（選択中の LLM と独立）', () => {
+    const screen = renderEgressScreen({ OPENAI_API_KEY: 'x' } as NodeJS.ProcessEnv).join('\n');
+    expect(screen).toContain('会話履歴の埋め込み');
+    expect(screen).toContain('選択中の LLM とは独立に決まります');
+  });
+
+  test('LANGSMITH_TRACING=1 のときだけ LangSmith が出る', () => {
+    expect(renderEgressScreen({} as NodeJS.ProcessEnv).join('\n')).not.toContain('LangSmith');
+    expect(
+      renderEgressScreen({ LANGSMITH_TRACING: '1' } as NodeJS.ProcessEnv).join('\n'),
+    ).toContain('LangSmith');
+  });
+
+  test('既定で有効な送信先が 2 つ以上ある（「鍵を入れるまで何も出ない」と書けない）', () => {
+    const onByDefault = EGRESS_DESTINATIONS.filter(d => d.onByDefault);
+    expect(onByDefault.map(d => d.id).sort()).toEqual([
+      'edinetdb',
+      'llm-provider',
+      'memory-embeddings',
+    ]);
+  });
+
+  test('各送信先が「何が送られるか」を空でなく持っている', () => {
+    for (const d of EGRESS_DESTINATIONS) {
+      expect({ id: d.id, ok: d.whatIsSent.length > 10 }).toEqual({ id: d.id, ok: true });
+      expect({ id: d.id, ok: d.enabledWhen.length > 0 }).toEqual({ id: d.id, ok: true });
+    }
+  });
+});
+
+describe('README の表', () => {
+  test('台帳の全件が行になる', () => {
+    const table = renderEgressTable();
+    for (const d of EGRESS_DESTINATIONS) {
+      expect({ id: d.id, inTable: table.includes(d.label) }).toEqual({ id: d.id, inTable: true });
+    }
+  });
+
+  test('当社生成の文字列なので出力 linter を通る', () => {
+    expect(lintOutput(renderEgressTable(), '$.readmeTable').findings).toEqual([]);
+    expect(lintOutput(renderEgressScreen({} as NodeJS.ProcessEnv), '$.screen').findings).toEqual([]);
+  });
+});
+
+describe('activeDestinations — 台帳の全 id に判定がある', () => {
+  test('どの id も switch の default に落ちていない（足して書き忘れると常に非表示になる）', () => {
+    const allEnv = {
+      EDINETDB_API_KEY: 'x', TYPESAFE_API_KEY: 'x', OPENAI_API_KEY: 'x',
+      LANGSMITH_TRACING: '1', JQUANTS_REFRESH_TOKEN: 'x', TAVILY_API_KEY: 'x',
+      X_API_KEY: 'x', OLLAMA_BASE_URL: 'x', OPENROUTER_API_KEY: 'x',
+      MOONSHOT_API_KEY: 'x', DEEPSEEK_API_KEY: 'x',
+    } as NodeJS.ProcessEnv;
+    const active = activeDestinations(allEnv).map(d => d.id);
+    const expected = EGRESS_DESTINATIONS
+      .filter(d => d.id !== 'messaging-gateways') // ゲートウェイ起動時にだけ出す
+      .map(d => d.id);
+    expect(active.sort()).toEqual(expected.sort());
+  });
+});
