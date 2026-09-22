@@ -223,3 +223,53 @@ export function renderScopeLine(scope: CheckPanel['scope']): string {
   const tail = scope.unchecked > 0 ? `（未検査 ${scope.unchecked}）` : '';
   return `検査した範囲: 有価証券報告書 ${year}${sections}、${scope.total} 段落中 ${scope.examined}${tail}`;
 }
+
+/** パネルを端末に出す行に落とす。**当社生成の行だけ**を組み立て、逐語はそのまま並べる。 */
+export function renderCheckPanel(panel: CheckPanel): string[] {
+  const lines: string[] = [];
+  lines.push(`仮説: ${panel.hypothesis.text}`);
+  lines.push(`会社: ${panel.company.name}${panel.company.secCode ? `（${panel.company.secCode}）` : ''}`);
+  lines.push('');
+
+  if (panel.undetermined) {
+    lines.push(panel.undeterminedText ?? UNDETERMINED_TEXT);
+    lines.push('');
+  }
+
+  for (const claim of panel.claims) {
+    lines.push(`主張: ${claim.text}`);
+    lines.push(`  もとの言葉: ${claim.quote.text}`);
+    switch (claim.status) {
+      case 'supports': lines.push('  → 裏付ける'); break;
+      case 'contradicts': lines.push('  → 食い違う'); break;
+      case 'split': lines.push('  → 判定が割れている（裏付けと食い違いの両方が確定）'); break;
+      case 'unresolved': lines.push('  → 確かめられなかった'); break;
+      case 'not_judged': lines.push(`  → ${claim.notJudgedReason ?? '未判定'}`); break;
+    }
+    if (claim.numeric) {
+      const label = { match: '一致', mismatch: '不一致', unverifiable: '検算不能' }[claim.numeric.result];
+      lines.push(`  数値の検算: ${label}${claim.numeric.reason ? `（${claim.numeric.reason}）` : ''}`);
+    }
+    for (const [heading, entries] of [['裏付け', claim.supporting], ['食い違い', claim.contradicting]] as const) {
+      for (const e of entries) {
+        const estimate = e.estimate === undefined ? '' : `（推定 ${e.estimate.toFixed(2)}）`;
+        lines.push(`  [${heading}]${estimate} ${e.docType ?? ''} ${e.section} ${e.docId}`);
+        lines.push(`    ${e.text.text}`);
+      }
+    }
+    lines.push('');
+  }
+
+  lines.push(renderScopeLine(panel.scope));
+  lines.push(`バーの数字は「${panel.estimateCaption}」です。`);
+  if (panel.summary) lines.push('', panel.summary);
+  if (panel.summaryDropped) lines.push('', '（要約は出せる形になりませんでした。上の段落をそのままご覧ください）');
+  if (panel.footer) {
+    lines.push('', `判定リクエスト ${panel.footer.requests} 回 / ${(panel.footer.elapsedMs / 1000).toFixed(1)} 秒`);
+  }
+  if (panel.links.length > 0) {
+    lines.push('');
+    for (const link of panel.links) lines.push(`  ${link.label}: ${link.url}`);
+  }
+  return lines;
+}

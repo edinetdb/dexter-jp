@@ -2,7 +2,7 @@
  * `/check` のパネル（design §4.2・§6、go-decision G-A2 / G-A3 / G-A5 / G-A6）。
  */
 import { describe, expect, test } from 'bun:test';
-import { buildCheckPanel, renderScopeLine, ESTIMATE_CAPTION, UNDETERMINED_TEXT } from './panel.js';
+import { buildCheckPanel, renderCheckPanel, renderScopeLine, ESTIMATE_CAPTION, UNDETERMINED_TEXT } from './panel.js';
 import { lintOutput } from '../guard/output-linter.js';
 import type { Claim, Paragraph, ParagraphJudgment } from './core/index.js';
 
@@ -280,5 +280,47 @@ describe('仕分け', () => {
     });
     expect(p.claims[0].status).toBe('not_judged');
     expect(p.claims[0].notJudgedReason).toContain('それ以外は寄与していない');
+  });
+});
+
+describe('端末への表示', () => {
+  const panel = buildCheckPanel({
+    hypothesis: '中国事業は回復していると会社は説明している',
+    company: COMPANY,
+    claims: [claim('c1')],
+    paragraphs: [P_SUPPORT, P_RISKY_WORDS],
+    judgments: new Map([['c1', judged([['p1', 'supports', 0.94], ['p3', 'contradicts', 0.88]])]]),
+    scope: { ...BASE_SCOPE, unchecked: 3 },
+    footer: { requests: 132, elapsedMs: 8400 },
+  });
+  const text = renderCheckPanel(panel).join('\n');
+
+  test('原文・主張・出典・検査範囲・推定の説明・deep link が全部出る', () => {
+    expect(text).toContain('仮説: 中国事業は回復していると会社は説明している');
+    expect(text).toContain('もとの言葉: 中国事業は回復している');
+    expect(text).toContain('S100X6X6');
+    expect(text).toContain('132 段落中 129（未検査 3）');
+    expect(text).toContain('この段落と主張の関係についてのモデルの推定');
+    expect(text).toContain('https://jp.tradingview.com/symbols/TSE-9983/');
+  });
+
+  test('★ 逐語の中の「割高」は表示に出る（証拠を捨てない）', () => {
+    expect(text).toContain('割高に評価された場合');
+  });
+
+  test('★ それでも当社生成の行だけを見れば linter は緑', () => {
+    // 逐語の行（段落の本文）を除いた行 = 当社が組み立てた行だけを検査する
+    const ours = renderCheckPanel(panel).filter(
+      l => !panel.claims.some(c => [...c.supporting, ...c.contradicting].some(e => l.includes(e.text.text))),
+    );
+    expect(lintOutput(ours, '$.rendered').findings).toEqual([]);
+  });
+
+  test('判定不能のときはその行が先に出る', () => {
+    const p = buildCheckPanel({
+      hypothesis: 'x', company: COMPANY, claims: [claim('c1')], paragraphs: [],
+      judgments: new Map([['c1', []]]), scope: { ...BASE_SCOPE, total: 0 },
+    });
+    expect(renderCheckPanel(p)[3]).toBe(UNDETERMINED_TEXT);
   });
 });

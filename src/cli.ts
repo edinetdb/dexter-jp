@@ -37,7 +37,9 @@ import {
   createSearchProviderSelector,
 } from './components/index.js';
 import { editorTheme, theme } from './theme.js';
-import { matchCommands, type SlashCommand } from './commands/index.js';
+import { matchCommands, parseSlashCommand, parseCheckArgs, parseWatchArgs, type SlashCommand } from './commands/index.js';
+import { runCheck, renderCheckPanel } from './check/index.js';
+import { productionPorts } from './check/ports.js';
 import { initSpinner } from './utils/spinner.js';
 
 function truncateForHistory(text: string): string {
@@ -385,8 +387,45 @@ export async function runCli() {
   /clear       Clear conversation
   ↑ / ↓        Navigate input history`;
 
-  const handleSlashCommand = async (command: string) => {
+  const say = (text: string) => {
+    chatLog.addChild(new Spacer(1));
+    chatLog.addChild(new Text(text, 0, 0));
+    tui.requestRender();
+  };
+
+  /**
+   * `rest` は**原文のまま**（trim だけ）受け取る。以前は
+   * `query.slice(1).trim().toLowerCase()` を丸ごと渡していたので、
+   * 引数つきコマンドはどの case にも当たらず**黙って何も起きず**、
+   * さらに仮説の本文まで小文字化されていた（review r2 L1）。
+   */
+  const handleSlashCommand = async (command: string, rest = '') => {
     switch (command) {
+      case 'check': {
+        const { ticker, hypothesis } = parseCheckArgs(rest);
+        const outcome = await runCheck(ticker, hypothesis, productionPorts(), { interactive: true });
+        if (outcome.kind === 'usage') {
+          say(theme.muted(outcome.message));
+        } else if (outcome.kind === 'judge_unavailable') {
+          say(theme.muted(outcome.message));
+        } else if (outcome.kind === 'refused') {
+          const lines = [outcome.verdict.message];
+          if (outcome.verdict.suggestions.length > 0) {
+            lines.push('', '開示で確かめられる形だと、たとえば:');
+            for (const s of outcome.verdict.suggestions) lines.push(`  ・${s}`);
+          }
+          say(lines.join('\n'));
+        } else {
+          say(renderCheckPanel(outcome.panel).join('\n'));
+          say(theme.muted(`記録: ${outcome.recordPath}`));
+        }
+        break;
+      }
+      case 'watch': {
+        const { all } = parseWatchArgs(rest);
+        say(theme.muted(`/watch${all ? ' all' : ''} は次のリリースで配線します。`));
+        break;
+      }
       case 'model':
         modelSelection.startSelection();
         break;
@@ -451,10 +490,10 @@ export async function runCli() {
 
     // Handle all slash commands
     if (query.startsWith('/')) {
-      const command = query.slice(1).trim().toLowerCase();
+      const parsed = parseSlashCommand(query);
       slashActive = false;
       slashSuggestions = [];
-      await handleSlashCommand(command);
+      if (parsed) await handleSlashCommand(parsed.name, parsed.rest);
       return;
     }
 
