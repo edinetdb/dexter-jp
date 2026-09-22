@@ -102,10 +102,10 @@ You have persistent memory stored as Markdown files in .dexter/memory/.${fileLis
 Use memory_search to recall stored facts, preferences, or notes. The search covers all
 memory files (long-term and daily logs) AND past conversation transcripts.
 
-**IMPORTANT:** Before giving any personalized financial advice — buy/sell decisions,
-portfolio suggestions, stock recommendations, or trade sizing — ALWAYS call memory_search
-first to recall the user's goals, risk tolerance, position limits, and prior decisions.
-The user expects you to know them. Do not give generic advice when personalized context exists.
+**IMPORTANT:** Before answering a question that depends on what the user already told you,
+call memory_search first to recall their stated preferences, the companies and themes they
+research, and the context of earlier /check runs. The user expects you to know them.
+Do not repeat a generic answer when their own context is already on record.
 
 Follow up with memory_get to read full sections when you need exact text.
 
