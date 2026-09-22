@@ -126,7 +126,16 @@ const SECRET_PATTERNS: RegExp[] = [
   /(^|\/)\.netrc$/i,
   /(^|\/)credentials(\.[\w-]+)?($|\/)/i, // credentials, credentials.yml, credentials/
   /\.dexter\/credentials/i,
+  // `/check` の記録。利用者の仮説（= その人の投資スタンス）が平文で残るので、
+  // エージェントから読ませない。これを開けると、入口ガードも出力 linter も通さずに
+  // 「さっきの判定を踏まえて」の自由質問で判定結果が使われる（review r2 M3）。
+  /\.dexter\/checks/i,
 ];
+
+/** 秘密パス判定を 1 か所から使えるように公開する（bash 以外のツールにも掛けるため）。 */
+export function isSecretPath(value: string): boolean {
+  return SECRET_PATTERNS.some((re) => re.test(value));
+}
 
 /** Expand a word into the strings to test: the whole word plus any `--opt=VALUE` value. */
 function secretCandidates(word: string): string[] {

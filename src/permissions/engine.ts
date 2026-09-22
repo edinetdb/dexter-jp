@@ -18,7 +18,7 @@
 import type { Classification, PermissionDecision, PermissionRequest } from './types.js';
 import { parseCommand, type ParsedCommand } from './command-parser.js';
 import { isReadOnly } from './read-only.js';
-import { builtinDeny, loadRuleSet, matchRuleSet, proposeRule, serializeRule, type RuleSet } from './rules.js';
+import { builtinDeny, isSecretPath, loadRuleSet, matchRuleSet, proposeRule, serializeRule, type RuleSet } from './rules.js';
 
 /** Tools that have always required explicit user approval before running. */
 const LEGACY_APPROVAL_TOOLS = new Set<string>(['write_file', 'edit_file']);
@@ -102,12 +102,48 @@ export function evaluateBash(command: string, rules: RuleSet = loadRuleSet()): P
 }
 
 /**
+ * Argument names that carry a filesystem path. Any tool that passes one of these
+ * gets the secret-path floor, so a tool added later is covered without a new entry
+ * in a per-tool allowlist.
+ */
+const PATH_ARG_KEYS = new Set(['path', 'file_path', 'filePath', 'filepath', 'dir', 'directory']);
+
+/**
+ * The secret-path floor for tools other than bash.
+ *
+ * Before this existed the floor was **bash only**: `evaluatePermission` sent bash to
+ * `evaluateBash` (→ `builtinDeny`), asked for write_file/edit_file, and allowed
+ * everything else outright — so `read_file` reached `.env` and `.dexter/credentials/`
+ * as long as they sat under the sandbox root, and subagents inherited that through
+ * their read-only tool list. Reviewed and fixed 2026-09-22 (review r2 H2 / M3).
+ *
+ * @returns a deny decision, or null when no path argument is protected
+ */
+function evaluateProtectedPath(req: PermissionRequest): PermissionDecision | null {
+  for (const [key, value] of Object.entries(req.args)) {
+    if (!PATH_ARG_KEYS.has(key)) continue;
+    if (typeof value !== 'string') continue;
+    if (isSecretPath(value)) {
+      return {
+        mode: 'deny',
+        reason: 'references a sensitive/secret path',
+      };
+    }
+  }
+  return null;
+}
+
+/**
  * Evaluate whether a tool call may proceed.
  */
 export function evaluatePermission(req: PermissionRequest): PermissionDecision {
   if (req.tool === 'bash') {
     const command = typeof req.args.command === 'string' ? req.args.command : '';
     return evaluateBash(command);
+  }
+  const protectedPath = evaluateProtectedPath(req);
+  if (protectedPath) {
+    return protectedPath;
   }
   if (LEGACY_APPROVAL_TOOLS.has(req.tool)) {
     return { mode: 'ask', reason: 'This tool modifies files and needs your approval.' };
