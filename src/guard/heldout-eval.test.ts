@@ -23,6 +23,7 @@ import { describe, expect, test } from 'bun:test';
 import { guardInput, type AdviceVote } from './input-guard.js';
 import h3 from './__fixtures__/heldout3-inputs.json';
 import replay from './__fixtures__/heldout3-noul-replay.json';
+import llmReplay from './__fixtures__/heldout3-llm-vote-replay.json';
 
 const NOUL: Record<string, number> = replay.answers;
 
@@ -83,5 +84,27 @@ describe('固定評価集合（held-out #3、調整に一度も使っていな�
     await expect(
       guardInput('録画に無い入力', { interactive: true, vote: replayVote }),
     ).rejects.toThrow('Noul の録画がありません');
+  });
+});
+
+describe('LLM 代行の票（README・案内文の 8/30 の裏付け、review T9 M4）', () => {
+  // 以前は 8/30 を案内文の文字列として固定していただけで、repo 内に再現できる録画が無かった
+  const advice = h3.advice_seeking.map(x => x.text);
+  const legit = h3.legitimate.map(x => x.text);
+  const LLM: Record<string, string> = llmReplay.answers;
+
+  const llmVote: AdviceVote = async (input) => {
+    if (!(input in LLM)) throw new Error(`LLM 代行の録画がありません: ${input}`);
+    const isAdvice = LLM[input] === 'true';
+    return { isAdvice, probability: isAdvice ? 1 : 0 };
+  };
+
+  test('録画は held-out #3 の 50 本を全部覆う（`??` の空振りで数が作られない）', () => {
+    for (const t of [...advice, ...legit]) expect(t in LLM).toBe(true);
+  });
+
+  test('★ 決定論 OR LLM 代行 = 助言 30 本のうち 8 本が素通り・誤検知 0/20（README の表の 4 行目）', async () => {
+    expect(30 - (await countRefusals(advice, llmVote))).toBe(8);
+    expect(await countRefusals(legit, llmVote)).toBe(0);
   });
 });

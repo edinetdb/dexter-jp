@@ -30,7 +30,7 @@ Bring your own hypothesis about a company. Dexter JP puts it against the paragra
 /check 9983 中国事業は回復していると会社は説明している
 ```
 
-Your hypothesis is split into claims (shown next to your original wording), the relevant sections of the annual report are cut into paragraphs, and each paragraph is checked against each claim. Numeric claims are verified in code against financial data and come back as match, mismatch, or not verifiable. If the paragraphs cannot settle a claim, you get "判定不能" (cannot determine) — the model is not asked to fill the gap.
+Your hypothesis is split into claims (shown next to your original wording), the relevant sections of the annual report are cut into paragraphs, and each paragraph is checked against each claim. If the paragraphs cannot settle a claim, you get "判定不能" (cannot determine) — the model is not asked to fill the gap.
 
 The panel shows your original wording, the claims it was split into, the company's own paragraphs behind each verdict (with document ID, filer, document type and section), and how much of the report was examined.
 
@@ -78,6 +78,8 @@ A local LLM standing in for the judge lets 8 of 30 through. We would rather stop
 
 ### Where your data goes
 
+This table is a translation. The canonical list is the Japanese table in `README.md`, which a test keeps identical to the ledger in `src/config/egress.ts`.
+
 | Destination | What is sent | When | Default |
 |---|---|---|---|
 | EDINET DB | Ticker codes and API requests (annual report text, financials, disclosure events) | `EDINETDB_API_KEY` | on |
@@ -100,7 +102,7 @@ Conversation-history embedding is on by default, and **its destination is chosen
 
 ### Bundled data
 
-The paragraphs replayed by `bun run demo` are annual report text. Each carries a document ID, filer, document type, section, retrieval date, the required attribution, and the party that edited it.
+The paragraphs replayed by `bun run demo` are annual report text, identical to the bundled data in `src/data/materials/` (a test checks this). Each entry there carries a document ID, filer, document type, section, retrieval date, the required attribution, and the party that edited it.
 
 > 出典：EDINET閲覧（提出）サイト（https://disclosure2.edinet-fsa.go.jp/）、PDL1.0（https://www.digital.go.jp/resources/open_data/public_data_license_v1.0）
 
@@ -115,6 +117,7 @@ If you use the output of this tool to provide information to third parties (a pu
 - TradingView connection. Reading your watchlist is deferred to a later release
 - `/check` under Agent SDK mode. We have not verified that decomposition and summarisation run through a single SDK `query()`, so it is unsupported here
 - `/watch` as a command. The data layer is implemented; wiring it up as a command comes next
+- Checking numeric claims against financial data. The parts exist but are not wired into `/check` yet, so `/check` in this release only checks text claims against paragraphs
 
 ## Not Just Another Financial Tool
 

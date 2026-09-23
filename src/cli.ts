@@ -39,6 +39,7 @@ import {
 import { editorTheme, theme } from './theme.js';
 import { matchCommands, parseSlashCommand, parseWatchArgs, type SlashCommand } from './commands/index.js';
 import { runCheckCommand } from './check/command.js';
+import { renderEgressScreen } from './config/egress.js';
 import { productionPorts } from './check/ports.js';
 import { initSpinner } from './utils/spinner.js';
 
@@ -333,6 +334,10 @@ export async function runCli() {
     0, 0,
   );
 
+  // 起動時に、このセッションで実際に外へ出る先を 1 画面で出す（go-decision G-D2 / review T9 H4）。
+  // 以前は renderEgressScreen が誰からも呼ばれず、README「起動時に一覧が出ます」と食い違っていた。
+  const egressText = new Text(theme.muted(renderEgressScreen(process.env).join('\n')), 0, 0);
+
   const errorText = new Text('', 0, 0);
   const workingIndicator = new WorkingIndicatorComponent(tui);
   workingIndicator.setTurnStatsProvider(() => agentRunner.turnStats);
@@ -343,6 +348,7 @@ export async function runCli() {
 
   // Build the component tree ONCE — stable structure, no root.clear()
   root.addChild(intro);
+  root.addChild(egressText);
   if (warnings.length > 0) {
     root.addChild(warningText);
   }

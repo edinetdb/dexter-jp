@@ -105,6 +105,16 @@ describe('送信先の台帳 — 許可リスト方式', () => {
   });
 });
 
+describe('起動画面（G-D2）— 実際に起動経路から出る（review T9 H4）', () => {
+  test('★ cli.ts が起動時に renderEgressScreen(process.env) を画面の木に載せる', async () => {
+    const src = await Bun.file(new URL('../cli.ts', import.meta.url)).text();
+    // コメント内の言及では通らないよう、呼び出しと木への追加の 2 つを実コードの形で見る
+    const code = src.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+    expect(code).toMatch(/new Text\([^\n]*renderEgressScreen\(process\.env\)/);
+    expect(code).toMatch(/root\.addChild\(egressText\)/);
+  });
+});
+
 describe('起動画面（G-D2）— プロバイダの切り替えに追随する', () => {
   test('鍵が無ければ「外には出ません」', () => {
     const lines = renderEgressScreen({} as NodeJS.ProcessEnv);
@@ -156,6 +166,16 @@ describe('README の表', () => {
     for (const d of EGRESS_DESTINATIONS) {
       expect({ id: d.id, inTable: table.includes(d.label) }).toEqual({ id: d.id, inTable: true });
     }
+  });
+
+  test('★ README.md の表は台帳から生成した表と一字一句同じ（review T9 M3。台帳を直したら README も直す）', async () => {
+    const readme = await Bun.file(new URL('../../README.md', import.meta.url)).text();
+    const lines = readme.split('\n');
+    const start = lines.findIndex(l => l.startsWith('| 送信先 | 何が送られるか |'));
+    expect(start).toBeGreaterThanOrEqual(0);
+    let end = start;
+    while (end < lines.length && lines[end].startsWith('|')) end++;
+    expect(lines.slice(start, end).join('\n')).toBe(renderEgressTable());
   });
 
   test('当社生成の文字列なので出力 linter を通る', () => {
