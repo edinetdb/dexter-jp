@@ -119,6 +119,10 @@ If you use the output of this tool to provide information to third parties (a pu
 - `/watch` as a command. The data layer is implemented; wiring it up as a command comes next
 - Checking numeric claims against financial data. The parts exist but are not wired into `/check` yet, so `/check` in this release only checks text claims against paragraphs
 
+### When verdicts split
+
+Run against the full annual report, the judge can read a paragraph about a segment's or a region's profit increase as contradicting a consolidated profit decline, so claims can come back split. On Toyota's 122nd-period annual report (103 paragraphs across MD&A, business risks and management policy), the hypothesis "the company explains that the fall in operating profit was mainly due to exchange rates" came back split on all three claims (the decline: 12 supporting / 3 contradicting). The `bun run demo` recording uses 10 paragraphs selected from the same report.
+
 ## Not Just Another Financial Tool
 
 Most financial tools stop at "here's a screener" or "here's the data." Dexter JP goes further.
