@@ -60,6 +60,20 @@ export function isTruncated(payload: unknown): boolean {
   return (payload as { meta?: { truncated?: unknown } })?.meta?.truncated === true;
 }
 
+export const TRUNCATED_DISCLOSURE_MESSAGE =
+  'EDINET DB から有価証券報告書の本文が全文で返らなかったため（要約版）、段落を逐語として使えません';
+
+/**
+ * text-blocks の応答から対象節を取り出す。**要約版なら止める**（review T9 M5）。
+ *
+ * 要約版の文を有報の逐語として引用すると、出典表記と中身が食い違う。いまは `full=true` を
+ * 送っているが、プランやレート制限で API 側が要約に落とした時に黙って通さない。
+ */
+export function sectionsFromTextBlocks(body: unknown): { key: string; sectionName: string; text: string }[] {
+  if (isTruncated(body)) throw new Error(TRUNCATED_DISCLOSURE_MESSAGE);
+  return extractSections(body);
+}
+
 /**
  * 直近 1 年ぶんの日付窓（`since` / `until`）。
  *
@@ -103,19 +117,42 @@ export function companyHeader(payload: unknown): { name?: string; secCode?: stri
  * design §4.2 の「1 回の `/check` で 6 回以内」の内数。
  */
 export async function fetchDisclosure(ticker: string): Promise<DisclosureSource> {
-  const edinetCode = await resolveEdinetCode(ticker);
+  return fetchDisclosureWith(ticker, { get: api.get, resolve: resolveEdinetCode });
+}
 
-  const [{ data: companyPayload }, { data: blocks }, { data: events }] = await Promise.all([
-    api.get(`/companies/${edinetCode}`, {}, { cacheable: true }),
-    api.get(`/companies/${edinetCode}/text-blocks`, { full: 'true' }, { cacheable: true }),
-    api.get(
+/** `api.get` の形（応答の JSON 本体を `data` に入れて返す）。テストが同じ境界で差し替える。 */
+export type ApiGet = (
+  endpoint: string,
+  params: Record<string, string | number | string[] | undefined>,
+  options?: { cacheable?: boolean; ttlMs?: number },
+) => Promise<{ data: Record<string, unknown>; url: string }>;
+
+/**
+ * `fetchDisclosure` の中身。
+ *
+ * ★ `api.get` の `data` は**応答の JSON 本体そのもの**（`{ data: [...], meta: {...} }`）。
+ * 以前はそれをもう一度 `{ data: 本体 }` に包んでから各関数に渡していたので、
+ * `extractSections` は配列を見つけられず**節 0・段落 0**、`companyHeader` は社名も期も取れず、
+ * 本番の `/check` は**常に判定不能**だった（review T9 後の自己点検で発見。録画の応答を
+ * `api.get` と同じ形で流すテストで固定 = ports.test.ts）。本体をそのまま渡す。
+ */
+export async function fetchDisclosureWith(
+  ticker: string,
+  deps: { get: ApiGet; resolve: (ticker: string) => Promise<string> },
+): Promise<DisclosureSource> {
+  const edinetCode = await deps.resolve(ticker);
+
+  const [{ data: companyBody }, { data: blocksBody }, { data: eventsBody }] = await Promise.all([
+    deps.get(`/companies/${edinetCode}`, {}, { cacheable: true }),
+    deps.get(`/companies/${edinetCode}/text-blocks`, { full: 'true' }, { cacheable: true }),
+    deps.get(
       '/events',
       { edinet_code: edinetCode, event_type: 'yuhou', limit: 5, ...yuhouWindow() },
       { cacheable: true },
     ),
   ]);
 
-  const header = companyHeader({ data: companyPayload });
+  const header = companyHeader(companyBody);
   const company = {
     name: header.name ?? ticker,
     edinetCode,
@@ -125,9 +162,9 @@ export async function fetchDisclosure(ticker: string): Promise<DisclosureSource>
   // 直近 1 年に有報の提出が無い会社では取れない。**その場合は空のままにする**
   // （古い期の書類 ID を当てると、本文（最新期）と出典が食い違う。誤った出典を出すより
   //   出典なしで出す方を選ぶ。同梱データは出所メタが欠けると build が落ちる = G-C2）。
-  const docId = latestYuhouDocId({ data: events }) ?? '';
+  const docId = latestYuhouDocId(eventsBody) ?? '';
 
-  const sections = extractSections({ data: blocks, meta: (blocks as { meta?: unknown })?.meta });
+  const sections = sectionsFromTextBlocks(blocksBody);
   const paragraphs = sections.flatMap(({ key, sectionName, text }) =>
     segmentIntoParagraphs(text, {
       docId,

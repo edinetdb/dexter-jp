@@ -214,3 +214,20 @@ describe('renderWatchPanel', () => {
     expect(renderWatchPanel(panel)).toContain('割安');
   });
 });
+
+describe('上流・利用者由来の文字列で /watch 全体が落ちない（review T9 M2）', () => {
+  test('★ ウォッチリストの label に禁止語（押し目）があっても assertOutputClean を通り、表示に残る', async () => {
+    const wl: Watchlist = { entries: [{ label: '押し目で拾う候補', secCode: '7203', edinetCode: 'E02144' }] };
+    const panel = await buildWatchPanel([ev()], wl, { incomplete: false, windowSince: 's' });
+    expect(() => assertOutputClean(panel, 'watch.panel')).not.toThrow();
+    expect(renderWatchPanel(panel)).toContain('押し目で拾う候補');
+  });
+
+  test('★ 上流の提出者名（filer_name）に禁止語があっても落ちない', async () => {
+    const panel = await buildWatchPanel([ev({ filer_name: '注目ホールディングス' })], toyotaWatchlist, {
+      incomplete: false, windowSince: 's', all: true,
+    });
+    expect(() => assertOutputClean(panel, 'watch.panel')).not.toThrow();
+    expect(renderWatchPanel(panel)).toContain('注目ホールディングス');
+  });
+});

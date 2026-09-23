@@ -81,3 +81,27 @@ describe('秘密パスの floor — 経路と広さ', () => {
       .toBe('allow');
   });
 });
+
+describe('秘密パスの綴りの変異（review T9 M1）', () => {
+  // read_file は後段で正規化してから実際に読む。生の文字列だけを照合すると素通りした
+  const variants = [
+    '.dexter/./checks/x.json',
+    '.dexter//checks/x.json',
+    './.dexter/checks/',
+    '.dexter/checks/../checks/x.json',
+    'sub/../.dexter/checks/x.json',
+  ];
+
+  test('★ read_file: `./` 挿入・`//`・`..`・末尾スラッシュでも deny', () => {
+    for (const p of variants) expect({ p, mode: read(p).mode }).toEqual({ p, mode: 'deny' });
+  });
+
+  test('★ bash: `cat .dexter/./checks/x.json` も deny', () => {
+    const mode = evaluatePermission({ tool: 'bash', args: { command: 'cat .dexter/./checks/x.json' } }).mode;
+    expect(mode).toBe('deny');
+  });
+
+  test('正規化で無関係なパスを秘密扱いにしない（対照）', () => {
+    expect(read('src/checks/./x.ts').mode).not.toBe('deny');
+  });
+});

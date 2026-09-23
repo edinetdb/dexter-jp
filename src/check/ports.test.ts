@@ -12,7 +12,10 @@
  *      本文（最新期）と出典が食い違う = トヨタは第121期 `S100VWVY` ではなく第122期 `S100Y8NY`
  */
 import { describe, expect, test } from 'bun:test';
-import { extractSections, isTruncated, latestYuhouDocId, companyHeader, yuhouWindow, EVIDENCE_SECTIONS } from './ports.js';
+import {
+  extractSections, isTruncated, latestYuhouDocId, companyHeader, yuhouWindow, EVIDENCE_SECTIONS,
+  fetchDisclosureWith, TRUNCATED_DISCLOSURE_MESSAGE, type ApiGet,
+} from './ports.js';
 import textBlocks from './__fixtures__/text-blocks-E02144.json';
 import events from './__fixtures__/events-yuhou-E02144.json';
 import company from './__fixtures__/company-E02144.json';
@@ -127,5 +130,35 @@ describe('★ 日付窓（実応答で 2 回間違えた）', () => {
   test('★ 見つからなければ null（古い期の書類 ID を当てない）', () => {
     // 本文は最新期なので、1 年より前の有報 ID を出典にすると本文と出典が食い違う
     expect(latestYuhouDocId({ data: [] })).toBeNull();
+  });
+});
+
+describe('★ fetchDisclosure が api.get の実際の形で段落まで届く（常に判定不能の型、T9 後の自己点検）', () => {
+  // api.get は応答の JSON 本体を `data` に入れて返す。以前は本体をもう一度 { data: 本体 } に包んで
+  // 読んでいたので、実応答では節 0・段落 0・社名も期も取れず、本番の /check は常に判定不能だった。
+  // fixture は 2026-09-23 に EDINET DB から取った実応答の本体。
+  const fakeGet: ApiGet = async (endpoint) => {
+    const body = endpoint.endsWith('/text-blocks') ? textBlocks : endpoint === '/events' ? events : company;
+    return { data: body as Record<string, unknown>, url: `https://edinetdb.jp/v1${endpoint}` };
+  };
+  const deps = { get: fakeGet, resolve: async () => 'E02144' };
+
+  test('節 3・段落あり・社名・期・書類 ID が全部取れる', async () => {
+    const d = await fetchDisclosureWith('7203', deps);
+    expect(d.sections).toEqual(['mda', 'risks', 'policy']);
+    expect(d.paragraphs.length).toBeGreaterThan(10);
+    expect(d.company.name).not.toBe('E02144'); // 社名が取れず銘柄コードに落ちていない
+    expect(d.company.name).toContain('トヨタ');
+    expect(d.fiscalYear).toBeGreaterThan(2000);
+    expect(d.paragraphs[0].docId).toBe('S100Y8NY');
+  });
+
+  test('★ 要約版（meta.truncated: true）が返ったら段落を作らずに止める（review T9 M5）', async () => {
+    const truncatedGet: ApiGet = async (endpoint, params, options) => {
+      const r = await fakeGet(endpoint, params, options);
+      if (!endpoint.endsWith('/text-blocks')) return r;
+      return { ...r, data: { ...(r.data as object), meta: { ...(textBlocks as { meta: object }).meta, truncated: true } } };
+    };
+    await expect(fetchDisclosureWith('7203', { ...deps, get: truncatedGet })).rejects.toThrow(TRUNCATED_DISCLOSURE_MESSAGE);
   });
 });

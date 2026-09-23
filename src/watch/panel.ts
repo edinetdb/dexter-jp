@@ -27,7 +27,8 @@ export interface WatchEventLine {
   /** ISO8601（`detected_at`）。design「公表時刻」に対応する当社が持つ唯一の時刻。 */
   publishedAt: string;
   title: QuotedText;
-  filerName: string;
+  /** 上流（EDINET DB）の提出者名。逐語なので quote() で包む（review T9 M2） */
+  filerName: QuotedText;
   group: Group;
   classificationSource: string;
 }
@@ -42,7 +43,11 @@ export interface WatchGroupSection {
 }
 
 export interface WatchTickerSection {
-  label: string;
+  /**
+   * 利用者がウォッチリストに書いた名前（逐語）。`/check` の仮説と同じく quote() で包む。
+   * 素の string だと「押し目で拾う候補」のような label 1 つで `/watch` 全体が例外で落ちた（review T9 M2）
+   */
+  label: QuotedText;
   events: WatchEventLine[];
   deepLinks: DeepLink[];
 }
@@ -83,7 +88,7 @@ function toEventLine(event: EdinetDbEvent, classification: { group: Group; sourc
     // ★ title は必ず quote() で包む（包まないと有報/開示タイトル中の語で linter が発火する。
     //   逆に包めば芯の証拠を捨てずに linter を通せる。panel.test.ts の対テストで固定）。
     title: quote(event.title, { source: 'edinetdb-events' }),
-    filerName: event.filer_name,
+    filerName: quote(event.filer_name, { source: 'edinetdb-events' }),
     group: classification.group,
     classificationSource: classification.source,
     // event.severity は意図的にここに入れない（design §4.2「upstream の severity を
@@ -151,7 +156,7 @@ export async function buildWatchPanel(
   }
 
   const byTicker: WatchTickerSection[] = [...byTickerMap.entries()].map(([label, bucket]) => ({
-    label,
+    label: quote(label, { source: 'user' }),
     events: bucket.events,
     deepLinks: deepLinksFor(bucket.entry),
   }));
@@ -170,7 +175,7 @@ export async function buildWatchPanel(
 }
 
 function formatLine(line: WatchEventLine): string {
-  return `  - [${line.publishedAt}] ${line.eventType} — ${line.filerName}: ${line.title.text}`;
+  return `  - [${line.publishedAt}] ${line.eventType} — ${line.filerName.text}: ${line.title.text}`;
 }
 
 /**
@@ -211,7 +216,7 @@ export function renderWatchPanel(panel: WatchPanel): string {
   if (panel.byTicker.length > 0) {
     lines.push('## 銘柄別リンク');
     for (const ticker of panel.byTicker) {
-      lines.push(`### ${ticker.label}`);
+      lines.push(`### ${ticker.label.text}`);
       for (const link of ticker.deepLinks) lines.push(`  ${link.label}: ${link.url}`);
     }
     lines.push('');
