@@ -15,7 +15,7 @@
  * 「判定不能」で止め、**モデルに埋めさせない**。
  */
 import { quote, lintOutput, acceptSummary, type QuotedText } from '../guard/output-linter.js';
-import { deepLinksFor, type DeepLink } from '../links/deeplink.js';
+import { deepLinksFor, toTseFourDigit, type DeepLink } from '../links/deeplink.js';
 import {
   resolveClaim,
   type Claim,
@@ -253,7 +253,9 @@ export function renderScopeLine(scope: CheckPanel['scope']): string {
 export function renderCheckPanel(panel: CheckPanel): string[] {
   const lines: string[] = [];
   lines.push(`仮説: ${panel.hypothesis.text}`);
-  lines.push(`会社: ${panel.company.name}${panel.company.secCode ? `（${panel.company.secCode}）` : ''}`);
+  // EDINET DB の sec_code は 5 桁（トヨタ = 72030）。利用者が打った 4 桁の形で出す（英字付き等はそのまま）
+  const code = panel.company.secCode ? (toTseFourDigit(panel.company.secCode) ?? panel.company.secCode) : '';
+  lines.push(`会社: ${panel.company.name}${code ? `（${code}）` : ''}`);
   lines.push('');
 
   if (panel.undetermined) {

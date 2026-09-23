@@ -324,3 +324,17 @@ describe('端末への表示', () => {
     expect(renderCheckPanel(p)[3]).toBe(UNDETERMINED_TEXT);
   });
 });
+
+describe('会社の証券コードの表示', () => {
+  test('EDINET DB の 5 桁（72030）は 4 桁（7203）で出す', async () => {
+    const { buildCheckPanel, renderCheckPanel } = await import('./panel.js');
+    const panel = buildCheckPanel({
+      hypothesis: 'x', company: { name: 'トヨタ自動車株式会社', secCode: '72030' },
+      claims: [], paragraphs: [], judgments: new Map(),
+      scope: { sections: [], total: 0, unchecked: 0 },
+    });
+    const text = renderCheckPanel(panel).join('\n');
+    expect(text).toContain('会社: トヨタ自動車株式会社（7203）');
+    expect(text).not.toContain('72030');
+  });
+});
