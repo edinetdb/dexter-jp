@@ -69,7 +69,7 @@ A local LLM standing in for the judge lets 8 of 30 through. We would rather stop
 
 ### What it does not output
 
-- `/check` and `/watch` do not output trade instructions, price targets, or position sizes
+- Dexter JP does not provide investment advice. `/check` and `/watch` do not output trade instructions, price targets, or position sizes
 - No view on whether a stock is cheap or expensive, and no fair value. Inputs asking for those do not reach the judgment step; you get two or three suggested rewordings that the disclosures can actually answer
 - No market-regime labels (uptrend, near highs, and so on)
 - Counts are reported as "how many of the examined paragraphs fell into each bucket". They are never rolled up into a single "support score"
