@@ -105,3 +105,15 @@ describe('秘密パスの綴りの変異（review T9 M1）', () => {
     expect(read('src/checks/./x.ts').mode).not.toBe('deny');
   });
 });
+
+describe('ファイルツールのパス展開と同じ形で見る（Codex T9 H1）', () => {
+  test('★ `@.env` / `@.env.local` / `@.dexter/checks/x` / `~/.ssh/id_rsa` は deny', () => {
+    for (const p of ['@.env', '@.env.local', '@.dexter/checks/x.json', '~/.ssh/id_rsa', '@~/.aws/credentials']) {
+      expect({ p, mode: read(p).mode }).toEqual({ p, mode: 'deny' });
+    }
+  });
+
+  test('`@src/checks/x.ts` は秘密扱いにしない（対照）', () => {
+    expect(read('@src/checks/x.ts').mode).not.toBe('deny');
+  });
+});

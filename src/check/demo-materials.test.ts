@@ -30,7 +30,7 @@ describe('demo の段落は同梱データの段落と一字一句同じ', () =>
 describe('README の約束と本番経路（review T9 H1）', () => {
   test('★ 本番ポートが数値の検算を配線していない限り、README・RELEASE-NOTES は数値の検算を約束しない', async () => {
     const { productionPorts } = await import('./ports.js');
-    if (productionPorts().fetchFinancials) return; // 配線したら、この約束を書いてよい
+    if (productionPorts('any-model').fetchFinancials) return; // 配線したら、この約束を書いてよい
     for (const f of ['README.md', 'README.en.md', 'RELEASE-NOTES-v1.1.0-jp.md']) {
       const text = await Bun.file(new URL(`../../${f}`, import.meta.url)).text();
       expect({ f, claims: /財務データで検算し|verified in code against financial data/.test(text) }).toEqual({ f, claims: false });

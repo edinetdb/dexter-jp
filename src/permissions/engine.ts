@@ -18,6 +18,7 @@
 import type { Classification, PermissionDecision, PermissionRequest } from './types.js';
 import { parseCommand, type ParsedCommand } from './command-parser.js';
 import { isReadOnly } from './read-only.js';
+import { expandPath } from '../tools/filesystem/utils/path-utils.js';
 import { builtinDeny, isSecretPath, loadRuleSet, matchRuleSet, proposeRule, serializeRule, type RuleSet } from './rules.js';
 
 /** Tools that have always required explicit user approval before running. */
@@ -123,7 +124,9 @@ function evaluateProtectedPath(req: PermissionRequest): PermissionDecision | nul
   for (const [key, value] of Object.entries(req.args)) {
     if (!PATH_ARG_KEYS.has(key)) continue;
     if (typeof value !== 'string') continue;
-    if (isSecretPath(value)) {
+    // ファイルツールと同じ展開（先頭 `@` の除去・`~` の展開・Unicode 空白）を通した形でも見る
+    // （Codex T9 H1: `@.env` は生の文字列では当たらず、read_file 側で `.env` として読まれた）
+    if (isSecretPath(value) || isSecretPath(expandPath(value))) {
       return {
         mode: 'deny',
         reason: 'references a sensitive/secret path',

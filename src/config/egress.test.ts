@@ -109,7 +109,8 @@ describe('起動画面（G-D2）— 実際に起動経路から出る（review T
   test('★ cli.ts が起動時に renderEgressScreen(process.env) を画面の木に載せる', async () => {
     const src = await Bun.file(new URL('../cli.ts', import.meta.url)).text();
     // コメント内の言及では通らないよう、呼び出しと木への追加の 2 つを実コードの形で見る
-    const code = src.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+    // ブロックコメントと行コメントを落としてから見る（Codex T9 L1）
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
     expect(code).toMatch(/new Text\([^\n]*renderEgressScreen\(process\.env\)/);
     expect(code).toMatch(/root\.addChild\(egressText\)/);
   });
@@ -188,8 +189,8 @@ describe('activeDestinations — 台帳の全 id に判定がある', () => {
   test('どの id も switch の default に落ちていない（足して書き忘れると常に非表示になる）', () => {
     const allEnv = {
       EDINETDB_API_KEY: 'x', TYPESAFE_API_KEY: 'x', OPENAI_API_KEY: 'x',
-      LANGSMITH_TRACING: '1', JQUANTS_REFRESH_TOKEN: 'x', TAVILY_API_KEY: 'x',
-      X_API_KEY: 'x', OLLAMA_BASE_URL: 'x', OPENROUTER_API_KEY: 'x',
+      LANGSMITH_TRACING: '1', JQUANTS_API_KEY: 'x', TAVILY_API_KEY: 'x',
+      X_BEARER_TOKEN: 'x', OLLAMA_BASE_URL: 'x', OPENROUTER_API_KEY: 'x',
       MOONSHOT_API_KEY: 'x', DEEPSEEK_API_KEY: 'x',
     } as NodeJS.ProcessEnv;
     const active = activeDestinations(allEnv).map(d => d.id);
@@ -197,5 +198,32 @@ describe('activeDestinations — 台帳の全 id に判定がある', () => {
       .filter(d => d.id !== 'messaging-gateways') // ゲートウェイ起動時にだけ出す
       .map(d => d.id);
     expect(active.sort()).toEqual(expected.sort());
+  });
+});
+
+describe('ツールを有効にする鍵は、どれも送信先一覧に載る（Codex T9 H4 + 同型の全走査）', () => {
+  test('★ registry.ts / stock-price.ts / embeddings.ts / providers.ts が読む鍵の全部で、一覧に固有の送信先が出る', async () => {
+    const read = (p: string) => Bun.file(new URL(p, import.meta.url)).text();
+    const names = new Set<string>();
+    for (const f of ['../tools/registry.ts', '../tools/finance/stock-price.ts', '../memory/embeddings.ts']) {
+      for (const m of (await read(f)).matchAll(/process\.env\.([A-Z][A-Z0-9_]*(?:_API_KEY|_TOKEN|_BASE_URL))/g)) names.add(m[1]);
+    }
+    for (const m of (await read('../providers.ts')).matchAll(/apiKeyEnvVar:\s*'([A-Z0-9_]+)'/g)) names.add(m[1]);
+    expect(names.size).toBeGreaterThanOrEqual(12); // 走査が空振りしていない
+    const base = new Set(activeDestinations({} as NodeJS.ProcessEnv).map(d => d.id));
+    for (const name of names) {
+      const lit = activeDestinations({ [name]: 'x' } as NodeJS.ProcessEnv).map(d => d.id).filter(id => !base.has(id));
+      // LLM プロバイダの鍵は「選択中の LLM プロバイダ」（既定で有効）に含まれるので、新たに増えなくてよい
+      const isLlmKey = /^(OPENAI|ANTHROPIC|GOOGLE|XAI|MOONSHOT|DEEPSEEK|OPENROUTER|OLLAMA_CLOUD)_API_KEY$/.test(name);
+      expect({ name, covered: lit.length > 0 || isLlmKey }).toEqual({ name, covered: true });
+    }
+  });
+
+  test('★ Exa / J-Quants / X / Ollama Cloud は実装と同じ鍵名で一覧に出る', () => {
+    const ids = (env: Record<string, string>) => activeDestinations(env as NodeJS.ProcessEnv).map(d => d.id);
+    expect(ids({ EXASEARCH_API_KEY: 'x' })).toContain('web-search');
+    expect(ids({ JQUANTS_API_KEY: 'x' })).toContain('jquants');
+    expect(ids({ X_BEARER_TOKEN: 'x' })).toContain('x-search');
+    expect(ids({ OLLAMA_CLOUD_API_KEY: 'x' })).toContain('ollama');
   });
 });

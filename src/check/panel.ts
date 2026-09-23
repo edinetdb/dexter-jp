@@ -161,6 +161,19 @@ export function safeClaimText(
   return { text: CLAIM_TEXT_WITHHELD, replaced: 'withheld' };
 }
 
+/**
+ * 画面と要約に出す主張の文（Codex T9 H3）。
+ *
+ * 判定は肯定形の `text` で行い、否定のときはコードが結果を反転する。反転後の判定・証拠の振り分けは
+ * **利用者のもとの言い方（否定形）に対するもの**なので、肯定形の `text` をそのまま並べると
+ * 「利益は増加している → 食い違う」のように逆向きに読める。否定のときは否定形で出す。
+ * 原文に落とした（`user_quote`）・固定文（`withheld`）のときは、その文がすでにもとの言い方なのでそのまま。
+ */
+export function displayClaimText(claim: Pick<PanelClaim, 'text' | 'negated' | 'textReplaced'>): string {
+  if (!claim.negated || claim.textReplaced) return claim.text;
+  return `「${claim.text}」ということはない`;
+}
+
 export interface BuildPanelInput {
   hypothesis: string;
   company: { name: string; edinetCode?: string; secCode?: string };
@@ -264,7 +277,7 @@ export function renderCheckPanel(panel: CheckPanel): string[] {
   }
 
   for (const claim of panel.claims) {
-    lines.push(`主張: ${claim.text}`);
+    lines.push(`主張: ${displayClaimText(claim)}`);
     lines.push(`  もとの言葉: ${claim.quote.text}`);
     if (claim.textReplaced === 'user_quote') lines.push('  （言い換えは出せる形にならなかったため、もとの言葉で判定結果を示しています）');
     if (claim.scopeNote) lines.push(`  ${claim.scopeNote}`);

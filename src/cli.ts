@@ -409,7 +409,7 @@ export async function runCli() {
     switch (command) {
       case 'check': {
         // 例外は runCheckCommand の中で必ず画面に出す形に落ちる（review T9 H6）
-        for (const m of await runCheckCommand(rest, productionPorts(), { interactive: true })) {
+        for (const m of await runCheckCommand(rest, productionPorts(modelSelection.model), { interactive: true })) {
           say(m.muted ? theme.muted(m.text) : m.text);
         }
         break;

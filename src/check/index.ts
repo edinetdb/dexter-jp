@@ -140,9 +140,13 @@ export async function runCheck(
   const claims: Claim[] = [];
   const numericClaims: NumericClaim[] = [];
   const scopeNotes = new Map<string, string>();
-  for (const [i, r] of raw.entries()) {
+  for (const [i, r0] of raw.entries()) {
+    const r = requireVerbatimQuote(r0, hypothesis);
     const { claim: scoped, note } = fillScopeFromDisclosure(r, disclosure);
-    for (const c of extractClaims(scoped, `c${i + 1}`)) {
+    for (const c0 of extractClaims(scoped, `c${i + 1}`)) {
+      const c = r.quoteNotVerbatim && !c0.unresolvable
+        ? { ...c0, unresolvable: { reason: 'meaning_not_preserved' as const } }
+        : c0;
       if (note) scopeNotes.set(c.id, note);
       if (isNumericClaim(c)) numericClaims.push(c);
       else claims.push(c);
@@ -222,6 +226,24 @@ export async function runCheck(
   });
 
   return { kind: 'panel', panel, recordPath };
+}
+
+/** 比較用: 空白を落とし、全角・半角を NFKC で揃える。 */
+function looseForm(text: string): string {
+  return text.normalize('NFKC').replace(/\s+/g, '');
+}
+
+/**
+ * `quote` が利用者の仮説に実在するかを確かめる（Codex T9 M2）。
+ *
+ * `quote` は `{kind:'quote', source:'user'}` として出力 linter の走査を免れる。LLM が原文に無い文
+ * （たとえば「目標株価は一万円」）を quote に入れると、当社生成の文が逐語の顔をして linter を素通りする。
+ * 原文に無い quote は**仮説の全文に差し替え**、主張は「意味を保って分けられない」として判定に回さない。
+ */
+export function requireVerbatimQuote(raw: RawClaimFromModel, hypothesis: string): RawClaimFromModel {
+  const q = raw.quote ?? '';
+  if (q.trim() && looseForm(hypothesis).includes(looseForm(q))) return raw;
+  return { ...raw, quote: hypothesis, quoteNotVerbatim: true };
 }
 
 /**

@@ -14,7 +14,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   extractSections, isTruncated, latestYuhouDocId, companyHeader, yuhouWindow, EVIDENCE_SECTIONS,
-  fetchDisclosureWith, TRUNCATED_DISCLOSURE_MESSAGE, type ApiGet,
+  fetchDisclosureWith, TRUNCATED_DISCLOSURE_MESSAGE, type ApiGet, productionPorts, type LlmCall,
 } from './ports.js';
 import textBlocks from './__fixtures__/text-blocks-E02144.json';
 import events from './__fixtures__/events-yuhou-E02144.json';
@@ -160,5 +160,20 @@ describe('★ fetchDisclosure が api.get の実際の形で段落まで届く�
       return { ...r, data: { ...(r.data as object), meta: { ...(textBlocks as { meta: object }).meta, truncated: true } } };
     };
     await expect(fetchDisclosureWith('7203', { ...deps, get: truncatedGet })).rejects.toThrow(TRUNCATED_DISCLOSURE_MESSAGE);
+  });
+});
+
+describe('★ 分解と要約は利用者が選んだモデルへ送る（Codex T9 H2）', () => {
+  test('productionPorts(model) の decompose / summarize は callLlm に同じ model を渡す', async () => {
+    const seen: Array<string | undefined> = [];
+    const fakeCall = (async (_prompt: string, options?: { model?: string }) => {
+      seen.push(options?.model);
+      return { response: { claims: [] }, usage: undefined };
+    }) as unknown as LlmCall;
+    const ports = productionPorts('claude-sonnet-5', fakeCall);
+    await ports.decompose('仮説', '会社');
+    const panelLike = { claims: [{ status: 'supports', text: 't', negated: false, quote: { kind: 'quote', text: 't' }, supporting: [], contradicting: [] }] };
+    await ports.summarize!(panelLike as never);
+    expect(seen).toEqual(['claude-sonnet-5', 'claude-sonnet-5']);
   });
 });

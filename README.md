@@ -85,10 +85,10 @@ EDINET DB の鍵は[こちら](https://edinetdb.jp/developers?utm_source=github&
 | TypeSafe（Jev、米国） | あなたの仮説から分けた主張と、有価証券報告書の段落（1 段落ずつ） | TYPESAFE_API_KEY | あなたの TypeSafe の鍵 | 無効 |
 | 会話履歴の埋め込み（OpenAI → Gemini → Ollama の順で自動選択） | 会話の全文（あなたの入力とエージェントの応答）。**選択中の LLM とは独立に決まります** — /model で Claude を選んでいても、OPENAI_API_KEY があれば OpenAI に送られます | 既定で有効。OPENAI_API_KEY / GOOGLE_API_KEY / OLLAMA_BASE_URL のいずれか | あなたの鍵 | 有効 |
 | LangSmith | LangChain のプロンプトとツールの結果（トレース） | LANGSMITH_TRACING=1 | あなたの LangSmith の鍵 | 無効 |
-| J-Quants | 銘柄コードと日付（株価の取得） | JQUANTS_REFRESH_TOKEN | あなたの J-Quants の契約 | 無効 |
+| J-Quants | 銘柄コードと日付（株価の取得） | JQUANTS_API_KEY | あなたの J-Quants の契約 | 無効 |
 | Web 検索プロバイダ（Tavily / Exa / Perplexity / LangSearch） | 検索語（/search で選んだプロバイダにだけ送られます） | 選んだプロバイダの鍵 | あなたの鍵 | 無効 |
-| X（旧 Twitter） | 検索語（あなたが入力した、またはエージェントが組み立てた検索の語句） | X_API_KEY / XAI_API_KEY | あなたの鍵 | 無効 |
-| Ollama（既定では手元、設定すれば別のホスト） | 会話の内容・埋め込みの対象テキスト | OLLAMA_BASE_URL | —（手元で動かす場合は外に出ません） | 無効 |
+| X（旧 Twitter） | 検索語（あなたが入力した、またはエージェントが組み立てた検索の語句） | X_BEARER_TOKEN | あなたの鍵 | 無効 |
+| Ollama（既定では手元、設定すれば別のホスト） | 会話の内容・埋め込みの対象テキスト | OLLAMA_BASE_URL / OLLAMA_CLOUD_API_KEY | —（手元で動かす場合は外に出ません） | 無効 |
 | OpenRouter | 会話の内容（OpenRouter 経由のモデルを選んだ場合） | OPENROUTER_API_KEY | あなたの鍵 | 無効 |
 | Moonshot | 会話の内容（Kimi を選んだ場合） | MOONSHOT_API_KEY | あなたの鍵 | 無効 |
 | DeepSeek | 会話の内容（DeepSeek のモデルを選んだ場合） | DEEPSEEK_API_KEY | あなたの鍵 | 無効 |

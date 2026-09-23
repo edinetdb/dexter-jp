@@ -338,3 +338,52 @@ describe('会社の証券コードの表示', () => {
     expect(text).not.toContain('72030');
   });
 });
+
+describe('否定形の主張は否定形で出す（Codex T9 H3）', () => {
+  const P = { id: 'p1', docId: 'D1', company: 'X', section: 'mda', text: '利益は増加した。' };
+
+  async function panelFor(negated: boolean) {
+    const { buildCheckPanel } = await import('./panel.js');
+    return buildCheckPanel({
+      hypothesis: negated ? '利益は増加していない' : '利益は増加している',
+      company: { name: 'X' },
+      claims: [{
+        id: 'c1', quote: negated ? '利益は増加していない' : '利益は増加している', text: '利益は増加している',
+        negated, kind: 'qualitative', degreeWords: [], company: 'X', period: 'FY2025',
+      }],
+      paragraphs: [P],
+      // 肯定形に対する判定 = 裏付ける。否定なら反転して「食い違う」
+      judgments: new Map([['c1', [{ paragraphId: 'p1', verdict: 'supports' as const, confidence: 0.95 }]]]),
+      scope: { sections: ['mda'], total: 1, unchecked: 0 },
+    });
+  }
+
+  test('★ 否定: 画面の主張は否定形、判定は「食い違う」= 同じ向きで読める', async () => {
+    const { renderCheckPanel } = await import('./panel.js');
+    const panel = await panelFor(true);
+    expect(panel.claims[0].status).toBe('contradicts');
+    const text = renderCheckPanel(panel).join('\n');
+    expect(text).toContain('主張: 「利益は増加している」ということはない');
+    expect(text).not.toMatch(/^主張: 利益は増加している$/m);
+  });
+
+  test('肯定（対照）: 主張はそのまま、判定は「裏付ける」', async () => {
+    const { renderCheckPanel } = await import('./panel.js');
+    const panel = await panelFor(false);
+    expect(panel.claims[0].status).toBe('supports');
+    expect(renderCheckPanel(panel).join('\n')).toContain('主張: 利益は増加している\n');
+  });
+
+  test('★ 要約へ渡す材料も否定形 + 利用者のもとの言葉', async () => {
+    const { summarize } = await import('./ports.js');
+    const panel = await panelFor(true);
+    let material = '';
+    const fakeCall = (async (prompt: string) => {
+      material = prompt;
+      return { response: 'x', usage: undefined };
+    }) as never;
+    await summarize(panel, 'm', fakeCall);
+    expect(material).toContain('「利益は増加している」ということはない');
+    expect(material).toContain('利用者のもとの言葉: 利益は増加していない');
+  });
+});

@@ -10,7 +10,7 @@ import { resolveEdinetCode } from '../tools/finance/resolver.js';
 import { callLlm } from '../model/llm.js';
 import { segmentIntoParagraphs, type RawClaimFromModel } from './core/index.js';
 import type { CheckPorts, DisclosureSource } from './index.js';
-import type { CheckPanel } from './panel.js';
+import { displayClaimText, type CheckPanel } from './panel.js';
 
 /**
  * 証拠に使う節（design §4.2 = 有報の MD&A・リスク・方針。短信の本文は使わない）。
@@ -208,11 +208,24 @@ const DECOMPOSE_INSTRUCTIONS = `あなたは、利用者が持ち込んだ仮説
 - \`quote\` は利用者の文からの**逐語**。要約や言い換えをしない
 - 売買の推奨・目標株価・株価の水準についての主張は**作らない**（そういう仮説はここに来ない）`;
 
-/** 仮説 → 主張（LLM）。 */
-export async function decompose(hypothesis: string, company: string): Promise<RawClaimFromModel[]> {
-  const { response } = await callLlm(
+/** `callLlm` の形。テストが送り先のモデルを確かめるために差し替える。 */
+export type LlmCall = typeof callLlm;
+
+/**
+ * 仮説 → 主張（LLM）。
+ *
+ * `model` は利用者が `/model` で選んだもの。省くと `callLlm` の既定モデルに送られ、
+ * README の「選択中の LLM プロバイダに送る」と食い違う（Codex T9 H2）。
+ */
+export async function decompose(
+  hypothesis: string,
+  company: string,
+  model?: string,
+  call: LlmCall = callLlm,
+): Promise<RawClaimFromModel[]> {
+  const { response } = await call(
     `会社: ${company}\n仮説: ${hypothesis}`,
-    { systemPrompt: DECOMPOSE_INSTRUCTIONS, outputSchema: ClaimsSchema },
+    { systemPrompt: DECOMPOSE_INSTRUCTIONS, outputSchema: ClaimsSchema, ...(model ? { model } : {}) },
   );
   const parsed = ClaimsSchema.safeParse(response);
   if (!parsed.success) return [];
@@ -234,21 +247,34 @@ const SUMMARY_INSTRUCTIONS = `確定した判定を 2 文以内でまとめま�
 - 確定していない主張には触れない`;
 
 /** パネルの要約（LLM）。linter に当たったら呼び出し側で捨てられる。 */
-export async function summarize(panel: CheckPanel): Promise<string | null> {
+export async function summarize(
+  panel: CheckPanel,
+  model?: string,
+  call: LlmCall = callLlm,
+): Promise<string | null> {
   const confirmed = panel.claims.filter(c => c.status === 'supports' || c.status === 'contradicts');
   if (confirmed.length === 0) return null;
   const material = confirmed
     .map(c => {
       const evidence = [...c.supporting, ...c.contradicting].map(e => e.text.text).join('\n');
-      return `主張: ${c.text}\n判定: ${c.status === 'supports' ? '裏付ける' : '食い違う'}\n段落:\n${evidence}`;
+      // 否定形の主張は否定形のまま渡す（判定は利用者のもとの言い方に対するもの。Codex T9 H3）
+      return `主張: ${displayClaimText(c)}\n利用者のもとの言葉: ${c.quote.text}\n判定: ${c.status === 'supports' ? '裏付ける' : '食い違う'}\n段落:\n${evidence}`;
     })
     .join('\n\n');
-  const { response } = await callLlm(material, { systemPrompt: SUMMARY_INSTRUCTIONS });
+  const { response } = await call(material, { systemPrompt: SUMMARY_INSTRUCTIONS, ...(model ? { model } : {}) });
   const text = typeof response === 'string' ? response : String(response.content ?? '');
   return text.trim() || null;
 }
 
-/** 本番の `/check` が使うポート一式。 */
-export function productionPorts(): CheckPorts {
-  return { decompose, fetchDisclosure, summarize };
+/**
+ * 本番の `/check` が使うポート一式。
+ *
+ * @param model 利用者が選択中のモデル（`/model`）。分解と要約はここへ送る
+ */
+export function productionPorts(model: string, call: LlmCall = callLlm): CheckPorts {
+  return {
+    decompose: (hypothesis, company) => decompose(hypothesis, company, model, call),
+    fetchDisclosure,
+    summarize: (panel) => summarize(panel, model, call),
+  };
 }

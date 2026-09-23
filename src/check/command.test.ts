@@ -75,8 +75,10 @@ describe('runCheckCommand はどの失敗でも rejected にならない', () =>
   });
 
   test('★ cli.ts の `/check` は runCheckCommand を通る（runCheck を直接呼ばない）', async () => {
-    const src = await Bun.file(new URL('../cli.ts', import.meta.url)).text();
-    expect(src).toContain('runCheckCommand(rest, productionPorts()');
+    const raw = await Bun.file(new URL('../cli.ts', import.meta.url)).text();
+    // コメント内の言及では通らないようにする（Codex T9 L1）
+    const src = raw.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+    expect(src).toContain('runCheckCommand(rest, productionPorts(modelSelection.model)');
     expect(src).not.toMatch(/\bawait runCheck\(/);
   });
 });

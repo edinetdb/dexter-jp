@@ -335,3 +335,32 @@ describe('出力側の禁止語を利用者が書いた仮説（review T9 H3）'
     expect(out.panel.claims[0].textReplaced).toBe('user_quote');
   });
 });
+
+describe('quote が仮説に実在しないとき（Codex T9 M2）', () => {
+  test('★ 原文に無い quote は仮説の全文に差し替え、主張は判定に回さない（linter の免除を悪用されない）', async () => {
+    let judged = 0;
+    const inner = judgeWithVote({ p1: { choice: 'supports', confidence: 0.94 }, p2: { choice: 'unrelated', confidence: 0.99 } }, 0.02);
+    const counting: JudgeBackend = { name: 'replay', call: async (r) => { if (r.key !== 'guard') judged++; return inner.call(r); } };
+    const hyp = '第 4 四半期は増益だったと会社は説明している';
+    const out = await runCheck('9983', hyp, ports({
+      judge: counting,
+      decompose: async () => [{ ...RAW_CLAIM, quote: '目標株価は一万円', text: '目標株価は一万円である' }],
+    }));
+    if (out.kind !== 'panel') throw new Error('unreachable');
+    const c = out.panel.claims[0];
+    expect(c.quote.text).toBe(hyp);            // 当社生成の文が逐語の顔をしない
+    expect(c.status).toBe('not_judged');
+    expect(judged).toBe(0);
+    expect(JSON.stringify(out.panel)).not.toContain('目標株価');
+    const saved = JSON.parse(readFileSync(out.recordPath, 'utf-8'));
+    expect(lintOutput(saved, '$.record').findings).toEqual([]);
+  });
+
+  test('空白や全角・半角の違いは同じ文として扱う（対照）', async () => {
+    const out = await runCheck('9983', '第 4 四半期は増益だったと会社は説明している', ports({
+      decompose: async () => [{ ...RAW_CLAIM, quote: '第４四半期は増益だった' }],
+    }));
+    if (out.kind !== 'panel') throw new Error('unreachable');
+    expect(out.panel.claims[0].status).toBe('supports');
+  });
+});

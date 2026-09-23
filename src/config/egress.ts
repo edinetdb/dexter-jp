@@ -105,7 +105,7 @@ export const EGRESS_DESTINATIONS: readonly EgressDestination[] = [
     hosts: ['api.jquants.com'],
     category: 'market',
     whatIsSent: '銘柄コードと日付（株価の取得）',
-    enabledWhen: 'JQUANTS_REFRESH_TOKEN',
+    enabledWhen: 'JQUANTS_API_KEY',
     credential: 'あなたの J-Quants の契約',
     onByDefault: false,
   },
@@ -125,7 +125,7 @@ export const EGRESS_DESTINATIONS: readonly EgressDestination[] = [
     hosts: ['api.x.com', 'api.x.ai'],
     category: 'search',
     whatIsSent: '検索語（あなたが入力した、またはエージェントが組み立てた検索の語句）',
-    enabledWhen: 'X_API_KEY / XAI_API_KEY',
+    enabledWhen: 'X_BEARER_TOKEN',
     credential: 'あなたの鍵',
     onByDefault: false,
   },
@@ -135,7 +135,7 @@ export const EGRESS_DESTINATIONS: readonly EgressDestination[] = [
     hosts: ['ollama.com'],
     category: 'llm',
     whatIsSent: '会話の内容・埋め込みの対象テキスト',
-    enabledWhen: 'OLLAMA_BASE_URL',
+    enabledWhen: 'OLLAMA_BASE_URL / OLLAMA_CLOUD_API_KEY',
     credential: '—（手元で動かす場合は外に出ません）',
     onByDefault: false,
   },
@@ -213,11 +213,12 @@ export function activeDestinations(env: NodeJS.ProcessEnv = process.env): Egress
       case 'memory-embeddings':
         return Boolean(env.OPENAI_API_KEY || env.GOOGLE_API_KEY || env.OLLAMA_BASE_URL);
       case 'langsmith': return env.LANGSMITH_TRACING === '1' || env.LANGSMITH_TRACING === 'true';
-      case 'jquants': return Boolean(env.JQUANTS_REFRESH_TOKEN);
+      // 鍵の名前は実装（stock-price.ts / registry.ts）と同じでないと、有効なのに一覧から消える（Codex T9 H4）
+      case 'jquants': return Boolean(env.JQUANTS_API_KEY);
       case 'web-search':
-        return Boolean(env.TAVILY_API_KEY || env.EXA_API_KEY || env.PERPLEXITY_API_KEY || env.LANGSEARCH_API_KEY);
-      case 'x-search': return Boolean(env.X_API_KEY || env.XAI_API_KEY);
-      case 'ollama': return Boolean(env.OLLAMA_BASE_URL);
+        return Boolean(env.TAVILY_API_KEY || env.EXASEARCH_API_KEY || env.PERPLEXITY_API_KEY || env.LANGSEARCH_API_KEY);
+      case 'x-search': return Boolean(env.X_BEARER_TOKEN);
+      case 'ollama': return Boolean(env.OLLAMA_BASE_URL || env.OLLAMA_CLOUD_API_KEY);
       case 'openrouter': return Boolean(env.OPENROUTER_API_KEY);
       case 'moonshot': return Boolean(env.MOONSHOT_API_KEY);
       case 'deepseek': return Boolean(env.DEEPSEEK_API_KEY);

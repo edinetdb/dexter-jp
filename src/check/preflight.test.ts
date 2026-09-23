@@ -78,6 +78,6 @@ describe('env からの解決（実際の既定経路）', () => {
 
   test('CLI の本番ポートは判定層を注入しない = env 以外から replay が入る口が無い', async () => {
     const { productionPorts } = await import('./ports.js');
-    expect(productionPorts().judge).toBeUndefined();
+    expect(productionPorts('gpt-5.6-sol').judge).toBeUndefined();
   });
 });

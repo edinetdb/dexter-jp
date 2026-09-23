@@ -38,6 +38,11 @@ export interface RawClaimFromModel {
   company?: string;
   /** Fiscal period, if the model captured one explicitly in the claim. */
   period?: string;
+  /**
+   * Set by the caller (not the model) when `quote` was not found verbatim in the
+   * hypothesis and was replaced by the whole hypothesis (Codex T9 M2).
+   */
+  quoteNotVerbatim?: boolean;
 }
 
 /** Why a claim could not be carried forward to judging. */

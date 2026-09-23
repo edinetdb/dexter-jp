@@ -87,10 +87,10 @@ This table is a translation. The canonical list is the Japanese table in `README
 | TypeSafe (Jev, US) | The claims split out of your hypothesis, and annual report paragraphs, one at a time | `TYPESAFE_API_KEY` | off |
 | Conversation-history embedding (OpenAI → Gemini → Ollama, auto-selected) | Full conversation text. Chosen **independently of your selected LLM** — with `OPENAI_API_KEY` set it goes to OpenAI even if `/model` is Claude | On by default; any of `OPENAI_API_KEY` / `GOOGLE_API_KEY` / `OLLAMA_BASE_URL` | on |
 | LangSmith | LangChain prompts and tool results (traces) | `LANGSMITH_TRACING=1` | off |
-| J-Quants | Ticker codes and dates (stock prices) | `JQUANTS_REFRESH_TOKEN` | off |
+| J-Quants | Ticker codes and dates (stock prices) | `JQUANTS_API_KEY` | off |
 | Web search provider (Tavily / Exa / Perplexity / LangSearch) | Search terms (only to the provider you chose with `/search`) | The key for the provider you chose | off |
-| X (Twitter) | Search terms you typed, or that the agent composed | `X_API_KEY` / `XAI_API_KEY` | off |
-| Ollama (local by default; remote if configured) | Conversation text and text to embed | `OLLAMA_BASE_URL` | off |
+| X (Twitter) | Search terms you typed, or that the agent composed | `X_BEARER_TOKEN` | off |
+| Ollama (local by default; remote if configured) | Conversation text and text to embed | `OLLAMA_BASE_URL` / `OLLAMA_CLOUD_API_KEY` | off |
 | OpenRouter | Conversation text (when an OpenRouter model is selected) | `OPENROUTER_API_KEY` | off |
 | Moonshot | Conversation text (when Kimi is selected) | `MOONSHOT_API_KEY` | off |
 | DeepSeek | Conversation text (when a DeepSeek model is selected) | `DEEPSEEK_API_KEY` | off |
