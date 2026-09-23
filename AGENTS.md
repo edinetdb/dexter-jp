@@ -7,9 +7,8 @@
 
 - Source code: `src/`
   - Agent core: `src/agent/` (agent loop, prompts, scratchpad, token counting, types)
-  - CLI interface: `src/cli.tsx` (Ink/React), entry point: `src/index.tsx`
+  - CLI interface: `src/cli.ts` (Ink/React), entry point: `src/index.tsx`
   - Components: `src/components/` (Ink UI components)
-  - Hooks: `src/hooks/` (React hooks for agent runner, model selection, input history)
   - Model/LLM: `src/model/llm.ts` (multi-provider LLM abstraction)
   - Tools: `src/tools/` (financial search, web search, browser, skill tool)
   - Finance tools: `src/tools/finance/` (financials, text-blocks, earnings, shareholders, key-ratios, screening)
@@ -17,18 +16,28 @@
   - Browser: `src/tools/browser/` (Playwright-based web scraping)
   - Skills: `src/skills/` (SKILL.md-based extensible workflows, e.g. DCF valuation)
   - Utils: `src/utils/` (env, config, caching, token estimation, markdown tables)
-  - Evals: `src/evals/` (LangSmith evaluation runner with Ink UI)
+  - Evals: `src/evals/` (LangSmith evaluation runner with Ink UI), `src/evals/judge/` (judge-layer benchmark)
+  - Judge layer: `src/judge/` (typed questions answered with probabilities; `jev` / `llm` / `replay` backends)
+  - `/check`: `src/check/` (assembly, panel, record) and `src/check/core/` (pure claim/paragraph/numeric helpers)
+  - `/watch`: `src/watch/` (+ `src/tools/finance/events.ts` for the disclosure feed)
+  - Guards: `src/guard/` (input guard, output linter) — see "Guards" below
+  - Egress ledger: `src/config/egress.ts` (single source for the README table and the startup screen)
+  - Bundled disclosure data: `src/data/` (schema + build gate) and `src/data/materials/`
+  - Deep links: `src/links/deeplink.ts` (URL construction only)
 - Config: `.dexter/settings.json` (persisted model/provider selection)
 - Environment: `.env` (API keys; see `env.example`)
 
 ## Build, Test, and Development Commands
 
 - Runtime: Bun (primary). Use `bun` for all commands.
-- Install deps: `bun install`
+- Install deps: `DEXTER_SKIP_BROWSER=1 bun install` (skips the ~130MB Chromium download; drop the flag when you need the `browser` tool)
 - Run: `bun run start` or `bun run src/index.tsx`
 - Dev (watch mode): `bun run dev`
 - Type-check: `bun run typecheck`
 - Tests: `bun test`
+- Demo (no keys, no network): `bun run demo`
+- Bundled-data gate: `bun run check:data`
+- Judge benchmark: `bun run bench:judge`
 - Evals: `bun run src/evals/run.ts` (full) or `bun run src/evals/run.ts --sample 10` (sampled)
 
 ## Coding Style & Conventions
@@ -43,7 +52,7 @@
 ## LLM Providers
 
 - Supported: OpenAI (default), Anthropic, Google, xAI (Grok), OpenRouter, Ollama (local).
-- Default model: `gpt-5.5`. Provider detection is prefix-based (`claude-` -> Anthropic, `gemini-` -> Google, etc.).
+- Default model: `gpt-5.6-sol` (`DEFAULT_MODEL` in `src/model/llm.ts`). Provider detection is prefix-based (`claude-` -> Anthropic, `gemini-` -> Google, etc.).
 - Fast models for lightweight tasks: see `FAST_MODELS` map in `src/model/llm.ts`.
 - Users switch providers/models via `/model` command in the CLI.
 
@@ -57,6 +66,19 @@
 - `skill`: invokes SKILL.md-defined workflows (e.g. DCF valuation).
 - Tool registry: `src/tools/registry.ts`. Tools are conditionally included based on env vars.
 
+## Guards (v1.1.0-jp)
+
+- `/check` refuses to run unless the judge layer is `jev` or `replay` (`src/check/preflight.ts`).
+  Measured on a held-out set never used for tuning: the deterministic layer alone lets 12/30
+  advice-seeking inputs through, the judge vote alone 1/30, both together 0/30 — and the LLM
+  stand-in as the vote lets 8/30 through. Shipping that would contradict the README.
+- Input guard = deterministic vocabulary + structural intent patterns, OR the judge's vote.
+  A judge vote can never *lift* a deterministic refusal.
+- Output linter scans **only strings we generated**. Verbatim disclosure text is carried as
+  `{kind:'quote'}` and never scanned — annual reports legitimately contain 割高 / 下値 / 配分.
+- Secret paths (`.env`, `.dexter/credentials/`, `.dexter/checks/`) are denied for every tool that
+  takes a path argument, not just `bash`.
+
 ## Financial Data Source
 
 - **EDINET DB API** (edinetdb.jp): Structured financial data from ~3,800 Japanese listed companies
@@ -67,7 +89,11 @@
 ## Skills
 
 - Skills live as `SKILL.md` files with YAML frontmatter (`name`, `description`) and markdown body (instructions).
-- Built-in skills: `src/skills/dcf/SKILL.md` (adapted for Japanese market: JGB rates, JPY, TSE PBR context).
+- Built-in skills: `src/skills/dcf/SKILL.md` (adapted for Japanese market: JGB rates, JPY, TSE PBR context)
+  and `src/skills/x-research/`.
+- `src/skills/write-memo/` was **removed in v1.1.0-jp**: its description offered a long/short equity
+  recommendation memo, which contradicts what `/check` and `/watch` state they do not output.
+  `src/guard/no-advice-surface.test.ts` fails if it comes back.
 - Discovery: `src/skills/registry.ts` scans for SKILL.md files at startup.
 
 ## Environment Variables
@@ -75,6 +101,8 @@
 - LLM keys: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY`
 - Ollama: `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434`)
 - Finance: `EDINETDB_API_KEY`
+- Judge layer: `TYPESAFE_API_KEY` — **`/check` does not run without it** (see "Guards")
+- Install/replay: `DEXTER_SKIP_BROWSER`, `DEXTER_JUDGE_REPLAY`
 - Search: `EXASEARCH_API_KEY` (preferred), `TAVILY_API_KEY` (fallback)
 - Tracing: `LANGSMITH_API_KEY`, `LANGSMITH_ENDPOINT`, `LANGSMITH_PROJECT`, `LANGSMITH_TRACING`
 - Never commit `.env` files or real API keys.
