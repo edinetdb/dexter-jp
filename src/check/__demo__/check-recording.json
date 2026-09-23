@@ -1,5 +1,5 @@
 {
-  "note": "録画。鍵なし・外部通信ゼロで再生する。段落はトヨタ自動車の有価証券報告書 第122期（S100Y8NY）の逐語、判定は cb-jev で実際に回した結果。",
+  "note": "録画。鍵なし・外部通信ゼロで再生する。段落はトヨタ自動車の有価証券報告書 第122期（S100Y8NY）の逐語、判定は cb-jev で実際に回した結果。 判定は 2026-09-23 16:3x に、公開版と同じ問いの形（対象会社・対象期間入り）で実 Jev に投げ直したもの。",
   "recorded_at": "2026-09-23",
   "hypothesis": "営業利益が減ったのは為替の影響が主因だと会社は説明している",
   "ticker": "7203",
@@ -155,40 +155,69 @@
     "mda-S100Y8NY-3": {
       "c1-1": {
         "choice": "supports",
-        "confidence": 0.9,
+        "confidence": 1,
         "probabilities": {
-          "supports": 0.93,
-          "contradicts": 0.01,
-          "unrelated": 0.06
+          "contradicts": 0,
+          "supports": 1,
+          "unrelated": 0
         }
       },
       "c2-1": {
         "choice": "contradicts",
-        "confidence": 0.95,
+        "confidence": 0.98,
         "probabilities": {
+          "contradicts": 0.99,
           "supports": 0.01,
-          "contradicts": 0.96,
-          "unrelated": 0.03
+          "unrelated": 0
         }
       },
       "c3-1": {
         "choice": "contradicts",
-        "confidence": 0.92,
+        "confidence": 0.97,
         "probabilities": {
-          "supports": 0.03,
-          "contradicts": 0.95,
-          "unrelated": 0.02
+          "contradicts": 0.98,
+          "supports": 0.02,
+          "unrelated": 0
         }
       }
     },
     "mda-S100Y8NY-22": {
       "c1-1": {
         "choice": "supports",
-        "confidence": 0.9,
+        "confidence": 1,
         "probabilities": {
-          "contradicts": 0.01,
-          "unrelated": 0.06,
-          "supports": 0.93
+          "contradicts": 0,
+          "supports": 1,
+          "unrelated": 0
+        }
+      },
+      "c2-1": {
+        "choice": "contradicts",
+        "confidence": 1,
+        "probabilities": {
+          "contradicts": 1,
+          "supports": 0,
+          "unrelated": 0
+        }
+      },
+      "c3-1": {
+        "choice": "contradicts",
+        "confidence": 1,
+        "probabilities": {
+          "contradicts": 1,
+          "supports": 0,
+          "unrelated": 0
+        }
+      }
+    },
+    "mda-S100Y8NY-44": {
+      "c1-1": {
+        "choice": "supports",
+        "confidence": 0.27,
+        "probabilities": {
+          "contradicts": 0.33,
+          "supports": 0.51,
+          "unrelated": 0.16
         }
       },
       "c2-1": {
@@ -196,8 +225,37 @@
         "confidence": 0.97,
         "probabilities": {
           "contradicts": 0.98,
-          "unrelated": 0.02,
-          "supports": 0.0
+          "supports": 0.02,
+          "unrelated": 0
+        }
+      },
+      "c3-1": {
+        "choice": "contradicts",
+        "confidence": 0.87,
+        "probabilities": {
+          "contradicts": 0.91,
+          "supports": 0.08,
+          "unrelated": 0.01
+        }
+      }
+    },
+    "mda-S100Y8NY-37": {
+      "c1-1": {
+        "choice": "supports",
+        "confidence": 1,
+        "probabilities": {
+          "contradicts": 0,
+          "supports": 1,
+          "unrelated": 0
+        }
+      },
+      "c2-1": {
+        "choice": "contradicts",
+        "confidence": 0.98,
+        "probabilities": {
+          "contradicts": 0.98,
+          "supports": 0,
+          "unrelated": 0.02
         }
       },
       "c3-1": {
@@ -205,201 +263,143 @@
         "confidence": 0.99,
         "probabilities": {
           "contradicts": 0.99,
-          "unrelated": 0.01,
-          "supports": 0.0
-        }
-      }
-    },
-    "mda-S100Y8NY-44": {
-      "c1-1": {
-        "choice": "supports",
-        "confidence": 0.21,
-        "probabilities": {
-          "contradicts": 0.33,
-          "supports": 0.47,
-          "unrelated": 0.2
-        }
-      },
-      "c2-1": {
-        "choice": "contradicts",
-        "confidence": 0.93,
-        "probabilities": {
-          "contradicts": 0.96,
-          "unrelated": 0.01,
-          "supports": 0.03
-        }
-      },
-      "c3-1": {
-        "choice": "contradicts",
-        "confidence": 0.89,
-        "probabilities": {
-          "contradicts": 0.92,
-          "supports": 0.06,
-          "unrelated": 0.02
-        }
-      }
-    },
-    "mda-S100Y8NY-37": {
-      "c1-1": {
-        "choice": "supports",
-        "confidence": 0.95,
-        "probabilities": {
-          "contradicts": 0.0,
-          "unrelated": 0.03,
-          "supports": 0.97
-        }
-      },
-      "c2-1": {
-        "choice": "contradicts",
-        "confidence": 0.95,
-        "probabilities": {
-          "contradicts": 0.97,
-          "unrelated": 0.03,
-          "supports": 0.0
-        }
-      },
-      "c3-1": {
-        "choice": "contradicts",
-        "confidence": 0.97,
-        "probabilities": {
-          "contradicts": 0.98,
-          "unrelated": 0.02,
-          "supports": 0.0
+          "supports": 0,
+          "unrelated": 0.01
         }
       }
     },
     "mda-S100Y8NY-39": {
       "c1-1": {
         "choice": "supports",
-        "confidence": 0.94,
+        "confidence": 1,
         "probabilities": {
-          "contradicts": 0.0,
-          "unrelated": 0.04,
-          "supports": 0.96
+          "contradicts": 0,
+          "supports": 1,
+          "unrelated": 0
         }
       },
       "c2-1": {
         "choice": "supports",
-        "confidence": 0.79,
+        "confidence": 0.87,
         "probabilities": {
-          "contradicts": 0.05,
-          "unrelated": 0.09,
-          "supports": 0.86
+          "contradicts": 0.08,
+          "supports": 0.91,
+          "unrelated": 0.01
         }
       },
       "c3-1": {
         "choice": "supports",
-        "confidence": 0.81,
+        "confidence": 0.93,
         "probabilities": {
-          "contradicts": 0.06,
-          "unrelated": 0.07,
-          "supports": 0.87
+          "contradicts": 0.05,
+          "supports": 0.95,
+          "unrelated": 0
         }
       }
     },
     "mda-S100Y8NY-35": {
       "c1-1": {
         "choice": "supports",
-        "confidence": 0.94,
+        "confidence": 1,
         "probabilities": {
-          "supports": 0.96,
-          "contradicts": 0.0,
-          "unrelated": 0.04
+          "contradicts": 0,
+          "supports": 1,
+          "unrelated": 0
         }
       },
       "c2-1": {
         "choice": "contradicts",
-        "confidence": 0.3,
+        "confidence": 0.54,
         "probabilities": {
-          "supports": 0.35,
-          "contradicts": 0.53,
-          "unrelated": 0.12
+          "contradicts": 0.69,
+          "supports": 0.28,
+          "unrelated": 0.03
         }
       },
       "c3-1": {
         "choice": "supports",
-        "confidence": 0.75,
+        "confidence": 0.76,
         "probabilities": {
-          "supports": 0.83,
-          "contradicts": 0.14,
-          "unrelated": 0.03
+          "contradicts": 0.16,
+          "supports": 0.84,
+          "unrelated": 0
         }
       }
     },
     "mda-S100Y8NY-18": {
       "c1-1": {
         "choice": "unrelated",
-        "confidence": 0.82,
+        "confidence": 0.72,
         "probabilities": {
-          "contradicts": 0.03,
-          "supports": 0.09,
-          "unrelated": 0.88
+          "contradicts": 0.04,
+          "supports": 0.15,
+          "unrelated": 0.81
         }
       },
       "c2-1": {
         "choice": "unrelated",
-        "confidence": 0.36,
+        "confidence": 0.22,
         "probabilities": {
           "contradicts": 0.13,
-          "supports": 0.3,
-          "unrelated": 0.57
+          "supports": 0.39,
+          "unrelated": 0.48
         }
       },
       "c3-1": {
         "choice": "unrelated",
-        "confidence": 0.45,
+        "confidence": 0.46,
         "probabilities": {
-          "contradicts": 0.27,
-          "supports": 0.1,
-          "unrelated": 0.63
+          "contradicts": 0.28,
+          "supports": 0.08,
+          "unrelated": 0.64
         }
       }
     },
     "mda-S100Y8NY-12": {
       "c1-1": {
         "choice": "unrelated",
-        "confidence": 1.0,
+        "confidence": 1,
         "probabilities": {
-          "supports": 0.0,
-          "contradicts": 0.0,
-          "unrelated": 1.0
-        }
-      },
-      "c2-1": {
-        "choice": "unrelated",
-        "confidence": 0.97,
-        "probabilities": {
-          "supports": 0.0,
-          "contradicts": 0.01,
-          "unrelated": 0.99
-        }
-      },
-      "c3-1": {
-        "choice": "unrelated",
-        "confidence": 0.97,
-        "probabilities": {
-          "supports": 0.0,
-          "unrelated": 0.98,
-          "contradicts": 0.02
-        }
-      }
-    },
-    "mda-S100Y8NY-50": {
-      "c1-1": {
-        "choice": "unrelated",
-        "confidence": 1.0,
-        "probabilities": {
-          "supports": 0.0,
-          "contradicts": 0.0,
-          "unrelated": 1.0
+          "contradicts": 0,
+          "supports": 0,
+          "unrelated": 1
         }
       },
       "c2-1": {
         "choice": "unrelated",
         "confidence": 0.98,
         "probabilities": {
+          "contradicts": 0.02,
+          "supports": 0,
+          "unrelated": 0.98
+        }
+      },
+      "c3-1": {
+        "choice": "unrelated",
+        "confidence": 0.96,
+        "probabilities": {
+          "contradicts": 0.02,
+          "supports": 0,
+          "unrelated": 0.98
+        }
+      }
+    },
+    "mda-S100Y8NY-50": {
+      "c1-1": {
+        "choice": "unrelated",
+        "confidence": 1,
+        "probabilities": {
+          "contradicts": 0,
+          "supports": 0,
+          "unrelated": 1
+        }
+      },
+      "c2-1": {
+        "choice": "unrelated",
+        "confidence": 0.98,
+        "probabilities": {
+          "contradicts": 0,
           "supports": 0.01,
-          "contradicts": 0.0,
           "unrelated": 0.99
         }
       },
@@ -407,8 +407,8 @@
         "choice": "unrelated",
         "confidence": 0.96,
         "probabilities": {
-          "supports": 0.0,
           "contradicts": 0.02,
+          "supports": 0,
           "unrelated": 0.98
         }
       }
@@ -418,27 +418,27 @@
         "choice": "unrelated",
         "confidence": 0.99,
         "probabilities": {
-          "unrelated": 1.0,
-          "supports": 0.0,
-          "contradicts": 0.0
+          "contradicts": 0,
+          "supports": 0,
+          "unrelated": 1
         }
       },
       "c2-1": {
         "choice": "unrelated",
-        "confidence": 0.42,
+        "confidence": 0.32,
         "probabilities": {
-          "unrelated": 0.62,
-          "supports": 0.36,
-          "contradicts": 0.02
+          "contradicts": 0.11,
+          "supports": 0.34,
+          "unrelated": 0.55
         }
       },
       "c3-1": {
         "choice": "unrelated",
-        "confidence": 0.69,
+        "confidence": 0.25,
         "probabilities": {
-          "unrelated": 0.8,
-          "supports": 0.05,
-          "contradicts": 0.15
+          "contradicts": 0.43,
+          "supports": 0.07,
+          "unrelated": 0.5
         }
       }
     }
