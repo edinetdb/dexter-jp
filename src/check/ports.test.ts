@@ -1,15 +1,18 @@
 /**
  * EDINET DB の応答の読み取り。**録画した実応答**（`__fixtures__/`）で回す = 外部通信ゼロ。
  *
- * ここは推測で書いてはいけない層で、実際に 3 つ間違えていた（2026-09-23 に実応答で判明）:
+ * ここは推測で書いてはいけない層で、実際に **5 つ**間違えていた（2026-09-23 に実応答で判明）:
  *   1. 節は `data.mda` のようなキーではなく、`data` が `{section, text}` の**配列**で、
  *      節名は**日本語**（「経営者による分析」等、18 節）
  *   2. `full=true` を付けないと各節は **2,000 字の要約版**（`meta.truncated: true`）。
  *      要約を有報の逐語として引用すると出典表記と中身が食い違う
  *   3. `sec_code` は **5 桁**（トヨタ = `72030`）
+ *   4. `/v1/events` は `since` を省くと**直近 7 日**しか見ない = 年 1 回の有報は必ず 0 件
+ *   5. 日付範囲は**最大 366 日**（超えると 400）。しかも 1 年より前の有報 ID を当てると、
+ *      本文（最新期）と出典が食い違う = トヨタは第121期 `S100VWVY` ではなく第122期 `S100Y8NY`
  */
 import { describe, expect, test } from 'bun:test';
-import { extractSections, isTruncated, latestYuhouDocId, companyHeader, EVIDENCE_SECTIONS } from './ports.js';
+import { extractSections, isTruncated, latestYuhouDocId, companyHeader, yuhouWindow, EVIDENCE_SECTIONS } from './ports.js';
 import textBlocks from './__fixtures__/text-blocks-E02144.json';
 import events from './__fixtures__/events-yuhou-E02144.json';
 import company from './__fixtures__/company-E02144.json';
@@ -61,7 +64,8 @@ describe('★ 要約版のまま使わない（full=true の取り違え）', ()
 
 describe('有報の書類 ID', () => {
   test('★ `event_type=yuhou` の `source_id` が取れる（出所メタの doc_id）', () => {
-    expect(latestYuhouDocId(events)).toBe('S100VWVY');
+    // 第122期（2025/04-2026/03、提出 2026-06-10）= text-blocks が返す本文と同じ期
+    expect(latestYuhouDocId(events)).toBe('S100Y8NY');
   });
 
   test('複数あれば新しい方', () => {
@@ -93,5 +97,35 @@ describe('会社の見出し', () => {
 
   test('無い項目は落とす（undefined を詰めない）', () => {
     expect(companyHeader({ data: { name: 'X' } })).toEqual({ name: 'X' });
+  });
+});
+
+describe('★ 日付窓（実応答で 2 回間違えた）', () => {
+  test('`since` を省くと直近 7 日しか見ない → 有報は年 1 回なので必ず 0 件になる', () => {
+    // 実測: ?edinet_code=E02144&event_type=yuhou&limit=5 は total 0
+    // だから窓を必ず付ける。付け忘れると doc_id が空のまま通ってしまう
+    const w = yuhouWindow(new Date('2026-09-23T00:00:00Z'));
+    expect(w.until).toBe('2026-09-23');
+    expect(w.since).toBe('2025-09-23');
+  });
+
+  test('★ 窓は 366 日を超えない（超えると 400 invalid_param: Range too large）', () => {
+    const w = yuhouWindow(new Date('2026-09-23T00:00:00Z'));
+    const days = (Date.parse(w.until) - Date.parse(w.since)) / 86_400_000;
+    expect(days).toBeLessThanOrEqual(366);
+    expect(days).toBeGreaterThanOrEqual(364);
+  });
+
+  test('うるう年をまたいでも 366 日以内', () => {
+    for (const d of ['2028-03-01', '2028-02-29', '2027-01-01']) {
+      const w = yuhouWindow(new Date(`${d}T00:00:00Z`));
+      const days = (Date.parse(w.until) - Date.parse(w.since)) / 86_400_000;
+      expect({ d, ok: days <= 366 }).toEqual({ d, ok: true });
+    }
+  });
+
+  test('★ 見つからなければ null（古い期の書類 ID を当てない）', () => {
+    // 本文は最新期なので、1 年より前の有報 ID を出典にすると本文と出典が食い違う
+    expect(latestYuhouDocId({ data: [] })).toBeNull();
   });
 });

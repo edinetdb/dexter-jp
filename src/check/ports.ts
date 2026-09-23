@@ -60,6 +60,19 @@ export function isTruncated(payload: unknown): boolean {
   return (payload as { meta?: { truncated?: unknown } })?.meta?.truncated === true;
 }
 
+/**
+ * 直近 1 年ぶんの日付窓（`since` / `until`）。
+ *
+ * `/v1/events` は **`since` を省くと直近 7 日**しか見ず（有報は年 1 回なので必ず 0 件になる）、
+ * **範囲は最大 366 日**（`since=2025-01-01` のような開いた指定は
+ * `invalid_param: Range too large (max 366 days)` で 400）。2026-09-23 実測。
+ */
+export function yuhouWindow(today: Date = new Date()): { since: string; until: string } {
+  const until = today.toISOString().slice(0, 10);
+  const from = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+  return { since: from.toISOString().slice(0, 10), until };
+}
+
 /** 有報（`event_type=yuhou`）の最新の書類 ID を取り出す。出所メタの `doc_id` に要る。 */
 export function latestYuhouDocId(payload: unknown): string | null {
   const data = (payload as { data?: unknown })?.data;
@@ -95,7 +108,11 @@ export async function fetchDisclosure(ticker: string): Promise<DisclosureSource>
   const [{ data: companyPayload }, { data: blocks }, { data: events }] = await Promise.all([
     api.get(`/companies/${edinetCode}`, {}, { cacheable: true }),
     api.get(`/companies/${edinetCode}/text-blocks`, { full: 'true' }, { cacheable: true }),
-    api.get('/events', { edinet_code: edinetCode, event_type: 'yuhou', limit: 5 }, { cacheable: true }),
+    api.get(
+      '/events',
+      { edinet_code: edinetCode, event_type: 'yuhou', limit: 5, ...yuhouWindow() },
+      { cacheable: true },
+    ),
   ]);
 
   const header = companyHeader({ data: companyPayload });
@@ -105,6 +122,9 @@ export async function fetchDisclosure(ticker: string): Promise<DisclosureSource>
     ...(header.secCode ? { secCode: header.secCode } : {}),
   };
   const fiscalYear = header.fiscalYear;
+  // 直近 1 年に有報の提出が無い会社では取れない。**その場合は空のままにする**
+  // （古い期の書類 ID を当てると、本文（最新期）と出典が食い違う。誤った出典を出すより
+  //   出典なしで出す方を選ぶ。同梱データは出所メタが欠けると build が落ちる = G-C2）。
   const docId = latestYuhouDocId({ data: events }) ?? '';
 
   const sections = extractSections({ data: blocks, meta: (blocks as { meta?: unknown })?.meta });
