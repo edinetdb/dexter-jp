@@ -11,6 +11,7 @@
  * Rules are parsed to a structured form on load and serialized back from structure
  * (never by concatenating raw user input) so a crafted command can't inject a rule.
  */
+import { posix } from 'node:path';
 import type { ParsedSegment } from './command-parser.js';
 import { isReadOnly } from './read-only.js';
 import { loadConfig, saveConfig } from '../utils/config.js';
@@ -126,7 +127,29 @@ const SECRET_PATTERNS: RegExp[] = [
   /(^|\/)\.netrc$/i,
   /(^|\/)credentials(\.[\w-]+)?($|\/)/i, // credentials, credentials.yml, credentials/
   /\.dexter\/credentials/i,
+  // `/check` の記録。利用者の仮説（= その人の投資スタンス）が平文で残るので、
+  // エージェントから読ませない。これを開けると、入口ガードも出力 linter も通さずに
+  // 「さっきの判定を踏まえて」の自由質問で判定結果が使われる（review r2 M3）。
+  /\.dexter\/checks/i,
 ];
+
+/** 秘密パス判定を 1 か所から使えるように公開する（bash 以外のツールにも掛けるため）。 */
+export function isSecretPath(value: string): boolean {
+  // 正規化の前と後の両方で見る（review T9 M1）。`read_file` は後段で正規化してから実際に読むので、
+  // 生の文字列だけを見ると `.dexter/./checks` / `.dexter//checks` が素通りして中身が読めた。
+  const forms = new Set([value, normalizeForSecretMatch(value)]);
+  for (const form of forms) {
+    if (SECRET_PATTERNS.some((re) => re.test(form))) return true;
+  }
+  return false;
+}
+
+/** `\` を `/` に、連続スラッシュと `.` / `..` を畳み、末尾のスラッシュを落とす。 */
+function normalizeForSecretMatch(value: string): string {
+  const unified = value.replace(/\\/g, '/');
+  const normalized = posix.normalize(unified);
+  return normalized.length > 1 ? normalized.replace(/\/+$/, '') : normalized;
+}
 
 /** Expand a word into the strings to test: the whole word plus any `--opt=VALUE` value. */
 function secretCandidates(word: string): string[] {
@@ -143,7 +166,8 @@ export function builtinDeny(seg: ParsedSegment): { denied: boolean; reason?: str
     return { denied: true, reason: 'sets a sensitive environment variable (possible code/PATH injection)' };
   }
   const candidates = [seg.command, ...seg.args].flatMap(secretCandidates);
-  if (candidates.some((w) => SECRET_PATTERNS.some((re) => re.test(w)))) {
+  // isSecretPath 経由 = 正規化の前後の両方を見る（review T9 M1。`cat .dexter/./checks/x` が ask 止まりだった）
+  if (candidates.some((w) => isSecretPath(w))) {
     return { denied: true, reason: 'references a sensitive/secret path' };
   }
   return { denied: false };

@@ -1,0 +1,24 @@
+[
+  {
+    "source": "edinet",
+    "docId": "S100TEST",
+    "filer": "サンプル製作所株式会社",
+    "documentType": "有価証券報告書",
+    "section": "事業等のリスク",
+    "acquiredDate": "2026-09-22",
+    "citation": "出典：EDINET閲覧（提出）サイト（https://disclosure2.edinet-fsa.go.jp/example1）、PDL1.0（https://www.digital.go.jp/resources/open_data/public_data_license_v1.0）",
+    "editor": "Cabocia",
+    "text": "為替相場の変動は、当社グループの海外事業の円換算後の業績に影響を及ぼす可能性があります。特に米ドルおよびユーロに対する円高が進行した場合、輸出採算の悪化により利益水準が低下するおそれがあります。"
+  },
+  {
+    "source": "edinet",
+    "docId": "S100TEST2",
+    "filer": "サンプル物産株式会社",
+    "documentType": "有価証券報告書",
+    "section": "経営者による財政状態、経営成績及びキャッシュ・フローの状況の分析",
+    "acquiredDate": "2026-09-22",
+    "citation": "出典：EDINET閲覧（提出）サイト（https://disclosure2.edinet-fsa.go.jp/example2）、PDL1.0（https://www.digital.go.jp/resources/open_data/public_data_license_v1.0）",
+    "editor": "Cabocia",
+    "text": "当連結会計年度の営業利益は、原価改善活動の進捗により前期比で増益となりました。地域別では、国内セグメントが堅調に推移した一方、海外セグメントは現地需要の減速により減収となりました。"
+  }
+]

@@ -4,22 +4,21 @@ import { CONTEXT_THRESHOLD } from '../utils/tokens.js';
 
 export const MEMORY_FLUSH_TOKEN = 'NO_MEMORY_TO_FLUSH';
 
-const MEMORY_FLUSH_PROMPT = `
+export const MEMORY_FLUSH_PROMPT = `
 Session context is close to compaction. Summarize durable facts and user preferences worth remembering long-term.
 
 Rules:
 - Output concise markdown bullet points.
 - Include durable facts, explicit user preferences, and stable decisions.
-- Prioritize capturing personal financial information:
-  - Financial goals (retirement targets, savings goals, income targets)
-  - Risk tolerance and investment philosophy
-  - Portfolio decisions and allocation changes
-  - Trade history and the reasoning behind buy/sell decisions
-  - Account details mentioned (brokerage, 401k, IRA specifics)
-- Also capture personal context that affects financial advice:
+- Capture durable context about what the user researches and how they work:
+  - Companies, sectors, and themes they keep coming back to
+  - Which disclosures and sections they rely on (有価証券報告書 MD&A / risks / policy)
+  - Stated interests and the questions they have asked before
+  - Working preferences (output format, language, level of detail)
+- Also capture stable personal context that changes what is relevant to them:
   - Life events (job changes, home purchase, family changes)
   - Tax situation or jurisdiction
-  - Time horizons and liquidity needs
+  - Time horizons
 - Do not include temporary tool output, market data, or stock prices.
 - If nothing should be stored, reply exactly with ${MEMORY_FLUSH_TOKEN}.
 `.trim();
