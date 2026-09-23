@@ -14,6 +14,9 @@
     "gateway": "tsx src/gateway/index.ts run",
     "gateway:login": "tsx src/gateway/index.ts login",
     "typecheck": "tsc --noEmit",
+    "demo": "bun scripts/demo.ts",
+    "bench:judge": "bun src/evals/judge/bench.ts",
+    "check:data": "bun src/data/check.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "postinstall": "bun scripts/postinstall.ts"

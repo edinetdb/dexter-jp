@@ -1,0 +1,448 @@
+{
+  "note": "録画。鍵なし・外部通信ゼロで再生する。段落はトヨタ自動車の有価証券報告書 第122期（S100Y8NY）の逐語、判定は cb-jev で実際に回した結果。",
+  "recorded_at": "2026-09-23",
+  "hypothesis": "営業利益が減ったのは為替の影響が主因だと会社は説明している",
+  "ticker": "7203",
+  "adviceNoul": 0.03,
+  "claims": [
+    {
+      "quote": "営業利益が減った",
+      "text": "トヨタ自動車株式会社のFY2026（2026年3月期）の営業利益は、前連結会計年度に比べて減少した。",
+      "negated": false,
+      "company": "トヨタ自動車株式会社",
+      "period": "FY2026"
+    },
+    {
+      "quote": "為替の影響が主因",
+      "text": "トヨタ自動車株式会社のFY2026（2026年3月期）の営業利益の減少は、為替の影響が主因である。",
+      "negated": false,
+      "company": "トヨタ自動車株式会社",
+      "period": "FY2026"
+    },
+    {
+      "quote": "会社は説明している",
+      "text": "トヨタ自動車株式会社は、FY2026（2026年3月期）の営業利益の減少の主因が為替の影響であると、自ら説明している。",
+      "negated": false,
+      "company": "トヨタ自動車株式会社",
+      "period": "FY2026"
+    }
+  ],
+  "disclosure": {
+    "company": {
+      "name": "トヨタ自動車株式会社",
+      "edinetCode": "E02144",
+      "secCode": "72030"
+    },
+    "fiscalYear": 2026,
+    "sections": [
+      "mda",
+      "risks"
+    ],
+    "paragraphs": [
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "mda",
+        "fiscalYear": 2026,
+        "id": "mda-S100Y8NY-3",
+        "text": " 営業収益50兆6,849億円（前期比増減２兆6,482億円（5.5%））営業利益３兆7,662億円（前期比増減△１兆293億円（△21.5%））税引前利益５兆1,529億円（前期比増減△１兆2,615億円（△19.7%））親会社の所有者に帰属する当期利益３兆8,480億円（前期比増減△9,169億円（△19.2%）） なお、営業利益の主な増減要因は、次のとおりです。 営業面の努力7,100億円原価改善の努力△1,200億円為替変動の影響△1,950億円諸経費の増減・低減努力△２兆300億円その他6,057億円 ②生産、受注及び販売の実績a.生産実績当連結会計年度における生産実績を事業別セグメントごとに示すと、次のとおりです。",
+        "docId": "S100Y8NY"
+      },
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "mda",
+        "fiscalYear": 2026,
+        "id": "mda-S100Y8NY-22",
+        "text": " e.営業利益 金額：百万円 営業利益の対前期比増減営業面の努力710,000原価改善の努力△120,000為替変動の影響△195,000諸経費の増減・低減努力△2,030,000その他605,700 合計△1,029,300 当連結会計年度における営業利益は３兆7,662億円と、前連結会計年度に比べて１兆293億円（21.5％）の減益となりました。この減益は、諸経費の増加２兆300億円などによるものですが、営業面の努力7,100億円などにより一部相殺されています。 上記の諸経費の増加は、米国関税の影響１兆3,800億円を含んでいます。 上記の営業面の努力は、車両販売台数および販売構成の変化2,100億円ならびに価格改定を中心としたその他営業面の努力3,350億円などを含んでいます。",
+        "docId": "S100Y8NY"
+      },
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "mda",
+        "fiscalYear": 2026,
+        "id": "mda-S100Y8NY-44",
+        "text": "（金額：百万円） 日本北米欧州アジアその他営業面の努力265,000415,000△30,00065,00045,000原価改善の努力△145,00025,00015,00015,000△30,000為替変動の影響△105,00025,000△45,000△75,0005,000諸経費の増減・低減努力△1,250,000△865,000△30,000△15,000△30,000その他404,91598,63832,190△16,68486,340合計△830,085△301,362△57,810△26,68476,340 b.外部顧客の所在地別営業収益 金額：百万円 ３月31日に終了した１年間 2025年 2026年日本7,723,171 7,942,616北米18,985,399 20,783,571欧州5,979,720 6,396,867アジア7,944,206 7,894,843その他7,404,208 7,667,056合計48,036,704 50,684,952 （注） 「その他」は、中南米、オセアニア、アフリカ、中東ほかからなります。",
+        "docId": "S100Y8NY"
+      },
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "mda",
+        "fiscalYear": 2026,
+        "id": "mda-S100Y8NY-37",
+        "text": "営業利益は、諸経費の増加および関税の影響などにより、前連結会計年度に比べて減益となりました。",
+        "docId": "S100Y8NY"
+      },
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "mda",
+        "fiscalYear": 2026,
+        "id": "mda-S100Y8NY-39",
+        "text": "営業利益は、為替変動の影響などにより、前連結会計年度に比べて減益となりました。",
+        "docId": "S100Y8NY"
+      },
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "mda",
+        "fiscalYear": 2026,
+        "id": "mda-S100Y8NY-35",
+        "text": "前連結会計年度および当連結会計年度における輸出台数はそれぞれ1,941千台および2,001千台となりました。営業利益は、諸経費の増加および為替変動の影響などにより、前連結会計年度に比べて減益となりました。",
+        "docId": "S100Y8NY"
+      },
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "mda",
+        "fiscalYear": 2026,
+        "id": "mda-S100Y8NY-18",
+        "text": "為替変動リスクをヘッジするためにトヨタで利用されるデリバティブ金融商品に関する追加的な情報については、連結財務諸表注記３（４）③および21を参照ください。 一般的に、円安は営業収益、営業利益および親会社の所有者に帰属する当期利益に好影響を及ぼし、円高は悪影響を及ぼします。日本円の米ドルに対する期中平均相場は、前会計年度に比べて円高に推移しました。また、日本円の米ドルに対する決算日の為替相場は、前会計年度末に比べて円安となりました。日本円のユーロに対する期中平均相場および決算日の為替相場は、前会計年度に比べて円安に推移しました。詳細については、連結財務諸表注記20を参照ください。",
+        "docId": "S100Y8NY"
+      },
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "mda",
+        "fiscalYear": 2026,
+        "id": "mda-S100Y8NY-12",
+        "text": "トヨタは、顧客に対して資金を提供する能力は、顧客に対しての重要な付加価値サービスであると考え、金融子会社のネットワークを各国へ展開しています。 小売融資およびリースにおけるトヨタの主な競争相手には、商業銀行、消費者信用組合、その他のファイナンス会社が含まれます。一方、卸売融資における主な競争相手には、商業銀行および自動車メーカー系のファイナンス会社が含まれます。 トヨタの金融事業に係る債権は、主に融資残高の増加により、当連結会計年度において増加しました。また、賃貸用車両及び器具は、主に為替変動の影響により、当連結会計年度において増加しました。 金融事業に係る債権および賃貸用車両及び器具の詳細については、連結財務諸表注記８および13を参照ください。 トヨタの金融債権は、回収可能性リスクを負っています。",
+        "docId": "S100Y8NY"
+      },
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "mda",
+        "fiscalYear": 2026,
+        "id": "mda-S100Y8NY-50",
+        "text": "現金及び現金同等物の大部分は円建てまたは米ドル建てです。 トヨタは、現金及び現金同等物、定期預金、公社債および信託ファンドへの投資を総資金量と定義しており、当連結会計年度において総資金量は、22兆1,179億円となりました。 当連結会計年度における営業債権及びその他の債権は、1,162億円（3.2％）増加し、３兆7,959億円となりました。これは主に、為替変動の影響によるものです。 当連結会計年度における棚卸資産は、5,367億円（11.7％）増加し、５兆1,349億円となりました。これは主に、為替変動の影響によるものです。 当連結会計年度における金融事業に係る債権合計は、５兆3,416億円（15.9％）増加し、38兆9,666億円となりました。これは主に、顧客や販売店に対する融資残高の増加によるものです。",
+        "docId": "S100Y8NY"
+      },
+      {
+        "company": "トヨタ自動車株式会社",
+        "edinetCode": "E02144",
+        "filer": "トヨタ自動車株式会社",
+        "docType": "有価証券報告書",
+        "section": "risks",
+        "fiscalYear": 2026,
+        "id": "risks-S100Y8NY-17",
+        "text": " （２）金融・経済のリスク①為替および金利変動の影響トヨタの収益は、外国為替相場の変動に影響を受け、主として日本円、米ドル、ユーロ、ならびに豪ドル、加ドルおよび英国ポンドの価格変動によって影響を受けます。トヨタの連結財務諸表は、日本円で表示されているため、換算リスクという形で為替変動の影響を受けます。また、為替相場の変動は、外国通貨で販売する製品および調達する材料に、取引リスクという形で影響を与える可能性があります。特に、米ドルに対する円高の進行は、トヨタの経営成績に悪影響を与える可能性があります。為替相場および金利の変動リスクを軽減するために、現地生産を行い、先物為替予約取引や金利スワップ取引を含むデリバティブ金融商品を利用していますが、依然として為替相場と金利の変動は、トヨタの財政状態、経営成績およびキャッシュ・フローに悪影響を与える可能性があります。",
+        "docId": "S100Y8NY"
+      }
+    ]
+  },
+  "judgments": {
+    "mda-S100Y8NY-3": {
+      "c1-1": {
+        "choice": "supports",
+        "confidence": 0.9,
+        "probabilities": {
+          "supports": 0.93,
+          "contradicts": 0.01,
+          "unrelated": 0.06
+        }
+      },
+      "c2-1": {
+        "choice": "contradicts",
+        "confidence": 0.95,
+        "probabilities": {
+          "supports": 0.01,
+          "contradicts": 0.96,
+          "unrelated": 0.03
+        }
+      },
+      "c3-1": {
+        "choice": "contradicts",
+        "confidence": 0.92,
+        "probabilities": {
+          "supports": 0.03,
+          "contradicts": 0.95,
+          "unrelated": 0.02
+        }
+      }
+    },
+    "mda-S100Y8NY-22": {
+      "c1-1": {
+        "choice": "supports",
+        "confidence": 0.9,
+        "probabilities": {
+          "contradicts": 0.01,
+          "unrelated": 0.06,
+          "supports": 0.93
+        }
+      },
+      "c2-1": {
+        "choice": "contradicts",
+        "confidence": 0.97,
+        "probabilities": {
+          "contradicts": 0.98,
+          "unrelated": 0.02,
+          "supports": 0.0
+        }
+      },
+      "c3-1": {
+        "choice": "contradicts",
+        "confidence": 0.99,
+        "probabilities": {
+          "contradicts": 0.99,
+          "unrelated": 0.01,
+          "supports": 0.0
+        }
+      }
+    },
+    "mda-S100Y8NY-44": {
+      "c1-1": {
+        "choice": "supports",
+        "confidence": 0.21,
+        "probabilities": {
+          "contradicts": 0.33,
+          "supports": 0.47,
+          "unrelated": 0.2
+        }
+      },
+      "c2-1": {
+        "choice": "contradicts",
+        "confidence": 0.93,
+        "probabilities": {
+          "contradicts": 0.96,
+          "unrelated": 0.01,
+          "supports": 0.03
+        }
+      },
+      "c3-1": {
+        "choice": "contradicts",
+        "confidence": 0.89,
+        "probabilities": {
+          "contradicts": 0.92,
+          "supports": 0.06,
+          "unrelated": 0.02
+        }
+      }
+    },
+    "mda-S100Y8NY-37": {
+      "c1-1": {
+        "choice": "supports",
+        "confidence": 0.95,
+        "probabilities": {
+          "contradicts": 0.0,
+          "unrelated": 0.03,
+          "supports": 0.97
+        }
+      },
+      "c2-1": {
+        "choice": "contradicts",
+        "confidence": 0.95,
+        "probabilities": {
+          "contradicts": 0.97,
+          "unrelated": 0.03,
+          "supports": 0.0
+        }
+      },
+      "c3-1": {
+        "choice": "contradicts",
+        "confidence": 0.97,
+        "probabilities": {
+          "contradicts": 0.98,
+          "unrelated": 0.02,
+          "supports": 0.0
+        }
+      }
+    },
+    "mda-S100Y8NY-39": {
+      "c1-1": {
+        "choice": "supports",
+        "confidence": 0.94,
+        "probabilities": {
+          "contradicts": 0.0,
+          "unrelated": 0.04,
+          "supports": 0.96
+        }
+      },
+      "c2-1": {
+        "choice": "supports",
+        "confidence": 0.79,
+        "probabilities": {
+          "contradicts": 0.05,
+          "unrelated": 0.09,
+          "supports": 0.86
+        }
+      },
+      "c3-1": {
+        "choice": "supports",
+        "confidence": 0.81,
+        "probabilities": {
+          "contradicts": 0.06,
+          "unrelated": 0.07,
+          "supports": 0.87
+        }
+      }
+    },
+    "mda-S100Y8NY-35": {
+      "c1-1": {
+        "choice": "supports",
+        "confidence": 0.94,
+        "probabilities": {
+          "supports": 0.96,
+          "contradicts": 0.0,
+          "unrelated": 0.04
+        }
+      },
+      "c2-1": {
+        "choice": "contradicts",
+        "confidence": 0.3,
+        "probabilities": {
+          "supports": 0.35,
+          "contradicts": 0.53,
+          "unrelated": 0.12
+        }
+      },
+      "c3-1": {
+        "choice": "supports",
+        "confidence": 0.75,
+        "probabilities": {
+          "supports": 0.83,
+          "contradicts": 0.14,
+          "unrelated": 0.03
+        }
+      }
+    },
+    "mda-S100Y8NY-18": {
+      "c1-1": {
+        "choice": "unrelated",
+        "confidence": 0.82,
+        "probabilities": {
+          "contradicts": 0.03,
+          "supports": 0.09,
+          "unrelated": 0.88
+        }
+      },
+      "c2-1": {
+        "choice": "unrelated",
+        "confidence": 0.36,
+        "probabilities": {
+          "contradicts": 0.13,
+          "supports": 0.3,
+          "unrelated": 0.57
+        }
+      },
+      "c3-1": {
+        "choice": "unrelated",
+        "confidence": 0.45,
+        "probabilities": {
+          "contradicts": 0.27,
+          "supports": 0.1,
+          "unrelated": 0.63
+        }
+      }
+    },
+    "mda-S100Y8NY-12": {
+      "c1-1": {
+        "choice": "unrelated",
+        "confidence": 1.0,
+        "probabilities": {
+          "supports": 0.0,
+          "contradicts": 0.0,
+          "unrelated": 1.0
+        }
+      },
+      "c2-1": {
+        "choice": "unrelated",
+        "confidence": 0.97,
+        "probabilities": {
+          "supports": 0.0,
+          "contradicts": 0.01,
+          "unrelated": 0.99
+        }
+      },
+      "c3-1": {
+        "choice": "unrelated",
+        "confidence": 0.97,
+        "probabilities": {
+          "supports": 0.0,
+          "unrelated": 0.98,
+          "contradicts": 0.02
+        }
+      }
+    },
+    "mda-S100Y8NY-50": {
+      "c1-1": {
+        "choice": "unrelated",
+        "confidence": 1.0,
+        "probabilities": {
+          "supports": 0.0,
+          "contradicts": 0.0,
+          "unrelated": 1.0
+        }
+      },
+      "c2-1": {
+        "choice": "unrelated",
+        "confidence": 0.98,
+        "probabilities": {
+          "supports": 0.01,
+          "contradicts": 0.0,
+          "unrelated": 0.99
+        }
+      },
+      "c3-1": {
+        "choice": "unrelated",
+        "confidence": 0.96,
+        "probabilities": {
+          "supports": 0.0,
+          "contradicts": 0.02,
+          "unrelated": 0.98
+        }
+      }
+    },
+    "risks-S100Y8NY-17": {
+      "c1-1": {
+        "choice": "unrelated",
+        "confidence": 0.99,
+        "probabilities": {
+          "unrelated": 1.0,
+          "supports": 0.0,
+          "contradicts": 0.0
+        }
+      },
+      "c2-1": {
+        "choice": "unrelated",
+        "confidence": 0.42,
+        "probabilities": {
+          "unrelated": 0.62,
+          "supports": 0.36,
+          "contradicts": 0.02
+        }
+      },
+      "c3-1": {
+        "choice": "unrelated",
+        "confidence": 0.69,
+        "probabilities": {
+          "unrelated": 0.8,
+          "supports": 0.05,
+          "contradicts": 0.15
+        }
+      }
+    }
+  },
+  "summary": null,
+  "cost_jpy": 0.0767
+}
