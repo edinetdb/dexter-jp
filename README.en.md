@@ -98,7 +98,7 @@ This table is a translation. The canonical list is the Japanese table in `README
 
 We do not write that TypeSafe (Jev) "does not store" your data. Their terms say inputs are not used as training data, while reserving the right to process them for telemetry, abuse prevention and legal compliance. Read each service's terms yourself.
 
-Conversation-history embedding is on by default, and **its destination is chosen independently of the model you selected**. If `OPENAI_API_KEY` is in your `.env`, your conversation goes to OpenAI even when `/model` is set to Claude. On startup, Dexter JP prints the destinations that are actually live for that session.
+Conversation-history embedding is on by default, and **its destination is chosen independently of the model you selected**. If `OPENAI_API_KEY` is in your `.env`, your conversation goes to OpenAI even when `/model` is set to Claude. On startup, Dexter JP prints the destinations your `.env` keys make possible for that session (a key being set does not mean that provider is actually used unless you select it).
 
 ### Bundled data
 
