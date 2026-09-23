@@ -27,6 +27,14 @@ export const JUDGE_UNAVAILABLE_AT_RUN = [
 
 export const CHECK_FAILED_PREFIX = '/check を最後まで実行できませんでした';
 
+/**
+ * Agent SDK モードでは `/check` を走らせない（Codex T9 r2 H1）。
+ * 分解・要約は `callLlm`（LangChain）を通るので、SDK を選んでいても同じ `claude-*` のモデル名が
+ * 通常の Anthropic API に送られ、SDK 側の課金ガード・予算上限を通らない。README の「未対応」を通信前に強制する。
+ */
+export const SDK_MODE_UNSUPPORTED =
+  '/check は Claude Agent SDK モードに対応していません（この版では未対応です）。/model で SDK 以外のプロバイダを選ぶと使えます。何も送信していません。';
+
 /** 例外の 1 行目だけを短く出す（スタックは出さない）。 */
 function briefReason(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -37,11 +45,12 @@ function briefReason(error: unknown): string {
 export async function runCheckCommand(
   rest: string,
   ports: CheckPorts,
-  options: { interactive: boolean } = { interactive: true },
+  options: { interactive: boolean; provider?: string } = { interactive: true },
 ): Promise<CheckMessage[]> {
+  if (options.provider === 'claude-agent-sdk') return [{ text: SDK_MODE_UNSUPPORTED, muted: true }];
   const { ticker, hypothesis } = parseCheckArgs(rest);
   try {
-    const outcome = await runCheck(ticker, hypothesis, ports, options);
+    const outcome = await runCheck(ticker, hypothesis, ports, { interactive: options.interactive });
     switch (outcome.kind) {
       case 'usage':
       case 'judge_unavailable':

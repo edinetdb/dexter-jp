@@ -78,7 +78,34 @@ describe('runCheckCommand はどの失敗でも rejected にならない', () =>
     const raw = await Bun.file(new URL('../cli.ts', import.meta.url)).text();
     // コメント内の言及では通らないようにする（Codex T9 L1）
     const src = raw.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
-    expect(src).toContain('runCheckCommand(rest, productionPorts(modelSelection.model)');
+    expect(src).toContain('runCheckCommand(rest, productionPorts(modelSelection.model), {');
     expect(src).not.toMatch(/\bawait runCheck\(/);
+  });
+});
+
+describe('Agent SDK モードでは走らせない（Codex T9 r2 H1）', () => {
+  test('★ provider = claude-agent-sdk なら、取得・分解・判定のどれも呼ばずに案内だけ返す', async () => {
+    const { SDK_MODE_UNSUPPORTED } = await import('./command.js');
+    let touched = 0;
+    const p = ports({
+      judge: { name: 'replay', call: async () => { touched++; throw new Error('x'); } },
+      fetchDisclosure: async () => { touched++; throw new Error('x'); },
+      decompose: async () => { touched++; return []; },
+    });
+    const out = await runCheckCommand(HYP, p, { interactive: true, provider: 'claude-agent-sdk' });
+    expect(out).toEqual([{ text: SDK_MODE_UNSUPPORTED, muted: true }]);
+    expect(touched).toBe(0);
+  });
+
+  test('★ cli.ts は選択中の provider を渡している', async () => {
+    const raw = await Bun.file(new URL('../cli.ts', import.meta.url)).text();
+    const src = raw.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+    expect(src).toMatch(/runCheckCommand\(rest, productionPorts\(modelSelection\.model\), \{\s*interactive: true,\s*provider: modelSelection\.provider,/);
+  });
+
+  test('案内文は出力 linter を通る', async () => {
+    const { SDK_MODE_UNSUPPORTED } = await import('./command.js');
+    const { lintOutput } = await import('../guard/output-linter.js');
+    expect(lintOutput(SDK_MODE_UNSUPPORTED, '$').findings).toEqual([]);
   });
 });
