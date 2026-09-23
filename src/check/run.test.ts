@@ -253,3 +253,85 @@ describe('引数', () => {
     expect((await runCheck('', '仮説', ports())).kind).toBe('usage');
   });
 });
+
+describe('期間・会社を書かない仮説（review T9 H2）', () => {
+  // 本番の分解プロンプトは「仮説に無ければ company / period を空のままにする」。
+  // その形の分解を流して、常に判定不能に落ちないことを固定する（以前は全主張 not_judged だった）
+  const NO_SCOPE: RawClaimFromModel = {
+    quote: '第 4 四半期は増益だった',
+    text: '第 4 四半期の事業利益は増益だった',
+  };
+
+  test('★ period / company が空の分解でも、検査した有報の期として判定まで進む', async () => {
+    const out = await runCheck('9983', '第 4 四半期は増益だったと会社は説明している', ports({
+      decompose: async () => [NO_SCOPE],
+    }));
+    if (out.kind !== 'panel') throw new Error('unreachable');
+    expect(out.panel.undetermined).toBe(false);
+    expect(out.panel.claims[0].status).toBe('supports');
+    expect(out.panel.footer?.requests).toBeGreaterThan(0); // 判定リクエストが実際に出た
+  });
+
+  test('★ 補ったことを主張ごとに画面へ出す（黙って補わない）', async () => {
+    const out = await runCheck('9983', '第 4 四半期は増益だったと会社は説明している', ports({
+      decompose: async () => [NO_SCOPE],
+    }));
+    if (out.kind !== 'panel') throw new Error('unreachable');
+    const note = out.panel.claims[0].scopeNote ?? '';
+    expect(note).toContain('FY2025');
+    expect(note).toContain(COMPANY.name);
+    const { renderCheckPanel } = await import('./panel.js');
+    expect(renderCheckPanel(out.panel).join('\n')).toContain('FY2025');
+    expect(lintOutput(out.panel, '$.panel').findings).toEqual([]);
+  });
+
+  test('明示された期間は上書きしない（補うのは空のときだけ）', async () => {
+    const out = await runCheck('9983', '第 4 四半期は増益だったと会社は説明している', ports());
+    if (out.kind !== 'panel') throw new Error('unreachable');
+    expect(out.panel.claims[0].scopeNote).toBeUndefined();
+  });
+
+  test('開示から期が取れないときは補わず、従来どおり未判定（推測で埋めない）', async () => {
+    const { fiscalYear: _drop, ...noYear } = DISCLOSURE;
+    const out = await runCheck('9983', '第 4 四半期は増益だったと会社は説明している', ports({
+      decompose: async () => [NO_SCOPE],
+      fetchDisclosure: async () => noYear,
+    }));
+    if (out.kind !== 'panel') throw new Error('unreachable');
+    expect(out.panel.claims[0].status).toBe('not_judged');
+    expect(out.panel.undetermined).toBe(true);
+  });
+});
+
+describe('出力側の禁止語を利用者が書いた仮説（review T9 H3）', () => {
+  const HYP = '会社は第 4 四半期の増益に注目していると説明している';
+
+  test('★ 主張にも原文にも「注目」があっても落ちず、パネルと記録が出る', async () => {
+    const out = await runCheck('9983', HYP, ports({
+      decompose: async () => [{
+        quote: '第 4 四半期の増益に注目している',
+        text: 'ファーストリテイリングは FY2025 第 4 四半期の増益に注目している',
+        company: COMPANY.name,
+        period: 'FY2025',
+      }],
+    }));
+    expect(out.kind).toBe('panel');
+    if (out.kind !== 'panel') throw new Error('unreachable');
+    const { CLAIM_TEXT_WITHHELD } = await import('./panel.js');
+    expect(out.panel.claims[0].text).toBe(CLAIM_TEXT_WITHHELD);
+    expect(out.panel.claims[0].textReplaced).toBe('withheld');
+    // 利用者の言葉は逐語として残る
+    expect(out.panel.claims[0].quote.text).toContain('注目');
+    const saved = JSON.parse(readFileSync(out.recordPath, 'utf-8'));
+    expect(lintOutput(saved, '$.record').findings).toEqual([]);
+  });
+
+  test('言い換えだけが汚れていれば原文に落とし、その旨を出す', async () => {
+    const out = await runCheck('9983', '第 4 四半期は増益だったと会社は説明している', ports({
+      decompose: async () => [{ ...RAW_CLAIM, text: 'FY2025 第 4 四半期の増益は重要度が高い' }],
+    }));
+    if (out.kind !== 'panel') throw new Error('unreachable');
+    expect(out.panel.claims[0].text).toBe(RAW_CLAIM.quote);
+    expect(out.panel.claims[0].textReplaced).toBe('user_quote');
+  });
+});

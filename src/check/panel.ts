@@ -28,6 +28,14 @@ import {
 /** 推定値の説明（G-A6 の逐語。「正しい確率」「支持率」「的中」は使わない）。 */
 export const ESTIMATE_CAPTION = 'この段落と主張の関係についてのモデルの推定';
 
+/**
+ * 主張の言い換えも利用者の原文も出力 linter に当たったときに出す固定文（review T9 H3）。
+ * 利用者が「注目」「重要度」のような出力側の禁止語を書くと、原文への退避も同じ語で当たる。
+ * そのまま記録を書くと例外で落ちる（判定層の課金を払い切ったあと）ので、当社生成の固定文に落とす。
+ * 原文は `quote`（逐語 = 走査対象外）に残っているので、利用者の言葉は画面から消えない。
+ */
+export const CLAIM_TEXT_WITHHELD = 'この主張は言い換えた形では表示できませんでした（もとの言葉をご覧ください）';
+
 /** 判定不能のときに出す文（モデルに埋めさせないための固定文）。 */
 export const UNDETERMINED_TEXT = '判定不能（有価証券報告書の対象節からは確かめられませんでした）';
 
@@ -57,6 +65,13 @@ export interface PanelClaim {
   quote: QuotedText;
   /** 当社生成（LLM が言い換えた主張）。linter の対象 */
   text: string;
+  /**
+   * 言い換えを出せなかったときの退避先（review T9 M7 = 差し替えを画面に出す）。
+   * `user_quote` = 利用者の原文に落とした / `withheld` = 原文にも禁止語があり固定文に落とした
+   */
+  textReplaced?: 'user_quote' | 'withheld';
+  /** 仮説に無かった範囲を開示から補ったとき（review T9 H2）。当社生成の固定語彙 */
+  scopeNote?: string;
   negated: boolean;
   status: ClaimStatus;
   /** `not_judged` のときの理由（当社生成の固定語彙） */
@@ -136,9 +151,14 @@ function statusOf(claim: Claim, resolution: ClaimResolution): ClaimStatus {
  * 主張ごと落とすと証拠の並びが消えて機能の芯が壊れる。原文はそのまま出してよい
  * （逐語 = 走査対象外）ので、当社生成の言い換えだけを引っ込める。
  */
-function safeClaimText(generated: string, userQuote: string): { text: string; replaced: boolean } {
-  if (lintOutput(generated, '$.claim.text').clean) return { text: generated, replaced: false };
-  return { text: userQuote, replaced: true };
+export function safeClaimText(
+  generated: string,
+  userQuote: string,
+): { text: string; replaced?: 'user_quote' | 'withheld' } {
+  if (lintOutput(generated, '$.claim.text').clean) return { text: generated };
+  // 原文も同じ語を含みうる（利用者がその語を書いたから主張に載っている）。原文も汚れていれば固定文へ
+  if (lintOutput(userQuote, '$.claim.text').clean) return { text: userQuote, replaced: 'user_quote' };
+  return { text: CLAIM_TEXT_WITHHELD, replaced: 'withheld' };
 }
 
 export interface BuildPanelInput {
@@ -150,6 +170,8 @@ export interface BuildPanelInput {
   judgments: ReadonlyMap<string, readonly ParagraphJudgment[]>;
   /** claimId → 数値検算の結果 */
   numeric?: ReadonlyMap<string, NumericVerification>;
+  /** claimId → 仮説に無かった範囲を補った旨（当社生成の固定語彙） */
+  scopeNotes?: ReadonlyMap<string, string>;
   scope: { fiscalYear?: number; sections: string[]; total: number; unchecked: number };
   summary?: string | null;
   threshold?: number;
@@ -165,12 +187,15 @@ export function buildCheckPanel(input: BuildPanelInput): CheckPanel {
     const estimates = new Map(judgments.map(j => [j.paragraphId, j.confidence]));
     const resolution = resolveClaim(claim, judgments, input.threshold);
     const status = statusOf(claim, resolution);
-    const { text } = safeClaimText(claim.text, claim.quote);
+    const { text, replaced } = safeClaimText(claim.text, claim.quote);
+    const scopeNote = input.scopeNotes?.get(claim.id);
 
     claims.push({
       id: claim.id,
       quote: quote(claim.quote, { source: 'user' }),
       text,
+      ...(replaced ? { textReplaced: replaced } : {}),
+      ...(scopeNote ? { scopeNote } : {}),
       negated: claim.negated,
       status,
       ...(claim.unresolvable
@@ -239,6 +264,8 @@ export function renderCheckPanel(panel: CheckPanel): string[] {
   for (const claim of panel.claims) {
     lines.push(`主張: ${claim.text}`);
     lines.push(`  もとの言葉: ${claim.quote.text}`);
+    if (claim.textReplaced === 'user_quote') lines.push('  （言い換えは出せる形にならなかったため、もとの言葉で判定結果を示しています）');
+    if (claim.scopeNote) lines.push(`  ${claim.scopeNote}`);
     switch (claim.status) {
       case 'supports': lines.push('  → 裏付ける'); break;
       case 'contradicts': lines.push('  → 食い違う'); break;

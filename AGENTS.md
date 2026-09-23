@@ -102,7 +102,7 @@
 - Ollama: `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434`)
 - Finance: `EDINETDB_API_KEY`
 - Judge layer: `TYPESAFE_API_KEY` — **`/check` does not run without it** (see "Guards")
-- Install/replay: `DEXTER_SKIP_BROWSER`, `DEXTER_JUDGE_REPLAY`
+- Install: `DEXTER_SKIP_BROWSER` (the judge replay is injected by `bun run demo` and tests as a port, never read from env)
 - Search: `EXASEARCH_API_KEY` (preferred), `TAVILY_API_KEY` (fallback)
 - Tracing: `LANGSMITH_API_KEY`, `LANGSMITH_ENDPOINT`, `LANGSMITH_PROJECT`, `LANGSMITH_TRACING`
 - Never commit `.env` files or real API keys.

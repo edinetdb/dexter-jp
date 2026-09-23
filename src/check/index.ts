@@ -139,8 +139,11 @@ export async function runCheck(
 
   const claims: Claim[] = [];
   const numericClaims: NumericClaim[] = [];
+  const scopeNotes = new Map<string, string>();
   for (const [i, r] of raw.entries()) {
-    for (const c of extractClaims(r, `c${i + 1}`)) {
+    const { claim: scoped, note } = fillScopeFromDisclosure(r, disclosure);
+    for (const c of extractClaims(scoped, `c${i + 1}`)) {
+      if (note) scopeNotes.set(c.id, note);
       if (isNumericClaim(c)) numericClaims.push(c);
       else claims.push(c);
     }
@@ -188,6 +191,7 @@ export async function runCheck(
     paragraphs: examined,
     judgments,
     numeric,
+    scopeNotes,
     scope: {
       ...(disclosure.fiscalYear ? { fiscalYear: disclosure.fiscalYear } : {}),
       sections: disclosure.sections,
@@ -205,6 +209,7 @@ export async function runCheck(
     paragraphs: examined,
     judgments,
     numeric,
+    scopeNotes,
     scope: base.scope,
     summary,
     ...(footer ? { footer } : {}),
@@ -217,6 +222,35 @@ export async function runCheck(
   });
 
   return { kind: 'panel', panel, recordPath };
+}
+
+/**
+ * 仮説に会社・期間が無い主張の範囲を、**実際に検査する開示**から補う（review T9 H2）。
+ *
+ * 分解プロンプトは「仮説に無ければ `company` / `period` を空のままにする」と指示している
+ * （= モデルに推測させない）。一方 `requireExplicitScope` は空なら未判定にする。この 2 つを
+ * そのまま繋ぐと、期間を書かない普通の仮説（README の例もそう）が**常に判定不能**になる。
+ *
+ * 会社は `/check <銘柄>` で利用者が指定している。期間は検査するのが取得した有報 1 期分だけ
+ * なので、その期として読むのが実態どおり。読み替えたことは主張ごとに画面へ出す（黙って補わない）。
+ * 開示から期が取れないときは補わない = 従来どおり未判定。
+ */
+export function fillScopeFromDisclosure(
+  raw: RawClaimFromModel,
+  disclosure: Pick<DisclosureSource, 'company' | 'fiscalYear'>,
+): { claim: RawClaimFromModel; note?: string } {
+  const filled: string[] = [];
+  let claim = raw;
+  if (!raw.company?.trim() && disclosure.company.name) {
+    claim = { ...claim, company: disclosure.company.name };
+    filled.push(`会社は指定された銘柄（${disclosure.company.name}）`);
+  }
+  if (!raw.period?.trim() && disclosure.fiscalYear) {
+    claim = { ...claim, period: `FY${disclosure.fiscalYear}` };
+    filled.push(`期間は検査した有価証券報告書の期（FY${disclosure.fiscalYear}）`);
+  }
+  if (filled.length === 0) return { claim };
+  return { claim, note: `範囲: 仮説に書かれていないため、${filled.join('、')}として読みました` };
 }
 
 /** 数値の主張もパネルの行として並べる（検算の結果を見せるため）。 */

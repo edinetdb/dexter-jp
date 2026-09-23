@@ -1,5 +1,5 @@
 /**
- * replay バックエンド。`DEXTER_JUDGE_REPLAY=<dir>` の時に使う（鍵なし demo・回帰テスト用）。
+ * replay バックエンド。テストがポートとして注入して使う（env からは選ばれない = review T9 H5）。
  * 要求のハッシュ = state + instructions + criteria + model（hash.ts）。
  * 録画が 1 問でも見つからなければ ReplayMissError を投げて**失敗する**。実 API へは絶対に落ちない
  * （フォールバックの try/catch を足すと ★ テストが赤になる = replay.test.ts 参照）。

@@ -2,11 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import { resolveJudgeBackend } from './select.js';
 
 describe('resolveJudgeBackend', () => {
-  test('picks replay when DEXTER_JUDGE_REPLAY is set, even if TYPESAFE_API_KEY is also present', () => {
-    const backend = resolveJudgeBackend({
+  test('DEXTER_JUDGE_REPLAY is ignored: replay is never chosen from env (review T9 H5)', () => {
+    // 鍵あり: jev のまま（録画が鍵より優先されない）
+    expect(resolveJudgeBackend({
       env: { DEXTER_JUDGE_REPLAY: '/tmp/some-dir', TYPESAFE_API_KEY: 'key' },
-    });
-    expect(backend.name).toBe('replay');
+    }).name).toBe('jev');
+    // 鍵なし: llm（= preflight で止まる）。replay に化けて /check が鍵なしで走らない
+    expect(resolveJudgeBackend({ env: { DEXTER_JUDGE_REPLAY: '/tmp/some-dir' } }).name).toBe('llm');
   });
 
   test('picks jev when TYPESAFE_API_KEY is set and no replay dir', () => {

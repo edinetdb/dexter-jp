@@ -66,9 +66,18 @@ describe('env からの解決（実際の既定経路）', () => {
     expect(preflightCheck(backend).ok).toBe(true);
   });
 
-  test('DEXTER_JUDGE_REPLAY が最優先（demo は鍵なしで走る）', () => {
-    const backend = resolveJudgeBackend({ env: { DEXTER_JUDGE_REPLAY: '/tmp/rec', TYPESAFE_API_KEY: 'x' } });
-    expect(backend.name).toBe('replay');
-    expect(preflightCheck(backend).ok).toBe(true);
+  test('DEXTER_JUDGE_REPLAY を置いても鍵なしでは /check は走らない（review T9 H5）', () => {
+    // 以前は replay が最優先 = 利用者の録画が入口ガードの票になり、鍵なしで走った
+    const noKey = resolveJudgeBackend({ env: { DEXTER_JUDGE_REPLAY: '/tmp/rec' } });
+    expect(noKey.name).toBe('llm');
+    expect(preflightCheck(noKey).ok).toBe(false);
+    // 鍵があっても録画には化けない
+    const withKey = resolveJudgeBackend({ env: { DEXTER_JUDGE_REPLAY: '/tmp/rec', TYPESAFE_API_KEY: 'x' } });
+    expect(withKey.name).toBe('jev');
+  });
+
+  test('CLI の本番ポートは判定層を注入しない = env 以外から replay が入る口が無い', async () => {
+    const { productionPorts } = await import('./ports.js');
+    expect(productionPorts().judge).toBeUndefined();
   });
 });

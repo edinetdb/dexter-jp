@@ -37,8 +37,8 @@ import {
   createSearchProviderSelector,
 } from './components/index.js';
 import { editorTheme, theme } from './theme.js';
-import { matchCommands, parseSlashCommand, parseCheckArgs, parseWatchArgs, type SlashCommand } from './commands/index.js';
-import { runCheck, renderCheckPanel } from './check/index.js';
+import { matchCommands, parseSlashCommand, parseWatchArgs, type SlashCommand } from './commands/index.js';
+import { runCheckCommand } from './check/command.js';
 import { productionPorts } from './check/ports.js';
 import { initSpinner } from './utils/spinner.js';
 
@@ -402,22 +402,9 @@ export async function runCli() {
   const handleSlashCommand = async (command: string, rest = '') => {
     switch (command) {
       case 'check': {
-        const { ticker, hypothesis } = parseCheckArgs(rest);
-        const outcome = await runCheck(ticker, hypothesis, productionPorts(), { interactive: true });
-        if (outcome.kind === 'usage') {
-          say(theme.muted(outcome.message));
-        } else if (outcome.kind === 'judge_unavailable') {
-          say(theme.muted(outcome.message));
-        } else if (outcome.kind === 'refused') {
-          const lines = [outcome.verdict.message];
-          if (outcome.verdict.suggestions.length > 0) {
-            lines.push('', '開示で確かめられる形だと、たとえば:');
-            for (const s of outcome.verdict.suggestions) lines.push(`  ・${s}`);
-          }
-          say(lines.join('\n'));
-        } else {
-          say(renderCheckPanel(outcome.panel).join('\n'));
-          say(theme.muted(`記録: ${outcome.recordPath}`));
+        // 例外は runCheckCommand の中で必ず画面に出す形に落ちる（review T9 H6）
+        for (const m of await runCheckCommand(rest, productionPorts(), { interactive: true })) {
+          say(m.muted ? theme.muted(m.text) : m.text);
         }
         break;
       }
