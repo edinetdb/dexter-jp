@@ -52,10 +52,12 @@ describe('再生', () => {
     expect(text).not.toContain('判定不能');
   });
 
-  test('★ 「裏付ける」と「食い違う」が両方出る（機能が伝わる録画になっている）', async () => {
+  test('★ 「裏付ける」の判定と「食い違い」の証拠が両方出る（機能が伝わる録画になっている）', async () => {
+    // 2026-09-23 に録画を公開版の問いの形で取り直した結果、「為替が主因」は「判定が割れている」になった
     const text = (await runDemo(rec)).join('\n');
     expect(text).toContain('→ 裏付ける');
-    expect(text).toContain('→ 食い違う');
+    expect(text).toContain('→ 判定が割れている');
+    expect(text).toContain('[食い違い]');
   });
 
   test('deep link 2 行が出る（5 桁 sec_code が 4 桁に正規化されている）', async () => {
@@ -89,5 +91,23 @@ describe('★ 録画に無いものを聞かれたら失敗する（実 API に�
       questions: { 'unknown-claim': { type: 'choice', instructions: 'x', criteria: { a: 'a' } } },
     });
     expect(out.answers['unknown-claim']).toHaveProperty('code', 'replay_miss');
+  });
+});
+
+describe('録画の問いと今の問いの照合（Codex T9 r3 M1）', () => {
+  test('★ 録画のまま再生すると照合を通る', async () => {
+    const lines = await runDemo(loadRecording());
+    expect(lines.join('\n')).toContain('判定が割れている');
+  });
+
+  test('★ 主張の期間を変えると（= 問いが変わると）録画は使えず失敗する', async () => {
+    const rec = loadRecording();
+    const tampered = { ...rec, claims: rec.claims.map(c => ({ ...c, period: 'FY2025' })) };
+    await expect(runDemo(tampered)).rejects.toThrow();
+  });
+
+  test('★ ハッシュを持たない録画は再生しない（fail-close）', async () => {
+    const rec = loadRecording();
+    await expect(runDemo({ ...rec, requestHashes: undefined })).rejects.toThrow();
   });
 });

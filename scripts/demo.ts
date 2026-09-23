@@ -17,6 +17,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { runCheck, renderCheckPanel, type CheckPorts, type DisclosureSource } from '../src/check/index.js';
 import type { JudgeBackend } from '../src/judge/index.js';
+import { judgeQuestionHash } from '../src/judge/hash.js';
 
 const DEMO_DIR = join(import.meta.dir, '..', 'src', 'check', '__demo__');
 
@@ -29,6 +30,14 @@ interface DemoRecording {
   judgments: Record<string, Record<string, { choice: string; confidence: number }>>;
   /** 入口ガードの票 */
   adviceNoul: number;
+  /** 判定を録ったときの Jev のモデル名（ハッシュの一部） */
+  model?: string;
+  /**
+   * 段落 ID → 主張 ID → 録画したときに実際に投げた問いのハッシュ（state + instructions + criteria + model）。
+   * 再生時に今のコードが組み立てた問いと照合し、違えば**失敗する**（Codex T9 r3 M1）。
+   * 問いの形を変えたのに録画を取り直さないと、出荷するコードが出さない判定を demo が見せてしまう。
+   */
+  requestHashes?: Record<string, Record<string, string>>;
   summary: string | null;
 }
 
@@ -37,7 +46,7 @@ export function loadRecording(dir = DEMO_DIR): DemoRecording {
 }
 
 /** 録画から判定層を作る。録画に無いものを聞かれたら**失敗する**（実 API に落ちない）。 */
-export function recordedBackend(rec: DemoRecording): JudgeBackend {
+export function recordedBackend(rec: DemoRecording, mismatches: string[] = []): JudgeBackend {
   return {
     name: 'replay',
     call: async (request) => {
@@ -64,6 +73,19 @@ export function recordedBackend(rec: DemoRecording): JudgeBackend {
             if (!judged) {
               return [q, { error: `録画がありません: ${request.key}/${q}`, code: 'replay_miss' as const }];
             }
+            const question = request.questions[q];
+            const expected = rec.requestHashes?.[request.key]?.[q];
+            const actual = judgeQuestionHash({
+              state: request.state,
+              instructions: question.instructions,
+              criteria: question.criteria,
+              model: rec.model ?? '',
+            });
+            if (!expected || expected !== actual) {
+              // runJudgeBatch は判定層の例外を問いごとのエラーに変えて吸収するので、ここで記録して runDemo が止める
+              mismatches.push(`${request.key}/${q}`);
+              throw new Error(`録画の問いと今の問いが一致しません: ${request.key}/${q}（録画を取り直してください）`);
+            }
             return [
               q,
               {
@@ -82,9 +104,9 @@ export function recordedBackend(rec: DemoRecording): JudgeBackend {
   };
 }
 
-export function recordedPorts(rec: DemoRecording, recordDir: string): CheckPorts {
+export function recordedPorts(rec: DemoRecording, recordDir: string, mismatches: string[] = []): CheckPorts {
   return {
-    judge: recordedBackend(rec),
+    judge: recordedBackend(rec, mismatches),
     decompose: async () => rec.claims,
     fetchDisclosure: async () => rec.disclosure,
     summarize: async () => rec.summary,
@@ -95,7 +117,11 @@ export function recordedPorts(rec: DemoRecording, recordDir: string): CheckPorts
 export async function runDemo(rec: DemoRecording = loadRecording()): Promise<string[]> {
   const recordDir = mkdtempSync(join(tmpdir(), 'dexter-demo-'));
   try {
-    const outcome = await runCheck(rec.ticker, rec.hypothesis, recordedPorts(rec, recordDir));
+    const mismatches: string[] = [];
+    const outcome = await runCheck(rec.ticker, rec.hypothesis, recordedPorts(rec, recordDir, mismatches));
+    if (mismatches.length > 0) {
+      throw new Error(`録画の問いと今の問いが一致しません（${mismatches.length} 問、例: ${mismatches[0]}）。録画を取り直してください`);
+    }
     if (outcome.kind !== 'panel') {
       throw new Error(`録画の再生が panel になりませんでした: ${outcome.kind}`);
     }
