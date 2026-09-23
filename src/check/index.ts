@@ -91,20 +91,30 @@ function isNumericClaim(c: Claim | NumericClaim): c is NumericClaim {
  * 段落ごとに 1 リクエスト、主張を並列の質問にする（PoC で確認した形。
  * 証拠を束ねて 1 つの state にしない = 公式 jaggedness「無関係な state が増えると精度が落ちる」）。
  */
-function buildJudgeRequests(paragraphs: readonly Paragraph[], claims: readonly Claim[]): JudgeRequest[] {
+export function buildJudgeRequests(paragraphs: readonly Paragraph[], claims: readonly Claim[]): JudgeRequest[] {
   const questions: Record<string, ChoiceQuestion> = {};
   for (const claim of claims) {
+    // 対象会社・対象期間を問いに入れる（Codex T9 r2 H2）。画面で補った範囲を判定層にも渡す。
+    // この形は T6 と同じ 180 組・同じ正解で測り直してある（2026-09-23、supports 37/37・contradicts 39/39・割れ 5.0%）。
+    // 文面を変えたら測り直す（~/Desktop/tmp/dexter-kotae/t6/run_jev_scoped.py と同じ形）
     questions[claim.id] = {
       type: 'choice',
-      instructions: `次の主張に対して、証拠の文章はどの立場か。主張:「${claim.text}」`,
+      instructions: `${scopeHeader(claim)}次の主張に対して、証拠の文章はどの立場か。主張:「${claim.text}」`,
       criteria: STANCE_CRITERIA,
     };
   }
   return paragraphs.map(p => ({
     key: p.id,
-    state: `証拠（${p.company} 有価証券報告書 ${p.section}）:\n${p.text}`,
+    state: `証拠（${p.company} 有価証券報告書 ${p.fiscalYear ? `FY${p.fiscalYear} ` : ''}${p.section}）:\n${p.text}`,
     questions,
   }));
+}
+
+function scopeHeader(claim: Claim): string {
+  const lines: string[] = [];
+  if (claim.company) lines.push(`対象会社: ${claim.company}`);
+  if (claim.period) lines.push(`対象期間: ${claim.period}`);
+  return lines.length > 0 ? `${lines.join('\n')}\n` : '';
 }
 
 export async function runCheck(

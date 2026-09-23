@@ -364,3 +364,34 @@ describe('quote が仮説に実在しないとき（Codex T9 M2）', () => {
     expect(out.panel.claims[0].status).toBe('supports');
   });
 });
+
+describe('判定の問いに対象会社・対象期間が入る（Codex T9 r2 H2）', () => {
+  test('★ 補った会社・期間が判定層への要求に載り、開示の期を変えると要求も変わる', async () => {
+    const seen: string[] = [];
+    const inner = judgeWithVote({ p1: { choice: 'supports', confidence: 0.94 }, p2: { choice: 'unrelated', confidence: 0.99 } }, 0.02);
+    const spy: JudgeBackend = {
+      name: 'replay',
+      call: async (r) => {
+        if (r.key !== 'guard') seen.push(JSON.stringify({ state: r.state, q: Object.values(r.questions).map(q => q.instructions) }));
+        return inner.call(r);
+      },
+    };
+    const NO_SCOPE: RawClaimFromModel = { quote: '第 4 四半期は増益だった', text: '第 4 四半期の事業利益は増益だった' };
+    const run = async (fy: number) => {
+      seen.length = 0;
+      await runCheck('9983', '第 4 四半期は増益だったと会社は説明している', ports({
+        judge: spy,
+        decompose: async () => [NO_SCOPE],
+        fetchDisclosure: async () => ({ ...DISCLOSURE, fiscalYear: fy, paragraphs: PARAGRAPHS.map(p => ({ ...p, fiscalYear: fy })) }),
+      }));
+      return [...seen];
+    };
+    const a = await run(2025);
+    expect(a.length).toBeGreaterThan(0);
+    expect(a[0]).toContain(`対象会社: ${COMPANY.name}`);
+    expect(a[0]).toContain('対象期間: FY2025');
+    expect(a[0]).toContain('有価証券報告書 FY2025 mda');
+    const b = await run(2024);
+    expect(b[0]).not.toBe(a[0]);
+  });
+});
