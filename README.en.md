@@ -22,6 +22,100 @@ This project is for **educational, entertainment, and informational purposes onl
 
 By using this software, you agree to use it solely for learning and informational purposes and accept all risks associated with its use.
 
+## Answer-checking (v1.1.0-jp)
+
+Bring your own hypothesis about a company. Dexter JP puts it against the paragraphs of that company's annual securities report (有価証券報告書), one claim at a time, and tells you which paragraphs support it, which contradict it, and which are about something else — with the source for each. It shows you what the company itself wrote. It does not tell you what to do about it.
+
+```
+/check 9983 中国事業は回復していると会社は説明している
+```
+
+Your hypothesis is split into claims (shown next to your original wording), the relevant sections of the annual report are cut into paragraphs, and each paragraph is checked against each claim. Numeric claims are verified in code against financial data and come back as match, mismatch, or not verifiable. If the paragraphs cannot settle a claim, you get "判定不能" (cannot determine) — the model is not asked to fill the gap.
+
+The panel shows your original wording, the claims it was split into, the company's own paragraphs behind each verdict (with document ID, filer, document type and section), and how much of the report was examined.
+
+### Run it first
+
+```bash
+DEXTER_SKIP_BROWSER=1 bun install
+bun run demo
+```
+
+`bun run demo` replays a recorded run. No API keys, no network calls. The screen says so.
+
+`DEXTER_SKIP_BROWSER=1` skips the Chromium download (130MB+). Install without it when you want the `browser` tool.
+
+### What you need to run your own hypotheses
+
+| | Keys | What works |
+|---|---|---|
+| 1 | none | `bun run demo` (replay of a recording) |
+| 2 | `EDINETDB_API_KEY` + `TYPESAFE_API_KEY` | `/check` |
+
+An EDINET DB key is [free](https://edinetdb.jp/developers?utm_source=github&utm_medium=readme&utm_campaign=dexter-kotaeawase) (account required).
+
+**`/check` does not run without `TYPESAFE_API_KEY`.** We did not make it fall back to a local LLM labelling things instead. Here is why.
+
+The entrance to `/check` screens out inputs asking for trading advice or for a view on price level. That screen is two things: a deterministic check on vocabulary and phrasing, and a vote from the judge layer. Neither is enough alone. Measured on 30 advice-seeking inputs written by a separate model that was shown neither the implementation nor the word list:
+
+| Screen | Got through | False positives on 20 ordinary inputs |
+|---|---|---|
+| Deterministic vocabulary and phrasing only | 12/30 | 0/20 |
+| Judge layer (Jev) vote only | 1/30 | 0/20 |
+| Both together (what ships) | 0/30 | 0/20 |
+| Deterministic + a local LLM as the vote | 8/30 | 0/20 |
+
+A local LLM standing in for the judge lets 8 of 30 through. We would rather stop than run with that gap. Use `bun run demo` to see the output before you add a key.
+
+### What it does not output
+
+- `/check` and `/watch` do not output trade instructions, price targets, or position sizes
+- No view on whether a stock is cheap or expensive, and no fair value. Inputs asking for those do not reach the judgment step; you get two or three suggested rewordings that the disclosures can actually answer
+- No market-regime labels (uptrend, near highs, and so on)
+- Counts are reported as "how many of the examined paragraphs fell into each bucket". They are never rolled up into a single "support score"
+- The probability shown is the model's estimate of the relationship between that paragraph and that claim. It is not the probability that your hypothesis is true
+- `/check` records stay on your machine in `.dexter/checks/`. Delete that directory to delete them
+
+### Where your data goes
+
+| Destination | What is sent | When | Default |
+|---|---|---|---|
+| EDINET DB | Ticker codes and API requests (annual report text, financials, disclosure events) | `EDINETDB_API_KEY` | on |
+| Your selected LLM provider | Your hypothesis, annual report paragraphs, conversation (decomposition, summarisation, free-form questions) | The key for the provider you chose (`/model`) | on |
+| TypeSafe (Jev, US) | The claims split out of your hypothesis, and annual report paragraphs, one at a time | `TYPESAFE_API_KEY` | off |
+| Conversation-history embedding (OpenAI → Gemini → Ollama, auto-selected) | Full conversation text. Chosen **independently of your selected LLM** — with `OPENAI_API_KEY` set it goes to OpenAI even if `/model` is Claude | On by default; any of `OPENAI_API_KEY` / `GOOGLE_API_KEY` / `OLLAMA_BASE_URL` | on |
+| LangSmith | LangChain prompts and tool results (traces) | `LANGSMITH_TRACING=1` | off |
+| J-Quants | Ticker codes and dates (stock prices) | `JQUANTS_REFRESH_TOKEN` | off |
+| Web search provider (Tavily / Exa / Perplexity / LangSearch) | Search terms (only to the provider you chose with `/search`) | The key for the provider you chose | off |
+| X (Twitter) | Search terms you typed, or that the agent composed | `X_API_KEY` / `XAI_API_KEY` | off |
+| Ollama (local by default; remote if configured) | Conversation text and text to embed | `OLLAMA_BASE_URL` | off |
+| OpenRouter | Conversation text (when an OpenRouter model is selected) | `OPENROUTER_API_KEY` | off |
+| Moonshot | Conversation text (when Kimi is selected) | `MOONSHOT_API_KEY` | off |
+| DeepSeek | Conversation text (when a DeepSeek model is selected) | `DEEPSEEK_API_KEY` | off |
+| Messaging gateways (Slack / Discord / WhatsApp / LINE) | Agent replies (only if you start a gateway) | When you start that gateway | off |
+
+We do not write that TypeSafe (Jev) "does not store" your data. Their terms say inputs are not used as training data, while reserving the right to process them for telemetry, abuse prevention and legal compliance. Read each service's terms yourself.
+
+Conversation-history embedding is on by default, and **its destination is chosen independently of the model you selected**. If `OPENAI_API_KEY` is in your `.env`, your conversation goes to OpenAI even when `/model` is set to Claude. On startup, Dexter JP prints the destinations that are actually live for that session.
+
+### Bundled data
+
+The paragraphs replayed by `bun run demo` are annual report text. Each carries a document ID, filer, document type, section, retrieval date, the required attribution, and the party that edited it.
+
+> 出典：EDINET閲覧（提出）サイト（https://disclosure2.edinet-fsa.go.jp/）、PDL1.0（https://www.digital.go.jp/resources/open_data/public_data_license_v1.0）
+
+This data is **not covered by the MIT licence**. Its terms are in `LICENSE-DATA`, along with the procedure for a filer to request a change or removal.
+
+### Before you use it
+
+If you use the output of this tool to provide information to third parties (a public bot, for example), you may yourself fall under the Financial Instruments and Exchange Act or other regulations.
+
+### Not in this release
+
+- TradingView connection. Reading your watchlist is deferred to a later release
+- `/check` under Agent SDK mode. We have not verified that decomposition and summarisation run through a single SDK `query()`, so it is unsupported here
+- `/watch` as a command. The data layer is implemented; wiring it up as a command comes next
+
 ## Not Just Another Financial Tool
 
 Most financial tools stop at "here's a screener" or "here's the data." Dexter JP goes further.
