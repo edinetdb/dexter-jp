@@ -1,16 +1,13 @@
 import { watch, type FSWatcher } from 'node:fs';
-import { dirname } from 'node:path';
 import type { MemoryDatabase } from './database.js';
 import { chunkMemoryText } from './chunker.js';
-import { parseSessionTranscripts } from './session-files.js';
 import type { MemoryEmbeddingClient, MemorySyncStats } from './types.js';
 import { MemoryStore } from './store.js';
 
-const SESSION_FILE_PATH = 'sessions/chat_history.json';
+export const LEGACY_SESSION_FILE_PATH = 'sessions/chat_history.json';
 
 export class MemoryIndexer {
   private watcher: FSWatcher | null = null;
-  private sessionWatcher: FSWatcher | null = null;
   private watchTimer: NodeJS.Timeout | null = null;
   private syncing: Promise<MemorySyncStats> | null = null;
   private dirty = true;
@@ -23,7 +20,6 @@ export class MemoryIndexer {
       overlapTokens: number;
       watchDebounceMs: number;
       embeddingClient: MemoryEmbeddingClient | null;
-      indexSessions: boolean;
     },
   ) {}
 
@@ -53,18 +49,6 @@ export class MemoryIndexer {
       }
       this.scheduleDebouncedSync();
     });
-
-    // Watch chat history for session transcript changes.
-    if (this.options.indexSessions) {
-      try {
-        const chatHistoryDir = dirname(this.store.getChatHistoryPath());
-        this.sessionWatcher = watch(chatHistoryDir, { recursive: false }, () => {
-          this.scheduleDebouncedSync();
-        });
-      } catch {
-        // Messages directory may not exist yet; session sync will still run on next search.
-      }
-    }
   }
 
   private scheduleDebouncedSync(): void {
@@ -84,8 +68,6 @@ export class MemoryIndexer {
     }
     this.watcher?.close();
     this.watcher = null;
-    this.sessionWatcher?.close();
-    this.sessionWatcher = null;
   }
 
   async sync(options?: { force?: boolean }): Promise<MemorySyncStats> {
@@ -113,8 +95,8 @@ export class MemoryIndexer {
     const indexedFilesBefore = new Set(this.db.listIndexedFiles());
     let removedChunks = 0;
     for (const knownFile of indexedFilesBefore) {
-      // Don't remove session file entries during memory file cleanup.
-      if (knownFile === SESSION_FILE_PATH) {
+      if (knownFile === LEGACY_SESSION_FILE_PATH) {
+        removedChunks += this.db.deleteChunksForFile(knownFile);
         continue;
       }
       if (!files.includes(knownFile)) {
@@ -138,7 +120,7 @@ export class MemoryIndexer {
         removedChunks += this.db.deleteChunksForFile(file);
       }
 
-      const result = await this.embedAndUpsertChunks(chunks, 'memory');
+      const result = await this.embedAndUpsertChunks(chunks);
       indexedChunks += result.indexed;
       updatedChunks += result.updated;
 
@@ -148,65 +130,18 @@ export class MemoryIndexer {
       }
     }
 
-    // Sync session transcripts if enabled.
-    if (this.options.indexSessions) {
-      const sessionResult = await this.syncSessionTranscripts(options?.force ?? false);
-      indexedChunks += sessionResult.indexed;
-      updatedChunks += sessionResult.updated;
-      removedChunks += sessionResult.removed;
-    }
-
+    this.db.pruneUnusedEmbeddingCache();
     this.dirty = false;
     return {
-      indexedFiles: files.length + (this.options.indexSessions ? 1 : 0),
+      indexedFiles: files.length,
       indexedChunks,
       updatedChunks,
       removedChunks,
     };
   }
 
-  private async syncSessionTranscripts(
-    force: boolean,
-  ): Promise<{ indexed: number; updated: number; removed: number }> {
-    const chatHistoryPath = this.store.getChatHistoryPath();
-    const entries = await parseSessionTranscripts(chatHistoryPath);
-
-    if (entries.length === 0) {
-      const removed = this.db.deleteChunksForFile(SESSION_FILE_PATH);
-      return { indexed: 0, updated: 0, removed };
-    }
-
-    // Combine all session entries into a single text and chunk it.
-    const combinedText = entries.map((e) => e.content).join('\n\n');
-    const chunks = chunkMemoryText({
-      filePath: SESSION_FILE_PATH,
-      text: combinedText,
-      chunkTokens: this.options.chunkTokens,
-      overlapTokens: this.options.overlapTokens,
-    });
-
-    // Mark chunks with session source.
-    for (const chunk of chunks) {
-      chunk.source = 'sessions';
-    }
-
-    let removed = 0;
-    if (force) {
-      removed = this.db.deleteChunksForFile(SESSION_FILE_PATH);
-    }
-
-    const result = await this.embedAndUpsertChunks(chunks, 'sessions');
-
-    if (chunks.length === 0) {
-      removed += this.db.deleteChunksForFile(SESSION_FILE_PATH);
-    }
-
-    return { indexed: result.indexed, updated: result.updated, removed };
-  }
-
   private async embedAndUpsertChunks(
     chunks: { filePath: string; startLine: number; endLine: number; content: string; contentHash: string }[],
-    source: 'memory' | 'sessions',
   ): Promise<{ indexed: number; updated: number }> {
     const uncached = chunks.filter((chunk) => !this.db.getCachedEmbedding(chunk.contentHash));
     let uncachedVectors: number[][] = [];
@@ -241,7 +176,7 @@ export class MemoryIndexer {
         embedding,
         provider: this.options.embeddingClient?.provider,
         model: this.options.embeddingClient?.model,
-        source,
+        source: 'memory',
       });
       indexed += 1;
       if (!result.inserted) {

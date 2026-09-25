@@ -164,8 +164,10 @@ function renderEvent(
   }
 
   if (event.type === 'tool_denied') {
-    const path = (event.args.path as string) ?? '';
-    chatLog.startTool(display.id, event.tool, event.args).setDenied(path, event.tool);
+    const target = event.operation.target ?? '';
+    chatLog
+      .startTool(display.id, event.tool, event.args)
+      .setDenied(target, event.operation.kind);
     return;
   }
 
@@ -655,15 +657,7 @@ export async function runCli() {
     }
 
     if (agentRunner.pendingApproval) {
-      const prompt = new ApprovalPromptComponent(
-        agentRunner.pendingApproval.tool,
-        agentRunner.pendingApproval.args,
-        {
-          command: agentRunner.pendingApproval.command,
-          reason: agentRunner.pendingApproval.decision?.reason,
-          proposedRule: agentRunner.pendingApproval.decision?.proposedRule,
-        },
-      );
+      const prompt = new ApprovalPromptComponent(agentRunner.pendingApproval);
       prompt.onSelect = (decision: ApprovalDecision) => {
         agentRunner.respondToApproval(decision);
       };

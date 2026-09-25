@@ -1,6 +1,7 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { MemoryManager } from '../../memory/index.js';
+import { EXPLICIT_MEMORY_UPDATE_ORIGIN } from '../../memory/persistence.js';
 import { formatToolResult } from '../types.js';
 
 export const MEMORY_UPDATE_DESCRIPTION = `
@@ -16,7 +17,7 @@ Add, edit, or delete persistent memory entries.
 ## When NOT to Use
 
 - For workspace project files (use \`write_file\` / \`edit_file\`)
-- For temporary scratchpad data that does not need to persist
+- For conversation messages, tool results, scratchpad data, or compaction summaries
 
 ## Usage
 
@@ -70,7 +71,12 @@ export const memoryUpdateTool = new DynamicStructuredTool({
         if (!input.content) {
           return formatToolResult({ success: false, error: '"content" is required for append.' });
         }
-        await manager.appendMemory(input.file, input.content);
+        await manager.persistExplicitUpdate({
+          origin: EXPLICIT_MEMORY_UPDATE_ORIGIN,
+          action: 'append',
+          file: input.file,
+          content: input.content,
+        });
         return formatToolResult({
           success: true,
           file,
@@ -85,7 +91,13 @@ export const memoryUpdateTool = new DynamicStructuredTool({
             error: '"old_text" and "new_text" are required for edit.',
           });
         }
-        const edited = await manager.editMemory(input.file, input.old_text, input.new_text);
+        const edited = await manager.persistExplicitUpdate({
+          origin: EXPLICIT_MEMORY_UPDATE_ORIGIN,
+          action: 'edit',
+          file: input.file,
+          oldText: input.old_text,
+          newText: input.new_text,
+        });
         if (!edited) {
           return formatToolResult({
             success: false,
@@ -103,7 +115,12 @@ export const memoryUpdateTool = new DynamicStructuredTool({
             error: '"old_text" is required for delete.',
           });
         }
-        const deleted = await manager.deleteMemory(input.file, input.old_text);
+        const deleted = await manager.persistExplicitUpdate({
+          origin: EXPLICIT_MEMORY_UPDATE_ORIGIN,
+          action: 'delete',
+          file: input.file,
+          oldText: input.old_text,
+        });
         if (!deleted) {
           return formatToolResult({
             success: false,

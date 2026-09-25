@@ -1,7 +1,13 @@
 import type { GroupContext } from './prompts.js';
 import type { MessageQueue } from '../utils/message-queue.js';
 import type { Question, UserAnswers } from '../tools/ask-user-question/types.js';
-import type { PermissionDecision } from '../permissions/types.js';
+import type {
+  ApprovalDecision,
+  NormalizedOperation,
+  OperationApprovalRequest,
+} from '../approval/operation-policy.js';
+
+export type { ApprovalDecision } from '../approval/operation-policy.js';
 
 // ============================================================================
 // Channel Profiles
@@ -28,14 +34,6 @@ export interface ChannelProfile {
 // Approval
 // ============================================================================
 
-/**
- * User's response to a tool approval prompt.
- * - 'allow-once': approve this single invocation
- * - 'allow-session': approve this command/tool for the rest of the session (bash: this query)
- * - 'allow-always': approve AND persist a rule to .dexter/settings.json (bash only)
- * - 'deny': reject and immediately end the agent's turn
- */
-export type ApprovalDecision = 'allow-once' | 'allow-session' | 'allow-always' | 'deny';
 
 /**
  * Agent configuration
@@ -53,21 +51,16 @@ export interface AgentConfig {
   channel?: string;
   /** Group chat context — when set, adds group-specific instructions to system prompt */
   groupContext?: GroupContext;
-  /** Called when a tool needs explicit user approval to proceed */
-  requestToolApproval?: (request: {
-    tool: string;
-    args: Record<string, unknown>;
-    /** For bash: the command being approved (shown instead of a file path). */
-    command?: string;
-    /** The engine's full decision (reason, classification, etc.) for richer prompts. */
-    decision?: PermissionDecision;
-  }) => Promise<ApprovalDecision>;
+  /** Called when an exact normalized operation needs explicit user approval. */
+  requestToolApproval?: (request: OperationApprovalRequest) => Promise<ApprovalDecision>;
   /** CLI-only: called when the agent asks the user interactive questions mid-turn. */
   requestUserInput?: (request: { questions: Question[] }) => Promise<UserAnswers>;
-  /** Shared set of tool names that have been session-approved (persists across queries) */
-  sessionApprovedTools?: Set<string>;
+  /** Exact operation fingerprints approved for this session (persists across queries). */
+  sessionApprovedOperations?: Set<string>;
   /** Enable/disable persistent memory integration for this run */
   memoryEnabled?: boolean;
+  /** Current user turn used by code-enforced Skill/tool activation boundaries. */
+  userQuery?: string;
   /** Message queue for mid-run injection of new user messages. */
   messageQueue?: MessageQueue;
   /**
@@ -170,6 +163,7 @@ export interface ToolApprovalEvent {
   type: 'tool_approval';
   tool: string;
   args: Record<string, unknown>;
+  operation: NormalizedOperation;
   approved: ApprovalDecision;
 }
 
@@ -180,6 +174,7 @@ export interface ToolDeniedEvent {
   type: 'tool_denied';
   tool: string;
   args: Record<string, unknown>;
+  operation: NormalizedOperation;
   /** Unique tool_call ID from the AIMessage (for concurrent execution ordering). */
   toolCallId?: string;
 }
@@ -204,14 +199,6 @@ export interface MemoryRecalledEvent {
   tokenCount: number;
 }
 
-/**
- * Pre-compaction memory flush lifecycle event.
- */
-export interface MemoryFlushEvent {
-  type: 'memory_flush';
-  phase: 'start' | 'end';
-  filesWritten?: string[];
-}
 
 /**
  * The model's current activity within a streamed turn.
@@ -305,7 +292,6 @@ export type AgentEvent =
   | MicrocompactEvent
   | CompactionEvent
   | MemoryRecalledEvent
-  | MemoryFlushEvent
   | StreamProgressEvent
   | DoneEvent;
 

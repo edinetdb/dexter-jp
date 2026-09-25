@@ -184,6 +184,12 @@ export class MemoryDatabase {
     this.db.query('DELETE FROM embedding_cache').run();
   }
 
+  pruneUnusedEmbeddingCache(): void {
+    this.db
+      .query('DELETE FROM embedding_cache WHERE content_hash NOT IN (SELECT content_hash FROM chunks)')
+      .run();
+  }
+
   getCachedEmbedding(contentHash: string): number[] | null {
     const row = this.db
       .query<CacheRow>('SELECT embedding FROM embedding_cache WHERE content_hash = ?')
@@ -353,7 +359,7 @@ export class MemoryDatabase {
         endLine: row.end_line,
         score: 0,
         source: 'keyword' as const,
-        contentSource: (row.source ?? 'memory') as 'memory' | 'sessions',
+        contentSource: 'memory' as const,
         updatedAt: row.updated_at,
       }));
   }

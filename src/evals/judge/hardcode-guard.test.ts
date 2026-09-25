@@ -9,6 +9,8 @@
  * 1 つも無いときに skip でなく赤になること、を対で置く。
  */
 import { describe, expect, test } from 'bun:test';
+import { join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   findHardcodedBenchNumbers,
   findNumberClaims,
@@ -26,14 +28,16 @@ const BENCH = JSON.stringify({
 
 /** fs を差し替えた検査。実ファイルに触らない。 */
 function guard(files: Record<string, string>, benchJson: string | null = BENCH) {
+  const scanDir = resolve('/repo');
+  const benchResultPath = join(scanDir, 'bench.json');
   return findHardcodedBenchNumbers({
-    scanDir: '/repo',
-    benchResultPath: '/repo/bench.json',
+    scanDir,
+    benchResultPath,
     readDirSync: () => Object.keys(files),
-    existsSync: (p) => (p === '/repo/bench.json' ? benchJson !== null : p in files),
+    existsSync: (p) => (p === benchResultPath ? benchJson !== null : relative(scanDir, p) in files),
     readFileSync: (p) => {
-      if (p === '/repo/bench.json') return benchJson ?? '';
-      const name = p.replace('/repo/', '');
+      if (p === benchResultPath) return benchJson ?? '';
+      const name = relative(scanDir, p);
       if (!(name in files)) throw new Error(`no such file: ${p}`);
       return files[name];
     },
@@ -138,7 +142,7 @@ describe('部品', () => {
 
 describe('実リポジトリ', () => {
   test('いまの README / RELEASE-NOTES に、説明できないベンチ数値が無い', () => {
-    const repo = new URL('../../..', import.meta.url).pathname;
+    const repo = fileURLToPath(new URL('../../..', import.meta.url));
     const violations = findHardcodedBenchNumbers({ scanDir: repo });
     expect(violations).toEqual([]);
   });

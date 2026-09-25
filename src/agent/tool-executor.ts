@@ -4,19 +4,21 @@ import { StructuredToolInterface } from '@langchain/core/tools';
 import { createProgressChannel } from '../utils/progress-channel.js';
 import { all } from '../utils/concurrency.js';
 import type {
-  ApprovalDecision,
   ToolApprovalEvent,
   ToolDeniedEvent,
   ToolEndEvent,
   ToolErrorEvent,
-  ToolLimitEvent,
   ToolProgressEvent,
   ToolStartEvent,
 } from './types.js';
 import type { Question, UserAnswers } from '../tools/ask-user-question/types.js';
-import { evaluatePermission, sessionKey } from '../permissions/engine.js';
+import { evaluatePermission } from '../permissions/engine.js';
 import { addRule } from '../permissions/rules.js';
-import type { PermissionDecision } from '../permissions/types.js';
+import {
+  normalizeToolOperation,
+  OperationApprovalGate,
+  type RequestOperationApproval,
+} from '../approval/operation-policy.js';
 import type { RunContext } from './run-context.js';
 
 type ToolExecutionEvent =
@@ -25,8 +27,7 @@ type ToolExecutionEvent =
   | ToolEndEvent
   | ToolErrorEvent
   | ToolApprovalEvent
-  | ToolDeniedEvent
-  | ToolLimitEvent;
+  | ToolDeniedEvent;
 
 const DEFAULT_MAX_CONCURRENCY = 10;
 
@@ -43,26 +44,25 @@ interface ToolCallBatch {
  * approval gates where required.
  */
 export class AgentToolExecutor {
-  private readonly sessionApprovedTools: Set<string>;
+  private readonly approvalGate: OperationApprovalGate;
+  private readonly queryApprovedBashOperations = new Set<string>();
   private readonly maxConcurrency: number;
 
   constructor(
     private readonly toolMap: Map<string, StructuredToolInterface>,
     private readonly concurrencyMap: Map<string, boolean>,
     private readonly signal?: AbortSignal,
-    private readonly requestToolApproval?: (request: {
-      tool: string;
-      args: Record<string, unknown>;
-      command?: string;
-      decision?: PermissionDecision;
-    }) => Promise<ApprovalDecision>,
-    sessionApprovedTools?: Set<string>,
+    requestToolApproval?: RequestOperationApproval,
+    sessionApprovedOperations?: Set<string>,
     maxConcurrency?: number,
     private readonly requestUserInput?: (request: {
       questions: Question[];
     }) => Promise<UserAnswers>,
   ) {
-    this.sessionApprovedTools = sessionApprovedTools ?? new Set();
+    this.approvalGate = new OperationApprovalGate(
+      requestToolApproval,
+      sessionApprovedOperations,
+    );
     this.maxConcurrency = maxConcurrency ?? DEFAULT_MAX_CONCURRENCY;
   }
 
@@ -101,7 +101,13 @@ export class AgentToolExecutor {
         if (ctx.scratchpad.hasExecutedSkill(skillName)) continue;
       }
 
-      const isSafe = this.concurrencyMap.get(call.name) ?? false;
+      const operation = normalizeToolOperation(
+        call.name,
+        call.args as Record<string, unknown>,
+      );
+      const isSafe =
+        operation.risk === 'read_only' &&
+        (this.concurrencyMap.get(call.name) ?? false);
       const lastBatch = batches[batches.length - 1];
 
       if (isSafe && lastBatch?.concurrent) {
@@ -133,55 +139,63 @@ export class AgentToolExecutor {
     ctx: RunContext,
   ): AsyncGenerator<ToolExecutionEvent, void> {
     const toolName = call.name;
-    const toolArgs = call.args as Record<string, unknown>;
+    const rawToolArgs = call.args as Record<string, unknown>;
     const toolCallId = call.id;
-    const toolQuery = this.extractQueryFromArgs(toolArgs);
 
-    // Permission gate: the engine decides allow / ask / deny per call.
-    const permission = evaluatePermission({ tool: toolName, args: toolArgs });
-    if (permission.mode === 'deny') {
-      // Denied by rule — never reaches the user (avoids rubber-stamp fatigue).
-      yield { type: 'tool_denied', tool: toolName, args: toolArgs, toolCallId };
+    const permission = toolName === 'bash'
+      ? evaluatePermission({ tool: toolName, args: rawToolArgs })
+      : undefined;
+    const authorization = await this.approvalGate.authorize(
+      toolName,
+      rawToolArgs,
+      {
+        ...(permission ? { permission } : {}),
+        ...(toolName === 'bash'
+          ? { sessionApprovedOperations: this.queryApprovedBashOperations }
+          : {}),
+      },
+    );
+    const authorizedArgs = authorization.operation.arguments as Record<string, unknown>;
+
+    if (authorization.prompted) {
+      yield {
+        type: 'tool_approval',
+        tool: toolName,
+        args: authorizedArgs,
+        operation: authorization.operation,
+        approved: authorization.decision ?? 'deny',
+      };
+    }
+    if (
+      authorization.allowed &&
+      authorization.decision === 'allow-always' &&
+      permission?.proposedRule
+    ) {
+      addRule('allow', permission.proposedRule);
+    }
+    if (!authorization.allowed) {
+      yield {
+        type: 'tool_denied',
+        tool: toolName,
+        args: authorizedArgs,
+        operation: authorization.operation,
+        toolCallId,
+      };
       return;
     }
-    if (permission.mode === 'ask') {
-      // Commands the engine marks non-cacheable always re-prompt (a prior
-      // allow-session grant can never silently skip them).
-      const cacheable = permission.sessionCacheable !== false;
-      const key = sessionKey(toolName, permission);
-      if (!(cacheable && this.sessionApprovedTools.has(key))) {
-        const decision = (await this.requestToolApproval?.({
-          tool: toolName,
-          args: toolArgs,
-          command: permission.command,
-          decision: permission,
-        })) ?? 'deny';
-        yield { type: 'tool_approval', tool: toolName, args: toolArgs, approved: decision };
-        if (decision === 'deny') {
-          yield { type: 'tool_denied', tool: toolName, args: toolArgs, toolCallId };
-          return;
-        }
-        if (decision === 'allow-session' && cacheable) {
-          this.sessionApprovedTools.add(key);
-        }
-        if (decision === 'allow-always' && permission.proposedRule) {
-          // Persist a permanent allow rule, then run this turn.
-          addRule('allow', permission.proposedRule);
-        }
-      }
-    }
 
-    // Tool limit check (warn but never block)
-    const limitCheck = ctx.scratchpad.canCallTool(toolName, toolQuery);
-    if (limitCheck.warning) {
-      yield { type: 'tool_limit', tool: toolName, warning: limitCheck.warning, blocked: false };
-    }
+    let toolArgs = authorizedArgs;
 
     yield { type: 'tool_start', tool: toolName, args: toolArgs, toolCallId };
 
     const toolStartTime = Date.now();
 
     try {
+      // Re-normalize after the approval UI and all pre-execution yields. This
+      // catches browser target/state substitution immediately before invoke.
+      const claimed = this.approvalGate.claim(toolName, toolArgs);
+      toolArgs = claimed.arguments as Record<string, unknown>;
+
       const tool = this.toolMap.get(toolName);
       if (!tool) {
         throw new Error(`Tool '${toolName}' not found`);
@@ -211,24 +225,19 @@ export class AgentToolExecutor {
 
       yield { type: 'tool_end', tool: toolName, args: toolArgs, result, duration, toolCallId };
 
-      ctx.scratchpad.recordToolCall(toolName, toolQuery);
+      ctx.scratchpad.recordToolOutcome(toolName, toolArgs, result, false);
       ctx.scratchpad.addToolResult(toolName, toolArgs, result);
+      if (toolName === 'skill') {
+        const skillName = typeof toolArgs.skill === 'string' ? toolArgs.skill : '';
+        ctx.scratchpad.recordActiveSkill(skillName, result);
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       yield { type: 'tool_error', tool: toolName, error: errorMessage, toolCallId };
 
-      ctx.scratchpad.recordToolCall(toolName, toolQuery);
-      ctx.scratchpad.addToolResult(toolName, toolArgs, `Error: ${errorMessage}`);
+      const result = `Error: ${errorMessage}`;
+      ctx.scratchpad.recordToolOutcome(toolName, toolArgs, result, true);
+      ctx.scratchpad.addToolResult(toolName, toolArgs, result);
     }
-  }
-
-  private extractQueryFromArgs(args: Record<string, unknown>): string | undefined {
-    const queryKeys = ['query', 'search', 'question', 'q', 'text', 'input'];
-    for (const key of queryKeys) {
-      if (typeof args[key] === 'string') {
-        return args[key] as string;
-      }
-    }
-    return undefined;
   }
 }

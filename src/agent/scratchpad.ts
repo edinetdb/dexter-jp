@@ -1,7 +1,4 @@
-import { existsSync, mkdirSync, appendFileSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { createHash } from 'crypto';
-import { dexterPath } from '../utils/paths.js';
+import { createHash } from 'node:crypto';
 
 /**
  * Record of a tool call for external consumers (e.g., DoneEvent)
@@ -23,92 +20,67 @@ export interface ScratchpadEntry {
   result?: unknown; // Stored as parsed object when possible, string otherwise
 }
 
-/**
- * Tool call limit configuration
- */
-export interface ToolLimitConfig {
-  /** Max calls per tool per query (default: 3) */
-  maxCallsPerTool: number;
-  /** Query similarity threshold (0-1, default: 0.7) */
-  similarityThreshold: number;
+export interface ActiveSkillContract {
+  name: string;
+  instructions: string;
 }
 
-/**
- * Status of tool usage for graceful exit mechanism
- */
-export interface ToolUsageStatus {
+interface ToolProgressRecord {
   toolName: string;
-  callCount: number;
-  maxCalls: number;
-  remainingCalls: number;
-  recentQueries: string[];
-  isBlocked: boolean;
-  blockReason?: string;
+  signature: string;
+  outcomeHash: string;
+  failed: boolean;
 }
 
-/** Default tool limit configuration */
-const DEFAULT_LIMIT_CONFIG: ToolLimitConfig = {
-  maxCallsPerTool: 3,
-  similarityThreshold: 0.7,
-};
+const MAX_TOOL_PROGRESS_RECORDS = 50;
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalize);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonicalize(item)]),
+    );
+  }
+  return value;
+}
 
 /**
- * Append-only scratchpad for tracking agent work on a query.
- * Uses JSONL format (newline-delimited JSON) for resilient appending.
- * Files are persisted in .dexter/scratchpad/ for debugging/history.
- * 
- * This is the single source of truth for all agent work on a query.
- * 
- * Includes soft limit warnings to guide the LLM:
- * - Tool call counting with suggested limits (warnings, not blocks)
- * - Query similarity detection to help prevent retry loops
+ * In-memory scratchpad for a single agent run.
+ *
+ * Tool evidence, active Skill contracts, progress detection, and compaction
+ * state are transient. None of this state is written to durable memory.
  */
 export class Scratchpad {
-  private readonly scratchpadDir = dexterPath('scratchpad');
-  private readonly filepath: string;
-  private readonly limitConfig: ToolLimitConfig;
+  private readonly entries: ScratchpadEntry[] = [];
+  private readonly activeSkillContracts = new Map<string, string>();
+  private readonly toolProgressRecords: ToolProgressRecord[] = [];
+  private readonly emittedProgressWarnings = new Set<string>();
 
-  // In-memory tracking for tool limits (also persisted in JSONL)
-  private toolCallCounts: Map<string, number> = new Map();
-  private toolQueries: Map<string, string[]> = new Map();
-
-  // In-memory tracking for Anthropic-style context clearing (JSONL file untouched)
+  // In-memory tracking for Anthropic-style context clearing.
   // Stores indices of tool_result entries that have been cleared from context
   private clearedToolIndices: Set<number> = new Set();
 
-  // Compaction state (in-memory only — JSONL file untouched)
+  // Compaction state (in-memory only).
   // When set, getToolResults() returns the summary + any post-compaction results
   private compactionSummary: string | null = null;
   private compactionBoundaryIndex: number = -1;
 
-  constructor(query: string, limitConfig?: Partial<ToolLimitConfig>) {
-    this.limitConfig = { ...DEFAULT_LIMIT_CONFIG, ...limitConfig };
-
-    if (!existsSync(this.scratchpadDir)) {
-      mkdirSync(this.scratchpadDir, { recursive: true });
-    }
-
-    const hash = createHash('md5').update(query).digest('hex').slice(0, 12);
-    const now = new Date();
-    const timestamp = now.toISOString()
-      .slice(0, 19)           // "2026-01-21T15:30:45"
-      .replace('T', '-')      // "2026-01-21-15:30:45"
-      .replace(/:/g, '');     // "2026-01-21-153045"
-    this.filepath = join(this.scratchpadDir, `${timestamp}_${hash}.jsonl`);
-
-    // Write initial entry with the query
+  constructor(query: string) {
     this.append({ type: 'init', content: query, timestamp: new Date().toISOString() });
   }
 
   /**
    * Add a complete tool result with full data.
-   * Parses JSON strings to store as objects for cleaner JSONL output.
-   * Anthropic-style: no inline summarization, full results preserved.
+   * Parses JSON strings to keep structured values in transient memory.
    */
   addToolResult(
     toolName: string,
     args: Record<string, unknown>,
-    result: string
+    result: string,
   ): void {
     this.append({
       type: 'tool_result',
@@ -119,167 +91,89 @@ export class Scratchpad {
     });
   }
 
-  // ============================================================================
-  // Tool Limit / Graceful Exit Methods
-  // ============================================================================
-
   /**
-   * Check if a tool call can proceed. Returns status with warning if limits exceeded.
-   * Call this BEFORE executing a tool to help prevent retry loops.
-   * Note: Always allows the call but provides warnings to guide the LLM.
+   * Record a completed attempt for no-progress detection.
+   * Distinct arguments or changing results count as progress and never warn.
    */
-  canCallTool(toolName: string, query?: string): { allowed: boolean; warning?: string } {
-    const currentCount = this.toolCallCounts.get(toolName) ?? 0;
-    const maxCalls = this.limitConfig.maxCallsPerTool;
-
-    // Check if over the suggested limit - warn but allow
-    if (currentCount >= maxCalls) {
-      return {
-        allowed: true,
-        warning: `Tool '${toolName}' has been called ${currentCount} times (suggested limit: ${maxCalls}). ` +
-          `If previous calls didn't return the needed data, consider: ` +
-          `(1) trying a different tool, (2) using different search terms, or ` +
-          `(3) proceeding with what you have and noting any data gaps to the user.`,
-      };
-    }
-
-    // Check query similarity if query provided
-    if (query) {
-      const previousQueries = this.toolQueries.get(toolName) ?? [];
-      const similarQuery = this.findSimilarQuery(query, previousQueries);
-      
-      if (similarQuery) {
-        // Allow but warn - the LLM should know it's repeating
-        const remaining = maxCalls - currentCount;
-        return {
-          allowed: true,
-          warning: `This query is very similar to a previous '${toolName}' call. ` +
-            `You have ${remaining} attempt(s) before reaching the suggested limit. ` +
-            `If the tool isn't returning useful results, consider: ` +
-            `(1) trying a different tool, (2) using different search terms, or ` +
-            `(3) acknowledging the data limitation to the user.`,
-        };
-      }
-    }
-
-    // Check if approaching limit (1 call remaining)
-    if (currentCount === maxCalls - 1) {
-      return {
-        allowed: true,
-        warning: `You are approaching the suggested limit for '${toolName}' (${currentCount + 1}/${maxCalls}). ` +
-          `If this doesn't return the needed data, consider trying a different approach.`,
-      };
-    }
-
-    return { allowed: true };
-  }
-
-  /**
-   * Record a tool call attempt. Call this AFTER the tool executes successfully.
-   */
-  recordToolCall(toolName: string, query?: string): void {
-    // Update call count
-    const currentCount = this.toolCallCounts.get(toolName) ?? 0;
-    this.toolCallCounts.set(toolName, currentCount + 1);
-
-    // Track query if provided
-    if (query) {
-      const queries = this.toolQueries.get(toolName) ?? [];
-      queries.push(query);
-      this.toolQueries.set(toolName, queries);
+  recordToolOutcome(
+    toolName: string,
+    args: Record<string, unknown>,
+    result: string,
+    failed: boolean,
+  ): void {
+    const signature = JSON.stringify(canonicalize({ toolName, args }));
+    const outcomeHash = createHash('sha256').update(result).digest('hex');
+    this.toolProgressRecords.push({ toolName, signature, outcomeHash, failed });
+    if (this.toolProgressRecords.length > MAX_TOOL_PROGRESS_RECORDS) {
+      this.toolProgressRecords.splice(
+        0,
+        this.toolProgressRecords.length - MAX_TOOL_PROGRESS_RECORDS,
+      );
     }
   }
 
   /**
-   * Get usage status for all tools that have been called.
-   * Used to inject tool attempt status into prompts.
+   * Return a warning only after an exact operation repeats without new output.
+   * Each unchanged outcome is warned once so the warning itself cannot loop.
    */
-  getToolUsageStatus(): ToolUsageStatus[] {
-    const statuses: ToolUsageStatus[] = [];
-    
-    for (const [toolName, callCount] of this.toolCallCounts) {
-      const maxCalls = this.limitConfig.maxCallsPerTool;
-      const remainingCalls = Math.max(0, maxCalls - callCount);
-      const recentQueries = this.toolQueries.get(toolName) ?? [];
-      const overLimit = callCount >= maxCalls;
-      
-      statuses.push({
-        toolName,
-        callCount,
-        maxCalls,
-        remainingCalls,
-        recentQueries: recentQueries.slice(-3), // Last 3 queries
-        isBlocked: false, // Never block, just warn
-        blockReason: overLimit ? `Over suggested limit of ${maxCalls} calls` : undefined,
-      });
-    }
-    
-    return statuses;
+  formatToolProgressWarningForPrompt(): string | null {
+    const latest = this.toolProgressRecords.at(-1);
+    if (!latest) return null;
+
+    const repetitions = this.toolProgressRecords.filter(record =>
+      record.signature === latest.signature
+      && record.outcomeHash === latest.outcomeHash
+      && record.failed === latest.failed,
+    ).length;
+    if (repetitions < 2) return null;
+
+    const warningKey = [
+      latest.signature,
+      latest.outcomeHash,
+      latest.failed ? 'failure' : 'unchanged',
+    ].join(':');
+    if (this.emittedProgressWarnings.has(warningKey)) return null;
+    this.emittedProgressWarnings.add(warningKey);
+
+    const outcome = latest.failed ? 'the same failure' : 'an unchanged result';
+    return [
+      '## Tool progress warning',
+      '',
+      `The same ${latest.toolName} operation repeated with ${outcome}.`,
+      'Change the query, target, or tool before retrying it. Continue other independent work, or report the blocker if this operation is required.',
+    ].join('\n');
   }
 
-  /**
-   * Format tool usage status for injection into prompts.
-   */
-  formatToolUsageForPrompt(): string | null {
-    const statuses = this.getToolUsageStatus();
-    
-    if (statuses.length === 0) {
-      return null;
-    }
-
-    const lines = statuses.map(s => {
-      const status = s.callCount >= s.maxCalls
-        ? `${s.callCount} calls (over suggested limit of ${s.maxCalls})`
-        : `${s.callCount}/${s.maxCalls} calls`;
-      return `- ${s.toolName}: ${status}`;
-    });
-
-    return `## Tool Usage This Query\n\n${lines.join('\n')}\n\n` +
-      `Note: If a tool isn't returning useful results after several attempts, consider trying a different tool/approach.`;
+  /** Keep a successful Skill contract available after full compaction. */
+  recordActiveSkill(name: string, instructions: string): void {
+    const trimmedName = name.trim();
+    const trimmedInstructions = instructions.trim();
+    if (!trimmedName || !trimmedInstructions) return;
+    this.activeSkillContracts.set(trimmedName, trimmedInstructions);
   }
 
-  /**
-   * Check if a query is too similar to previous queries.
-   * Uses word overlap similarity (Jaccard-like).
-   */
-  private findSimilarQuery(newQuery: string, previousQueries: string[]): string | null {
-    const newWords = this.tokenize(newQuery);
-    
-    for (const prevQuery of previousQueries) {
-      const prevWords = this.tokenize(prevQuery);
-      const similarity = this.calculateSimilarity(newWords, prevWords);
-      
-      if (similarity >= this.limitConfig.similarityThreshold) {
-        return prevQuery;
-      }
-    }
-    
-    return null;
+  /** Return a defensive snapshot of run-local active Skill contracts. */
+  getActiveSkillContracts(): ActiveSkillContract[] {
+    return [...this.activeSkillContracts.entries()].map(([name, instructions]) => ({
+      name,
+      instructions,
+    }));
   }
 
-  /**
-   * Tokenize a query into normalized words for similarity comparison.
-   */
-  private tokenize(query: string): Set<string> {
-    return new Set(
-      query
-        .toLowerCase()
-        .replace(/[^\w\s]/g, ' ')
-        .split(/\s+/)
-        .filter(w => w.length > 2) // Skip very short words
-    );
-  }
+  /** Format active Skill contracts for trusted prompt reconstruction. */
+  formatActiveSkillContractsForPrompt(): string {
+    const contracts = this.getActiveSkillContracts();
+    if (contracts.length === 0) return '';
 
-  /**
-   * Calculate word overlap similarity between two word sets.
-   */
-  private calculateSimilarity(set1: Set<string>, set2: Set<string>): number {
-    if (set1.size === 0 || set2.size === 0) return 0;
-    
-    const intersection = [...set1].filter(w => set2.has(w)).length;
-    const union = new Set([...set1, ...set2]).size;
-    
-    return intersection / union; // Jaccard similarity
+    return [
+      '## Active Skill contracts',
+      '',
+      'These run-local Skill instructions remain active after context compaction.',
+      '',
+      ...contracts.map(contract =>
+        `### ${contract.name}\n\n${contract.instructions}`,
+      ),
+    ].join('\n');
   }
 
   /**
@@ -305,12 +199,11 @@ export class Scratchpad {
   /**
    * Get full tool results formatted for the iteration prompt.
    * Anthropic-style: full results in context, excluding cleared entries.
-   * Does NOT modify the JSONL file - clearing is in-memory only.
    *
    * When a compaction summary is active, returns:
    *   summary + separator + any post-compaction tool results
    */
-  getToolResults(): string {
+  getToolResults(options: { excludeSkillInstructions?: boolean } = {}): string {
     const entries = this.readEntries();
     let toolResultIndex = 0;
 
@@ -323,6 +216,11 @@ export class Scratchpad {
 
         // Skip entries covered by the compaction summary
         if (toolResultIndex <= this.compactionBoundaryIndex) {
+          toolResultIndex++;
+          continue;
+        }
+
+        if (options.excludeSkillInstructions && entry.toolName === 'skill') {
           toolResultIndex++;
           continue;
         }
@@ -348,6 +246,11 @@ export class Scratchpad {
     for (const entry of entries) {
       if (entry.type !== 'tool_result' || !entry.toolName) continue;
 
+      if (options.excludeSkillInstructions && entry.toolName === 'skill') {
+        toolResultIndex++;
+        continue;
+      }
+
       // Skip entries that have been cleared from context (in-memory only)
       if (this.clearedToolIndices.has(toolResultIndex)) {
         formattedResults.push(`[Tool result #${toolResultIndex + 1} cleared from context]`);
@@ -364,6 +267,11 @@ export class Scratchpad {
     }
 
     return formattedResults.join('\n\n');
+  }
+
+  /** Tool evidence safe to send to the compaction summarizer. */
+  getCompactionEvidence(): string {
+    return this.getToolResults({ excludeSkillInstructions: true });
   }
 
   /**
@@ -446,41 +354,13 @@ export class Scratchpad {
     );
   }
 
-  /**
-   * Append-only write
-   */
+  /** Append an entry to this run's transient state. */
   private append(entry: ScratchpadEntry): void {
-    appendFileSync(this.filepath, JSON.stringify(entry) + '\n');
+    this.entries.push(entry);
   }
 
-  /**
-   * Parse and validate a single JSONL line. Returns null for malformed or invalid entries.
-   */
-  private parseLine(line: string): ScratchpadEntry | null {
-    try {
-      const parsed = JSON.parse(line);
-      return parsed && typeof parsed === 'object' && 'type' in parsed && 'timestamp' in parsed
-        ? (parsed as ScratchpadEntry)
-        : null;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Read all entries from the log.
-   * Skips malformed or corrupt lines (partial writes, disk corruption) to avoid
-   * a single bad line crashing tool-context methods.
-   */
+  /** Read a snapshot of this run's transient entries. */
   private readEntries(): ScratchpadEntry[] {
-    if (!existsSync(this.filepath)) {
-      return [];
-    }
-
-    return readFileSync(this.filepath, 'utf-8')
-      .split('\n')
-      .filter((line) => line.trim())
-      .map((line) => this.parseLine(line))
-      .filter((entry): entry is ScratchpadEntry => entry !== null);
+    return [...this.entries];
   }
 }

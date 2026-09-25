@@ -9,6 +9,8 @@ import {
   resolveSubagentTools,
 } from './types.js';
 import { encodeSubagentProgress } from './progress.js';
+import { ASTRA_MODEL_ID } from '../../model/openai-runtime.js';
+import { getProviderById, resolveProvider } from '../../providers.js';
 
 // Rough categories so the activity line can roll up trailing operations the way
 // a human would summarize them ("Searched 3×, read 2 sources").
@@ -45,7 +47,7 @@ Delegate a focused, self-contained sub-task to an isolated subagent that runs it
 
 ## How It Works
 
-The subagent runs in isolation — it cannot see this conversation and cannot delegate further. Put everything it needs into \`task\` (and optional \`context\`). It returns one complete answer that you then synthesize.
+The subagent runs in isolation — it cannot see this conversation and cannot delegate further. Put everything it needs into \`task\` (and optional \`context\`). It returns one complete answer that you then synthesize. For an explicit DCF request, use the worker to gather sourced inputs and run the deterministic \`calculate_dcf\` tool yourself.
 
 ## Subagent Types
 
@@ -53,6 +55,12 @@ ${Object.entries(SUBAGENT_TYPES)
   .map(([key, cfg]) => `- ${key}: ${cfg.whenToUse}`)
   .join('\n')}
 `;
+
+/** Astra remains the main reasoning model; isolated workers use the OpenAI fast model. */
+export function resolveSubagentModel(parentModel: string): string {
+  if (parentModel !== ASTRA_MODEL_ID) return parentModel;
+  return getProviderById(resolveProvider(parentModel).id)?.fastModel ?? parentModel;
+}
 
 const SpawnSubagentInputSchema = z.object({
   description: z
@@ -86,14 +94,15 @@ export function createSpawnSubagent(model: string): DynamicStructuredTool {
 
       const typeKey = input.subagent_type ?? DEFAULT_SUBAGENT_TYPE;
       const typeCfg = SUBAGENT_TYPES[typeKey] ?? SUBAGENT_TYPES[DEFAULT_SUBAGENT_TYPE];
-      const toolAllowlist = resolveSubagentTools(typeKey);
+      const toolAllowlist = resolveSubagentTools(typeKey, input.task);
+      const workerModel = resolveSubagentModel(model);
 
       // Lazy import to break the registry → spawn-subagent → agent → registry cycle.
       // By first invocation all modules are fully loaded.
       const { Agent } = await import('../../agent/agent.js');
 
       const subagent = await Agent.create({
-        model,
+        model: workerModel,
         maxIterations: typeCfg.maxIterations,
         signal,
         memoryEnabled: false,

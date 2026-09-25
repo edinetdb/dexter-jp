@@ -291,11 +291,11 @@ Examples:
 
 ### Context Compaction
 
-During long research sessions with heavy data retrieval, a fast LLM automatically compresses accumulated tool results into a structured summary. Unlike simple clearing, key numbers and conclusions are preserved — keeping analysis coherent across the full session.
+During long research sessions with heavy data retrieval, a fast LLM compresses accumulated tool results into a structured summary. The summary remains in the current session and is never promoted to persistent memory.
 
 ### Memory
 
-Persists across sessions. Dexter remembers your investment thesis, portfolio information, and past analyses.
+Persists only information the user explicitly asks Dexter to remember, such as an investment thesis, portfolio preference, or final analysis decision. Ordinary conversation and tool output are not saved automatically.
 
 ### Supported LLMs
 

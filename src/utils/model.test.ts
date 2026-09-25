@@ -7,11 +7,12 @@ import {
 } from './model.js';
 
 describe('OpenAI model catalog', () => {
-  test('offers the GPT-5.6 family with Sol as the default', () => {
+  test('offers Astra explicitly while keeping Sol as the default', () => {
     expect(getModelIdsForProvider('openai')).toEqual([
       'gpt-5.6-sol',
       'gpt-5.6-terra',
       'gpt-5.6-luna',
+      'gpt-6-astra',
     ]);
     expect(getDefaultModelForProvider('openai')).toBe('gpt-5.6-sol');
   });
@@ -24,6 +25,7 @@ describe('OpenAI model catalog', () => {
     expect(getModelDisplayName('gpt-5.6-sol')).toBe('GPT 5.6 Sol');
     expect(getModelDisplayName('gpt-5.6-terra')).toBe('GPT 5.6 Terra');
     expect(getModelDisplayName('gpt-5.6-luna')).toBe('GPT 5.6 Luna');
+    expect(getModelDisplayName('gpt-6-astra')).toBe('GPT-6 Astra');
   });
 });
 

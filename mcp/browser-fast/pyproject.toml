@@ -1,0 +1,40 @@
+[project]
+name = "browser-fast"
+version = "0.1.0"
+description = "Read-only MCP safety adapter for Jev Ultrafast"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "jev-ultrafast==0.1.0",
+  "mcp==2.0.0",
+  "pydantic==2.12.5",
+  "python-dotenv==1.1.1",
+  "tldextract==5.3.0",
+]
+
+[project.scripts]
+browser-fast = "browser_fast.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+  "pytest==8.4.2",
+  "ruff==0.14.14",
+]
+
+[tool.uv.sources]
+jev-ultrafast = { git = "https://github.com/browser-use/jev-ultrafast.git", rev = "452c1ad2dd628008f1d5608f28158d76e49e6cc0" }
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

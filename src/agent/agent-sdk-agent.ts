@@ -22,6 +22,10 @@ import { buildDexterMcpServer, DEXTER_MCP_SERVER_NAME } from './sdk-tool-adapter
 import { buildSdkAgentSystemPrompt } from './sdk-prompt.js';
 import { buildSdkEnv, evaluateEnvGuard } from './sdk-env-guard.js';
 import { translateSdkMessage, type TranslateContext } from './sdk-message-translate.js';
+import {
+  OperationApprovalGate,
+  type RequestOperationApproval,
+} from '../approval/operation-policy.js';
 
 /** SDK built-in tools we explicitly deny (belt-and-suspenders; `tools: []` also removes them). */
 export const SDK_BUILTIN_TOOLS_TO_DENY = [
@@ -67,48 +71,92 @@ export interface AgentSdkAgentConfig {
    * auto-declined so the run does not hang.
    */
   requestUserInput?: (prompt: string) => Promise<string | null>;
+  /** Exact-operation approval bridge shared with the LangChain runtime. */
+  requestToolApproval?: RequestOperationApproval;
+  /** Session approvals are exact operation fingerprints, never tool-wide flags. */
+  sessionApprovedOperations?: Set<string>;
+  /** Current user turn used by code-enforced Skill/tool activation boundaries. */
+  userQuery?: string;
 }
 
 export class AgentSdkAgent {
   private readonly config: AgentSdkAgentConfig;
   private readonly systemPrompt: string;
-  private readonly mcp = buildDexterMcpServer();
+  private readonly approvalGate: OperationApprovalGate;
+  private readonly mcp: ReturnType<typeof buildDexterMcpServer>;
   /** Tool names actually reported by the SDK as used, for the "no built-ins" check. */
   private readonly toolsSeen = new Set<string>();
 
-  private constructor(config: AgentSdkAgentConfig, systemPrompt: string) {
+  private constructor(
+    config: AgentSdkAgentConfig,
+    systemPrompt: string,
+    approvalGate: OperationApprovalGate,
+    mcp: ReturnType<typeof buildDexterMcpServer>,
+  ) {
     this.config = config;
     this.systemPrompt = systemPrompt;
+    this.approvalGate = approvalGate;
+    this.mcp = mcp;
   }
 
   static async create(config: AgentSdkAgentConfig): Promise<AgentSdkAgent> {
-    const systemPrompt = await buildSdkAgentSystemPrompt(config.model, config.channel);
-    return new AgentSdkAgent(config, systemPrompt);
+    const approvalGate = new OperationApprovalGate(
+      config.requestToolApproval,
+      config.sessionApprovedOperations,
+    );
+    const mcp = buildDexterMcpServer({
+      authorizeExecution: (toolName, args) =>
+        approvalGate.claim(toolName, args).arguments as Record<string, unknown>,
+      userQuery: config.userQuery,
+    });
+    const systemPrompt = await buildSdkAgentSystemPrompt(
+      config.model,
+      config.channel,
+      new Set(mcp.toolNames),
+      config.userQuery,
+    );
+    return new AgentSdkAgent(config, systemPrompt, approvalGate, mcp);
   }
 
-  /** Fully-qualified Dexter tool names + AskUserQuestion, for `allowedTools`. */
+  /** AskUserQuestion is SDK-native. Dexter MCP calls must pass canUseTool. */
   private allowedTools(): string[] {
-    return [`mcp__${DEXTER_MCP_SERVER_NAME}__*`, ASK_USER_QUESTION_TOOL];
+    return [ASK_USER_QUESTION_TOOL];
   }
 
   /**
-   * Permission handler: allow Dexter MCP tools + AskUserQuestion, deny everything
-   * else (fail-safe). Invoked only when the permission flow falls through to a
-   * prompt; `allowedTools` auto-approves the Dexter tools, so in practice this
-   * blocks any built-in the model somehow attempts.
+   * Permission handler: normalize every Dexter MCP call through the shared
+   * operation gate, allow AskUserQuestion, and deny everything else. The MCP
+   * handler separately claims the exact approved fingerprint before execution.
    */
   private canUseTool = async (
     toolName: string,
     input: Record<string, unknown>,
   ): Promise<PermissionResult> => {
-    const isDexterTool = toolName.startsWith(`mcp__${DEXTER_MCP_SERVER_NAME}__`);
+    const prefix = 'mcp__' + DEXTER_MCP_SERVER_NAME + '__';
+    const isDexterTool = toolName.startsWith(prefix);
     const isAskUser = toolName === ASK_USER_QUESTION_TOOL;
-    if (isDexterTool || isAskUser) {
+    if (isAskUser) {
       return { behavior: 'allow', updatedInput: input };
+    }
+    if (isDexterTool) {
+      const localToolName = toolName.slice(prefix.length);
+      const authorization = await this.approvalGate.authorize(localToolName, input);
+      if (!authorization.allowed) {
+        return {
+          behavior: 'deny',
+          message: "Operation '" + authorization.operation.kind + "' was not approved.",
+        };
+      }
+      return {
+        behavior: 'allow',
+        updatedInput: authorization.operation.arguments as Record<string, unknown>,
+      };
     }
     return {
       behavior: 'deny',
-      message: `Tool '${toolName}' is not available in Claude Agent SDK mode (only Dexter data tools are permitted).`,
+      message:
+        "Tool '" + toolName +
+        "' is not available in Claude Agent SDK mode (only Dexter data tools are permitted).",
     };
   };
 
@@ -135,7 +183,7 @@ export class AgentSdkAgent {
       tools: [],
       // Belt-and-suspenders deny (permission + availability layer).
       disallowedTools: [...SDK_BUILTIN_TOOLS_TO_DENY],
-      // Auto-approve only Dexter tools + AskUserQuestion.
+      // Only the SDK-native question tool is pre-approved; MCP calls use the operation gate.
       allowedTools: this.allowedTools(),
       // Register the raw Dexter tools; use only these MCP servers.
       mcpServers: { [DEXTER_MCP_SERVER_NAME]: this.mcp.server },

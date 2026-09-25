@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -61,3 +62,6 @@ coverage.json
 
 # Scratchpad files
 scratchpads/*
+
+# browser-fast runtime traces
+mcp/browser-fast/traces/

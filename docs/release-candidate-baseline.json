@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 2,
+  "baselineId": "dexter-rc3-20260920-188a146",
+  "status": "rc3_candidate_precommit",
+  "releaseCandidate": "v1.0.5-jp-rc3",
+  "freezeType": "manifest_bound_source_snapshot",
+  "recordedAt": "20260920",
+  "timezone": "Asia/Tokyo",
+  "packageVersion": "1.0.5-jp",
+  "integrationBase": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+  "preEvidenceHead": "4bce551f1d81928b106ad7bd05f12eb6c65a8858",
+  "commitSha": null,
+  "commitShaAssignment": "assigned_after_commit_and_recorded_in_freeze_report_or_later_tag",
+  "previousRcCommit": "931ddc5684f8b8168d16c48656edc0a29d145e6a",
+  "previousRcTag": "v1.0.5-jp-rc2",
+  "documents": [
+    "docs/astra-support.md",
+    "docs/memory-privacy-boundaries.md",
+    "docs/operation-approval-architecture.md",
+    "docs/memo-architecture.md",
+    "docs/behavioral-evaluation.md",
+    "docs/practical-acceptance.md",
+    "docs/release-candidate-baseline.md",
+    "docs/release-candidate-baseline.json",
+    "docs/rc-snapshot-manifest.json"
+  ],
+  "source": {
+    "branch": "rc/v1.0.0-jp-rc2-integration",
+    "integrationBase": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+    "originMainAfterFetch": "188a146823b1a06f632bbcb4ab6236beb70e681b",
+    "originMainIsAncestorOfPreEvidenceHead": true,
+    "originMainFastForwardToRc3Line": true,
+    "preEvidenceHead": "4bce551f1d81928b106ad7bd05f12eb6c65a8858",
+    "preFreezeWorkingTreeClean": true,
+    "commitsAheadOfOriginMainBeforeFreeze": 3,
+    "commitChain": [
+      "931ddc5684f8b8168d16c48656edc0a29d145e6a",
+      "b77942909fcc4198f9a466c6523e08e9f6d283f0",
+      "4bce551f1d81928b106ad7bd05f12eb6c65a8858"
+    ],
+    "evidenceFreezePaths": [
+      "docs/release-candidate-baseline.md",
+      "docs/release-candidate-baseline.json",
+      "docs/rc-snapshot-manifest.json"
+    ],
+    "tagCreated": false,
+    "pushPerformed": false
+  },
+  "architectureBaseline": {
+    "phase1Through8": "PRESERVED",
+    "astraCompatibilityPatch1": "INCLUDED",
+    "astraCompatibilityPatch2": "INCLUDED",
+    "gpt6AstraFormalRuntimeSupport": "INCLUDED"
+  },
+  "manifest": {
+    "path": "docs/rc-snapshot-manifest.json",
+    "comparisonBase": "origin/main",
+    "pathCount": 146,
+    "addedPaths": 88,
+    "modifiedPaths": 55,
+    "deletedPaths": 3,
+    "hashAlgorithm": "SHA-256",
+    "manifestSelfHashEmbedded": false,
+    "completedManifestHashLocation": "final_freeze_report"
+  },
+  "validation": {
+    "typecheck": {
+      "status": "PASS",
+      "command": "bun run typecheck"
+    },
+    "fullTestSuite": {
+      "status": "PASS",
+      "command": "bun test",
+      "passed": 535,
+      "skipped": 8,
+      "failed": 0,
+      "assertions": 1216,
+      "testFiles": 47
+    },
+    "behavioralEval": {
+      "status": "PASS",
+      "command": "bun run eval",
+      "mode": "offline-fixture",
+      "architectureBaseline": {
+        "passed": 34,
+        "total": 34
+      },
+      "criticalFailures": 0,
+      "astraOfflineCompatibility": "PASS",
+      "liveModelsInvoked": false
+    },
+    "practicalAcceptance": {
+      "status": "PASS",
+      "command": "bun run acceptance",
+      "mode": "offline-scripted-workflow",
+      "scenarios": {
+        "passed": 30,
+        "total": 30
+      },
+      "turns": 38,
+      "multiTurnScenarios": 8,
+      "criticalFailures": 0,
+      "xCapability": "observable-stub",
+      "liveCalls": false
+    },
+    "astraLiveList": {
+      "status": "PASS",
+      "command": "bun run eval:astra-live -- --list",
+      "cases": 8,
+      "liveCalls": false
+    },
+    "astraLiveSmokeEvidence": {
+      "status": "PASS",
+      "model": "gpt-6-astra",
+      "reasoning": "medium",
+      "serviceTier": "standard",
+      "passed": 8,
+      "total": 8,
+      "criticalFailures": 0,
+      "rerunForFreeze": false
+    },
+    "diffChecks": {
+      "workingTree": {
+        "command": "git diff --check",
+        "status": "PASS"
+      },
+      "staged": {
+        "command": "git diff --cached --check",
+        "status": "PASS"
+      }
+    },
+    "secretArtifactCheck": {
+      "status": "PASS",
+      "realCredentialsFound": 0,
+      "liveCredentialArtifactsFound": 0
+    }
+  },
+  "evidenceLevels": {
+    "unitDeterministic": {
+      "status": "PASS",
+      "command": "bun test"
+    },
+    "offlineBehavioral": {
+      "status": "PASS",
+      "command": "bun run eval",
+      "criticalFailures": 0
+    },
+    "offlinePracticalAcceptance": {
+      "status": "PASS",
+      "command": "bun run acceptance",
+      "criticalFailures": 0
+    },
+    "astraLiveSmoke": {
+      "status": "PASS",
+      "passed": 8,
+      "total": 8,
+      "criticalFailures": 0,
+      "verified": [
+        "multi_part_completion_structure",
+        "missing_required_input_non_fabrication_structure",
+        "explicit_dcf_routing",
+        "implicit_non_dcf_routing",
+        "explicit_memo_routing",
+        "memory_memo_separation",
+        "explicit_x_routing",
+        "adversarial_non_action_routing"
+      ],
+      "notFullyValidated": [
+        "dcf_supplied_argument_preservation",
+        "real_calculator_result_propagation",
+        "real_x_api_behavior",
+        "real_memo_filesystem_mutation",
+        "real_durable_memory_mutation",
+        "long_multi_turn_compaction",
+        "detailed_clarification_prose",
+        "internal_http_retry_count"
+      ]
+    }
+  },
+  "nonBlockingFindings": [
+    {
+      "id": "astra-live-clarification-heuristic",
+      "status": "NON_BLOCKING",
+      "finding": "clarificationLikely can false-positive on ordinary explanatory use of 確認",
+      "actualBehaviorFailure": false
+    }
+  ],
+  "secretArtifactPolicy": {
+    "realCredentialsAllowed": false,
+    "authorizationHeadersAllowed": false,
+    "liveRequestResponseDumpsAllowed": false,
+    "envFilesAllowed": false,
+    "runtimeCacheAllowed": false,
+    "dexterRuntimeStateAllowed": false,
+    "syntheticFixturesClassifiedSeparately": true
+  },
+  "deferred": [
+    "P3 RULES restructuring",
+    "S3 memo schema cleanup",
+    "U2 legacy memo cleanup",
+    "deeper Astra live end-to-end validation",
+    "clarification observability heuristic refinement"
+  ],
+  "reproduction": [
+    "bun run typecheck",
+    "bun test",
+    "bun run eval",
+    "bun run acceptance",
+    "bun run eval:astra-live -- --list",
+    "git diff --check",
+    "git diff --cached --check"
+  ],
+  "prohibitedDuringFreeze": [
+    "Astra live smoke rerun",
+    "product behavior changes",
+    "tag creation",
+    "push",
+    "release",
+    "publish"
+  ]
+}

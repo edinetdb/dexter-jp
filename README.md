@@ -289,23 +289,25 @@ CLIで `/rules` と入力すると現在のルールを確認できる。
 
 ### コンテキスト圧縮
 
-長時間のリサーチセッションで大量のデータを取得した場合、高速LLMが自動的にデータをサマリに圧縮してコンテキストを節約する。単純なデータ削除ではなく、重要な数値・結論を保持した要約を生成するため、セッションを通じた分析の整合性が保たれる。
+長時間のリサーチセッションで大量のデータを取得した場合、高速LLMが自動的にデータをサマリに圧縮してコンテキストを節約する。要約は現在のセッション内だけで使われ、永続メモリへは昇格しない。
 
 ### メモリ
 
-セッション間で記憶を保持。投資方針、ポートフォリオ情報、過去の分析結果を覚える。
+ユーザーが「覚えて」と明示した投資方針、ポートフォリオ情報、確定した分析結果だけをセッション間で保持する。通常の会話やツール出力は自動保存しない。
 
 ### 対応LLM
 
 `/model`コマンドでCLI上から切替可能:
 
-- OpenAI（GPT-4o, GPT-4o-mini 等）
+- OpenAI（GPT-6 Astra、GPT 5.6 Sol / Terra / Luna。既定はSol）
 - Anthropic（Claude）
 - Google（Gemini）
 - xAI（Grok）
 - OpenRouter
 - Ollama（ローカルLLM）
 - Claude Agent SDK（後述）
+
+GPT-6 Astraは明示選択時のみ使用され、正式なAPI契約・offline評価・opt-in live smokeの詳細は[GPT-6 Astra support](docs/astra-support.md)を参照。
 
 ### Claude Agent SDK モード
 

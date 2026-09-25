@@ -76,15 +76,9 @@ function isEvergreenFile(fileName: string): boolean {
  *
  * - Dated memory files (YYYY-MM-DD.md): date from filename
  * - MEMORY.md and other non-dated files: null (evergreen, no decay)
- * - Session chunks: use updatedAt from the DB
  */
 function extractTimestampMs(result: MemorySearchResult): number | null {
   const path = result.path;
-
-  // Session chunks use their indexed timestamp.
-  if (path.startsWith('sessions/')) {
-    return result.updatedAt ?? null;
-  }
 
   // Try to parse date from filename.
   const dateFromName = parseDateFromFileName(path);

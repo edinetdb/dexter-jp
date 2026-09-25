@@ -3,6 +3,7 @@ import { createEmbeddingClient } from './embeddings.js';
 import { MemoryIndexer } from './indexer.js';
 import { hybridSearch } from './search.js';
 import { MemoryStore } from './store.js';
+import { DurableMemoryPersistence, type DurableMemoryMutation } from './persistence.js';
 import type {
   MemoryReadOptions,
   MemoryReadResult,
@@ -29,7 +30,6 @@ const DEFAULT_CONFIG: MemoryRuntimeConfig = {
   watchDebounceMs: 1500,
   temporalDecay: { enabled: true, halfLifeDays: 30 },
   mmr: { enabled: true, lambda: 0.7 },
-  indexSessions: true,
 };
 
 type MemorySettings = {
@@ -39,7 +39,6 @@ type MemorySettings = {
   maxSessionContextTokens?: number;
   temporalDecay?: Partial<TemporalDecayConfig>;
   mmr?: Partial<MMRConfig>;
-  indexSessions?: boolean;
 };
 
 function resolveConfig(): MemoryRuntimeConfig {
@@ -65,6 +64,7 @@ export class MemoryManager {
   }
 
   private readonly store = new MemoryStore();
+  private readonly persistence = new DurableMemoryPersistence(this.store);
   private db: MemoryDatabase | null = null;
   private indexer: MemoryIndexer | null = null;
   private initError: string | null = null;
@@ -105,7 +105,6 @@ export class MemoryManager {
       overlapTokens: this.config.chunkOverlapTokens,
       watchDebounceMs: this.config.watchDebounceMs,
       embeddingClient: client,
-      indexSessions: this.config.indexSessions,
     });
     this.indexer.startWatching();
 
@@ -169,43 +168,17 @@ export class MemoryManager {
     return this.store.readLines(options);
   }
 
-  async appendLongTermMemory(text: string): Promise<void> {
+  async persistExplicitUpdate(mutation: DurableMemoryMutation): Promise<boolean> {
     await this.initialize();
-    await this.store.appendMemoryFile('MEMORY.md', text);
-    this.indexer?.markDirty();
-  }
-
-  async appendDailyMemory(text: string): Promise<void> {
-    await this.initialize();
-    await this.store.appendMemoryFile(this.getTodayFileName(), text);
-    this.indexer?.markDirty();
-  }
-
-  async editMemory(file: string, oldText: string, newText: string): Promise<boolean> {
-    await this.initialize();
-    const resolved = this.resolveFileAlias(file);
-    const result = await this.store.editInMemoryFile(resolved, oldText, newText);
-    if (result) {
+    const normalized = {
+      ...mutation,
+      file: this.resolveFileAlias(mutation.file),
+    } as DurableMemoryMutation;
+    const applied = await this.persistence.apply(normalized);
+    if (applied) {
       this.indexer?.markDirty();
     }
-    return result;
-  }
-
-  async deleteMemory(file: string, textToDelete: string): Promise<boolean> {
-    await this.initialize();
-    const resolved = this.resolveFileAlias(file);
-    const result = await this.store.deleteFromMemoryFile(resolved, textToDelete);
-    if (result) {
-      this.indexer?.markDirty();
-    }
-    return result;
-  }
-
-  async appendMemory(file: string, content: string): Promise<void> {
-    await this.initialize();
-    const resolved = this.resolveFileAlias(file);
-    await this.store.appendMemoryFile(resolved, content);
-    this.indexer?.markDirty();
+    return applied;
   }
 
   async listFiles(): Promise<string[]> {

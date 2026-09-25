@@ -14,7 +14,8 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { buildSystemPrompt, DEFAULT_SYSTEM_PROMPT } from '../agent/prompts.js';
-import { MEMORY_FLUSH_PROMPT } from '../memory/flush.js';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { discoverSkills, clearSkillCache } from '../skills/registry.js';
 
 /** 売買・推奨・建玉サイズの語。既定で走る当社生成のプロンプトに現れてはいけない。 */
@@ -43,32 +44,29 @@ function offenders(text: string): string[] {
 }
 
 describe('R1 で外した売買判断の面が戻っていない', () => {
-  test('memory flush プロンプトに売買・推奨・口座の指示が無い', () => {
-    expect(offenders(MEMORY_FLUSH_PROMPT)).toEqual([]);
-  });
-
-  test('memory flush プロンプトは依然として「何を残すか」を指示している（空にしただけではない）', () => {
-    // 逆方向の対: 禁止語を消すためにブロックごと削ると、この機能自体が壊れる。
-    expect(MEMORY_FLUSH_PROMPT).toContain('durable facts');
-    expect(MEMORY_FLUSH_PROMPT.length).toBeGreaterThan(400);
+  test('自動 memory flush を復活させない（明示依頼による記憶のみ）', () => {
+    expect(existsSync(join(import.meta.dir, '../memory/flush.ts'))).toBe(false);
   });
 
   test('システムプロンプト（既定・全チャネル）に売買助言の前提が無い', () => {
     expect(offenders(DEFAULT_SYSTEM_PROMPT)).toEqual([]);
     for (const channel of [undefined, 'cli', 'slack', 'discord', 'whatsapp', 'line']) {
-      const prompt = buildSystemPrompt('claude-sonnet-4-5', null, channel, undefined, ['MEMORY.md'], null, null);
+      const prompt = buildSystemPrompt('claude-sonnet-4-5', null, channel, undefined, ['MEMORY.md'], null, null,
+        new Set(['memory_search', 'memory_get', 'memory_update']));
       expect({ channel, hits: offenders(prompt) }).toEqual({ channel, hits: [] });
     }
   });
 
   test('システムプロンプトは memory_search の指示自体は残している', () => {
-    const prompt = buildSystemPrompt('claude-sonnet-4-5', null, 'cli', undefined, ['MEMORY.md'], null, null);
+    const prompt = buildSystemPrompt('claude-sonnet-4-5', null, 'cli', undefined, ['MEMORY.md'], null, null,
+      new Set(['memory_search']));
     expect(prompt).toContain('memory_search');
   });
 
   test('builtin スキルに建玉方向の推奨メモ（write-memo）が無い', () => {
     clearSkillCache();
-    const builtins = discoverSkills().filter(s => s.source === 'builtin');
+    const builtins = discoverSkills({ availableTools: new Set(['calculate_dcf', 'x_search', 'write_memo']) })
+      .filter(s => s.source === 'builtin');
     expect(builtins.map(s => s.name)).not.toContain('write-memo');
     for (const skill of builtins) {
       expect({ skill: skill.name, hits: offenders(`${skill.name} ${skill.description}`) })
@@ -78,7 +76,16 @@ describe('R1 で外した売買判断の面が戻っていない', () => {
 
   test('builtin スキルの発見機構自体は生きている（空にしたのではない）', () => {
     clearSkillCache();
-    const builtins = discoverSkills().filter(s => s.source === 'builtin');
+    const builtins = discoverSkills({ availableTools: new Set(['calculate_dcf', 'x_search']) })
+      .filter(s => s.source === 'builtin');
     expect(builtins.length).toBeGreaterThan(0);
+  });
+
+  test('明示依頼で公開されるメモも投資推奨を前提にしない', () => {
+    clearSkillCache();
+    const memo = discoverSkills({ availableTools: new Set(['write_memo']), userQuery: 'これをメモにして' })
+      .find(s => s.name === 'write-memo');
+    expect(memo).toBeDefined();
+    expect(offenders(memo!.description)).toEqual([]);
   });
 });
