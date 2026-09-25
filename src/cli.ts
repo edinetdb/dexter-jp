@@ -37,7 +37,10 @@ import {
   createSearchProviderSelector,
 } from './components/index.js';
 import { editorTheme, theme } from './theme.js';
-import { matchCommands, type SlashCommand } from './commands/index.js';
+import { matchCommands, parseSlashCommand, parseWatchArgs, type SlashCommand } from './commands/index.js';
+import { runCheckCommand } from './check/command.js';
+import { renderEgressScreen } from './config/egress.js';
+import { productionPorts } from './check/ports.js';
 import { initSpinner } from './utils/spinner.js';
 
 function truncateForHistory(text: string): string {
@@ -333,6 +336,10 @@ export async function runCli() {
     0, 0,
   );
 
+  // 起動時に、このセッションで実際に外へ出る先を 1 画面で出す（go-decision G-D2 / review T9 H4）。
+  // 以前は renderEgressScreen が誰からも呼ばれず、README「起動時に一覧が出ます」と食い違っていた。
+  const egressText = new Text(theme.muted(renderEgressScreen(process.env).join('\n')), 0, 0);
+
   const errorText = new Text('', 0, 0);
   const workingIndicator = new WorkingIndicatorComponent(tui);
   workingIndicator.setTurnStatsProvider(() => agentRunner.turnStats);
@@ -343,6 +350,7 @@ export async function runCli() {
 
   // Build the component tree ONCE — stable structure, no root.clear()
   root.addChild(intro);
+  root.addChild(egressText);
   if (warnings.length > 0) {
     root.addChild(warningText);
   }
@@ -387,8 +395,35 @@ export async function runCli() {
   /clear       Clear conversation
   ↑ / ↓        Navigate input history`;
 
-  const handleSlashCommand = async (command: string) => {
+  const say = (text: string) => {
+    chatLog.addChild(new Spacer(1));
+    chatLog.addChild(new Text(text, 0, 0));
+    tui.requestRender();
+  };
+
+  /**
+   * `rest` は**原文のまま**（trim だけ）受け取る。以前は
+   * `query.slice(1).trim().toLowerCase()` を丸ごと渡していたので、
+   * 引数つきコマンドはどの case にも当たらず**黙って何も起きず**、
+   * さらに仮説の本文まで小文字化されていた（review r2 L1）。
+   */
+  const handleSlashCommand = async (command: string, rest = '') => {
     switch (command) {
+      case 'check': {
+        // 例外は runCheckCommand の中で必ず画面に出す形に落ちる（review T9 H6）
+        for (const m of await runCheckCommand(rest, productionPorts(modelSelection.model), {
+          interactive: true,
+          provider: modelSelection.provider,
+        })) {
+          say(m.muted ? theme.muted(m.text) : m.text);
+        }
+        break;
+      }
+      case 'watch': {
+        const { all } = parseWatchArgs(rest);
+        say(theme.muted(`/watch${all ? ' all' : ''} は次のリリースで配線します。`));
+        break;
+      }
       case 'model':
         modelSelection.startSelection();
         break;
@@ -453,10 +488,10 @@ export async function runCli() {
 
     // Handle all slash commands
     if (query.startsWith('/')) {
-      const command = query.slice(1).trim().toLowerCase();
+      const parsed = parseSlashCommand(query);
       slashActive = false;
       slashSuggestions = [];
-      await handleSlashCommand(command);
+      if (parsed) await handleSlashCommand(parsed.name, parsed.rest);
       return;
     }
 

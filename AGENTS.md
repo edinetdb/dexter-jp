@@ -10,6 +10,16 @@
 
 - Use Bun for the main TypeScript application and its tests.
 - `mcp/browser-fast/` has its own nested instructions and runtime. Do not impose Bun or TypeScript conventions on that Python subsystem.
+- Set `DEXTER_SKIP_BROWSER=1` for installs that do not need Chromium. Offline checks include `bun run demo`, `bun run check:data`, and `bun run bench:judge`.
+
+## Guards
+
+- `/check` requires the `jev` or injected `replay` judge backend; do not replace its preflight with the LLM stand-in.
+- Input refusals combine deterministic checks and the judge vote; a vote cannot lift a deterministic refusal.
+- Output linting covers generated strings, not verbatim disclosure quotes.
+- Deny secret paths (`.env`, `.dexter/credentials/`, `.dexter/checks/`) in every path-taking tool.
+- The old investment-recommendation memo was removed upstream. The explicit-only `write-memo` Skill saves structured user-requested content without prescribing investment positions or promoting it to durable memory.
+- Automatic memory flush remains removed; durable memory requires an explicit user request.
 
 ## Safety and authorization
 

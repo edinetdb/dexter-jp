@@ -3,7 +3,11 @@ export interface SlashCommand {
   description: string;
 }
 
+export * from './parse.js';
+
 export const SLASH_COMMANDS: SlashCommand[] = [
+  { name: 'check', description: '仮説を有価証券報告書の段落に当てる（/check <銘柄> <仮説>）' },
+  { name: 'watch', description: 'ウォッチリストの銘柄に出た開示を並べる' },
   { name: 'model', description: 'Switch LLM provider and model' },
   { name: 'search', description: 'Choose preferred web search provider' },
   { name: 'rules', description: 'Show your research rules' },

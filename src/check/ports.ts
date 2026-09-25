@@ -1,0 +1,280 @@
+/**
+ * `/check` の外に出る処理（EDINET DB と LLM）の実装。
+ *
+ * `runCheck` はこれらを**ポートとして受け取る**ので、テストと `bun run demo` は
+ * 録画に差し替えて同じ経路を通れる。ここは本番用の中身だけを持つ。
+ */
+import { z } from 'zod';
+import { api } from '../tools/finance/api.js';
+import { resolveEdinetCode } from '../tools/finance/resolver.js';
+import { callLlm } from '../model/llm.js';
+import { segmentIntoParagraphs, type RawClaimFromModel } from './core/index.js';
+import type { CheckPorts, DisclosureSource } from './index.js';
+import { displayClaimText, type CheckPanel } from './panel.js';
+
+/**
+ * 証拠に使う節（design §4.2 = 有報の MD&A・リスク・方針。短信の本文は使わない）。
+ *
+ * **EDINET DB の `text-blocks` は節名を日本語で返す**（`mda` 等のキーではない。2026-09-23 実測）。
+ * 内部の呼び名 → 応答の節名の対応をここに固定する。応答の実キーは 18 節ある。
+ */
+export const EVIDENCE_SECTIONS: ReadonlyArray<{ key: string; sectionName: string }> = [
+  { key: 'mda', sectionName: '経営者による分析' },
+  { key: 'risks', sectionName: '事業等のリスク' },
+  { key: 'policy', sectionName: '事業方針・経営環境' },
+];
+
+/** `text-blocks` の 1 節。 */
+interface TextBlockSection {
+  section: string;
+  text: string;
+}
+
+/**
+ * 応答から対象節の**全文**を拾う。
+ *
+ * ★ `full=true` を付けないと、各節は **2,000 字の要約版**が返る
+ * （`meta.truncated: true`、応答の note が明記。トヨタの「経営者による分析」は
+ * 全文 24,544 字 / 要約 2,007 字、2026-09-23 実測）。
+ * 要約を有報の逐語として引用すると、出典表記と中身が食い違う。必ず全文を取る。
+ */
+export function extractSections(payload: unknown): { key: string; sectionName: string; text: string }[] {
+  const data = (payload as { data?: unknown })?.data;
+  if (!Array.isArray(data)) return [];
+  const bySection = new Map<string, string>();
+  for (const item of data as TextBlockSection[]) {
+    if (item && typeof item.section === 'string' && typeof item.text === 'string') {
+      bySection.set(item.section, item.text);
+    }
+  }
+  const out: { key: string; sectionName: string; text: string }[] = [];
+  for (const { key, sectionName } of EVIDENCE_SECTIONS) {
+    const text = bySection.get(sectionName);
+    if (text && text.trim()) out.push({ key, sectionName, text });
+  }
+  return out;
+}
+
+/** 応答が要約版のまま（`full=true` を付け忘れた）かどうか。 */
+export function isTruncated(payload: unknown): boolean {
+  return (payload as { meta?: { truncated?: unknown } })?.meta?.truncated === true;
+}
+
+export const TRUNCATED_DISCLOSURE_MESSAGE =
+  'EDINET DB から有価証券報告書の本文が全文で返らなかったため（要約版）、段落を逐語として使えません';
+
+/**
+ * text-blocks の応答から対象節を取り出す。**要約版なら止める**（review T9 M5）。
+ *
+ * 要約版の文を有報の逐語として引用すると、出典表記と中身が食い違う。いまは `full=true` を
+ * 送っているが、プランやレート制限で API 側が要約に落とした時に黙って通さない。
+ */
+export function sectionsFromTextBlocks(body: unknown): { key: string; sectionName: string; text: string }[] {
+  if (isTruncated(body)) throw new Error(TRUNCATED_DISCLOSURE_MESSAGE);
+  return extractSections(body);
+}
+
+/**
+ * 直近 1 年ぶんの日付窓（`since` / `until`）。
+ *
+ * `/v1/events` は **`since` を省くと直近 7 日**しか見ず（有報は年 1 回なので必ず 0 件になる）、
+ * **範囲は最大 366 日**（`since=2025-01-01` のような開いた指定は
+ * `invalid_param: Range too large (max 366 days)` で 400）。2026-09-23 実測。
+ */
+export function yuhouWindow(today: Date = new Date()): { since: string; until: string } {
+  const until = today.toISOString().slice(0, 10);
+  const from = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+  return { since: from.toISOString().slice(0, 10), until };
+}
+
+/** 有報（`event_type=yuhou`）の最新の書類 ID を取り出す。出所メタの `doc_id` に要る。 */
+export function latestYuhouDocId(payload: unknown): string | null {
+  const data = (payload as { data?: unknown })?.data;
+  if (!Array.isArray(data)) return null;
+  const yuhou = (data as { event_type?: string; source_id?: string; event_date?: string }[])
+    .filter(e => e.event_type === 'yuhou' && typeof e.source_id === 'string')
+    .sort((a, b) => String(b.event_date ?? '').localeCompare(String(a.event_date ?? '')));
+  return yuhou[0]?.source_id ?? null;
+}
+
+/** `/companies/{code}` から会社の見出しを取る。 */
+export function companyHeader(payload: unknown): { name?: string; secCode?: string; fiscalYear?: number } {
+  const d = ((payload as { data?: unknown })?.data ?? payload) as Record<string, unknown>;
+  const name = typeof d.name_ja === 'string' ? d.name_ja : typeof d.name === 'string' ? d.name : undefined;
+  const secCode = typeof d.sec_code === 'string' ? d.sec_code : undefined;
+  const fiscalYear = typeof d.latest_fiscal_year === 'number' ? d.latest_fiscal_year : undefined;
+  return {
+    ...(name ? { name } : {}),
+    ...(secCode ? { secCode } : {}),
+    ...(fiscalYear ? { fiscalYear } : {}),
+  };
+}
+
+/**
+ * 有報の対象節を取って段落化する。
+ *
+ * EDINET DB の呼び出しは 3 回（会社の見出し / 対象節の全文 / 有報の書類 ID）。
+ * design §4.2 の「1 回の `/check` で 6 回以内」の内数。
+ */
+export async function fetchDisclosure(ticker: string): Promise<DisclosureSource> {
+  return fetchDisclosureWith(ticker, { get: api.get, resolve: resolveEdinetCode });
+}
+
+/** `api.get` の形（応答の JSON 本体を `data` に入れて返す）。テストが同じ境界で差し替える。 */
+export type ApiGet = (
+  endpoint: string,
+  params: Record<string, string | number | string[] | undefined>,
+  options?: { cacheable?: boolean; ttlMs?: number },
+) => Promise<{ data: Record<string, unknown>; url: string }>;
+
+/**
+ * `fetchDisclosure` の中身。
+ *
+ * ★ `api.get` の `data` は**応答の JSON 本体そのもの**（`{ data: [...], meta: {...} }`）。
+ * 以前はそれをもう一度 `{ data: 本体 }` に包んでから各関数に渡していたので、
+ * `extractSections` は配列を見つけられず**節 0・段落 0**、`companyHeader` は社名も期も取れず、
+ * 本番の `/check` は**常に判定不能**だった（review T9 後の自己点検で発見。録画の応答を
+ * `api.get` と同じ形で流すテストで固定 = ports.test.ts）。本体をそのまま渡す。
+ */
+export async function fetchDisclosureWith(
+  ticker: string,
+  deps: { get: ApiGet; resolve: (ticker: string) => Promise<string> },
+): Promise<DisclosureSource> {
+  const edinetCode = await deps.resolve(ticker);
+
+  const [{ data: companyBody }, { data: blocksBody }, { data: eventsBody }] = await Promise.all([
+    deps.get(`/companies/${edinetCode}`, {}, { cacheable: true }),
+    deps.get(`/companies/${edinetCode}/text-blocks`, { full: 'true' }, { cacheable: true }),
+    deps.get(
+      '/events',
+      { edinet_code: edinetCode, event_type: 'yuhou', limit: 5, ...yuhouWindow() },
+      { cacheable: true },
+    ),
+  ]);
+
+  const header = companyHeader(companyBody);
+  const company = {
+    name: header.name ?? ticker,
+    edinetCode,
+    ...(header.secCode ? { secCode: header.secCode } : {}),
+  };
+  const fiscalYear = header.fiscalYear;
+  // 直近 1 年に有報の提出が無い会社では取れない。**その場合は空のままにする**
+  // （古い期の書類 ID を当てると、本文（最新期）と出典が食い違う。誤った出典を出すより
+  //   出典なしで出す方を選ぶ。同梱データは出所メタが欠けると build が落ちる = G-C2）。
+  const docId = latestYuhouDocId(eventsBody) ?? '';
+
+  const sections = sectionsFromTextBlocks(blocksBody);
+  const paragraphs = sections.flatMap(({ key, sectionName, text }) =>
+    segmentIntoParagraphs(text, {
+      docId,
+      company: company.name,
+      ...(company.edinetCode ? { edinetCode: company.edinetCode } : {}),
+      filer: company.name,
+      docType: '有価証券報告書',
+      section: key,
+      ...(fiscalYear ? { fiscalYear } : {}),
+    }).map(p => ({ ...p, id: `${key}-${p.id}`, sectionName })),
+  );
+
+  return {
+    company,
+    ...(fiscalYear ? { fiscalYear } : {}),
+    sections: sections.map(s => s.key),
+    paragraphs,
+  };
+}
+
+const ClaimsSchema = z.object({
+  claims: z.array(
+    z.object({
+      quote: z.string().describe('利用者の仮説の、この主張のもとになった箇所（逐語。要約しない）'),
+      text: z.string().describe('主張を肯定形の 1 文にしたもの。会社名と期間を明示する'),
+      negated: z.boolean().optional().describe('もとの言い方が否定形なら true'),
+      company: z.string().optional(),
+      period: z.string().optional().describe('FY2025 の形'),
+    }),
+  ),
+});
+
+const DECOMPOSE_INSTRUCTIONS = `あなたは、利用者が持ち込んだ仮説を、有価証券報告書の段落に 1 本ずつ当てられる形に分ける係です。
+
+守ること:
+- **仮説を別の命題に変えない**。書かれていないことを足さない
+- 否定は \`negated: true\` で持ち、\`text\` は**肯定形**にする（判定は肯定形で行い、結果はコードが反転する）
+- 「A だけ」のような限定は**そのまま残す**（分けるのはコードの仕事）
+- 「主因」「一過性」「大幅」などの**程度を含む語は落とさない**
+- 会社名と期間を \`text\` に明示する。仮説に無ければ \`company\` / \`period\` を空のままにする
+- \`quote\` は利用者の文からの**逐語**。要約や言い換えをしない
+- 売買の推奨・目標株価・株価の水準についての主張は**作らない**（そういう仮説はここに来ない）`;
+
+/** `callLlm` の形。テストが送り先のモデルを確かめるために差し替える。 */
+export type LlmCall = typeof callLlm;
+
+/**
+ * 仮説 → 主張（LLM）。
+ *
+ * `model` は利用者が `/model` で選んだもの。省くと `callLlm` の既定モデルに送られ、
+ * README の「選択中の LLM プロバイダに送る」と食い違う（Codex T9 H2）。
+ */
+export async function decompose(
+  hypothesis: string,
+  company: string,
+  model?: string,
+  call: LlmCall = callLlm,
+): Promise<RawClaimFromModel[]> {
+  const { response } = await call(
+    `会社: ${company}\n仮説: ${hypothesis}`,
+    { systemPrompt: DECOMPOSE_INSTRUCTIONS, outputSchema: ClaimsSchema, ...(model ? { model } : {}) },
+  );
+  const parsed = ClaimsSchema.safeParse(response);
+  if (!parsed.success) return [];
+  return parsed.data.claims.map(c => ({
+    quote: c.quote,
+    text: c.text,
+    ...(c.negated === undefined ? {} : { negated: c.negated }),
+    ...(c.company ? { company: c.company } : {}),
+    ...(c.period ? { period: c.period } : {}),
+  }));
+}
+
+const SUMMARY_INSTRUCTIONS = `確定した判定を 2 文以内でまとめます。
+
+守ること:
+- **段落に書かれていないことを足さない**
+- 売買・株価の水準・割安割高・目標株価に触れない
+- 「〜と会社は説明しています」の形で、会社が何と書いたかだけを言う
+- 確定していない主張には触れない`;
+
+/** パネルの要約（LLM）。linter に当たったら呼び出し側で捨てられる。 */
+export async function summarize(
+  panel: CheckPanel,
+  model?: string,
+  call: LlmCall = callLlm,
+): Promise<string | null> {
+  const confirmed = panel.claims.filter(c => c.status === 'supports' || c.status === 'contradicts');
+  if (confirmed.length === 0) return null;
+  const material = confirmed
+    .map(c => {
+      const evidence = [...c.supporting, ...c.contradicting].map(e => e.text.text).join('\n');
+      // 否定形の主張は否定形のまま渡す（判定は利用者のもとの言い方に対するもの。Codex T9 H3）
+      return `主張: ${displayClaimText(c)}\n利用者のもとの言葉: ${c.quote.text}\n判定: ${c.status === 'supports' ? '裏付ける' : '食い違う'}\n段落:\n${evidence}`;
+    })
+    .join('\n\n');
+  const { response } = await call(material, { systemPrompt: SUMMARY_INSTRUCTIONS, ...(model ? { model } : {}) });
+  const text = typeof response === 'string' ? response : String(response.content ?? '');
+  return text.trim() || null;
+}
+
+/**
+ * 本番の `/check` が使うポート一式。
+ *
+ * @param model 利用者が選択中のモデル（`/model`）。分解と要約はここへ送る
+ */
+export function productionPorts(model: string, call: LlmCall = callLlm): CheckPorts {
+  return {
+    decompose: (hypothesis, company) => decompose(hypothesis, company, model, call),
+    fetchDisclosure,
+    summarize: (panel) => summarize(panel, model, call),
+  };
+}

@@ -106,7 +106,7 @@ function buildMemorySection(
     lines.push('', '### User context', '', context);
   }
   if (canSearch) {
-    lines.push('', 'Use memory_search before personalized financial advice or when prior user context may affect the answer.');
+    lines.push('', 'Use memory_search before answering when prior user context may affect the answer, including stated preferences, research themes, and earlier /check runs.');
   }
   if (canGet) {
     lines.push('Use memory_get when exact stored text is needed.');

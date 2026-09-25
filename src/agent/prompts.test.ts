@@ -99,7 +99,7 @@ describe('main system prompt boundaries', () => {
       tools: new Set(['skill', 'memory_search', 'memory_get', 'memory_update']),
     });
     expect(withTools).toContain('## Memory');
-    expect(withTools).toContain('Use memory_search before personalized financial advice');
+    expect(withTools).toContain('Use memory_search before answering when prior user context may affect the answer');
     expect(withTools).toContain('Use memory_get when exact stored text is needed');
     expect(withTools).toContain('Use memory_update—not file tools');
 

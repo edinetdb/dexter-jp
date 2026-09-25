@@ -152,7 +152,21 @@ To press Enter:
  */
 async function ensureBrowser(): Promise<Page> {
   if (!browser) {
-    browser = await chromium.launch({ headless: true });
+    try {
+      browser = await chromium.launch({ headless: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      // `bun install` を DEXTER_SKIP_BROWSER=1 で走らせた利用者はここで初めて
+      // Chromium の不在に当たる。playwright の生メッセージ（長い ASCII box）を
+      // そのまま出さず、直し方だけを案内する（design v0 §3「脱落の手当て」）。
+      if (message.includes("Executable doesn't exist")) {
+        throw new Error(
+          'Chromium が見つかりません。DEXTER_SKIP_BROWSER を外して `bun install` し直すか、' +
+            '`playwright install chromium` を実行してください。',
+        );
+      }
+      throw err;
+    }
   }
   if (!page) {
     const context = await browser.newContext();
