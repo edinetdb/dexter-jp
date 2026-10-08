@@ -64,7 +64,7 @@ bun run start
 
 ### Dexter を入れずに、手元の AI から直接つなぐ（MCP）
 
-EDINET DB は MCP サーバーとしても公開しています。Claude Code には次の 1 行で登録できます。初めて使うときに EDINET DB のアカウントでの認証を求められます。
+EDINET DB は MCP サーバーとしても公開しています。Claude Code には次の 1 行で登録できます。使うには認証が要ります。認証の画面が出たら EDINET DB のアカウントでログインしてください。画面が出ないときは、下の MCP ガイドにある API キーでの設定を使ってください。
 
 ```bash
 claude mcp add edinetdb https://edinetdb.jp/mcp --transport http

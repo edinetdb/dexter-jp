@@ -64,7 +64,7 @@ The first screen lists what leaves your machine in this session. Check it togeth
 
 ### Connect your own AI directly, without Dexter (MCP)
 
-EDINET DB is also available as an MCP server. You can register it in Claude Code with one line; the first time you use it, you will be asked to sign in with your EDINET DB account.
+EDINET DB is also available as an MCP server. You can register it in Claude Code with one line. Authentication is required: sign in with your EDINET DB account when prompted, and if no sign-in prompt appears, use the API-key setup in the MCP guide below.
 
 ```bash
 claude mcp add edinetdb https://edinetdb.jp/mcp --transport http
