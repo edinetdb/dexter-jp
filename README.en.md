@@ -182,7 +182,7 @@ Most financial tools stop at "here's a screener" or "here's the data." Dexter JP
 1. Build a plan — decide which metrics matter (profitability, growth, balance sheet strength, risk) on its own
 2. Call multiple tools autonomously — pull financial statements, annual report risk factors, and earnings summaries for both companies in parallel
 3. Self-validate mid-process — check whether the numbers and narrative are consistent, and whether it has enough data
-4. Deliver a report — output a structured analysis with comparison tables and sources
+4. Deliver a report — output a structured analysis with comparison tables and a clear conclusion
 
 One question, zero human intervention. This is not single-tool data retrieval. It is multi-source, autonomous analysis.
 
@@ -249,7 +249,7 @@ Comprehensive analysis of Toyota's competitiveness. Cover financials, risk facto
 
 Line up Sony and Nintendo on ROE, equity ratio, and operating margin using the annual report values, and compare the business risks each one discloses.
 
-Screen for stocks with high ROE and high dividends, then check the top 3 on balance sheet strength and the business risks their annual reports disclose.
+Screen for companies with ROE of at least 15% and dividend yield of at least 4%, show up to three in stock code order, and check each company's equity ratio and the business risks disclosed in its annual securities report.
 
 Check Keyence's sales and operating profit over the last 5 years in its annual reports, and list three business risks the company itself discloses.
 ```
