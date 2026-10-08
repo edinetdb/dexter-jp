@@ -177,12 +177,12 @@ Run against the full annual report, the judge can read a paragraph about a segme
 
 Most financial tools stop at "here's a screener" or "here's the data." Dexter JP goes further.
 
-**Ask: "Analyze Sony vs Nintendo as investment targets and give me a recommendation"** and it will:
+**Ask: "Line up Sony and Nintendo on ROE and equity ratio using the annual report values, and compare the business risks each one discloses"** and it will:
 
 1. Build a plan — decide which metrics matter (profitability, growth, balance sheet strength, risk) on its own
 2. Call multiple tools autonomously — pull financial statements, annual report risk factors, and earnings summaries for both companies in parallel
 3. Self-validate mid-process — check whether the numbers and narrative are consistent, and whether it has enough data
-4. Deliver a report — output a structured analysis with comparison tables and a clear conclusion
+4. Deliver a report — output a structured analysis with comparison tables and sources
 
 One question, zero human intervention. This is not single-tool data retrieval. It is multi-source, autonomous analysis.
 
@@ -247,11 +247,11 @@ Throw a complex question at Dexter and it will plan, gather data across multiple
 ```
 Comprehensive analysis of Toyota's competitiveness. Cover financials, risk factors from the annual report, and latest earnings — compile everything into a report.
 
-Sony vs Nintendo: which is the better investment? Compare financial health, profitability, growth, and risk, then give a verdict.
+Line up Sony and Nintendo on ROE, equity ratio, and operating margin using the annual report values, and compare the business risks each one discloses.
 
-Find undervalued stocks with high ROE and high dividends, then deep-dive into the top 3 on balance sheet strength and business risk.
+Screen for stocks with high ROE and high dividends, then check the top 3 on balance sheet strength and the business risks their annual reports disclose.
 
-Run a DCF valuation on Keyence. Is the current stock price overvalued or undervalued?
+Check Keyence's sales and operating profit over the last 5 years in its annual reports, and list three business risks the company itself discloses.
 ```
 
 ### Simple Queries Work Too
@@ -271,7 +271,7 @@ Find high-dividend stocks yielding above 4%.
 ```
 Analyze Toyota's competitiveness. Cover financials, risk factors from the annual report, and latest earnings.
 
-Compare Sony vs Nintendo as investment targets with a final recommendation.
+Compare Sony and Nintendo on ROE and equity ratio using the values in their annual reports, and list the risks each one discloses.
 ```
 
 ## Architecture
