@@ -614,6 +614,12 @@ export async function runCli() {
   const restoreMainView = () => {
     root.clear();
     root.addChild(intro);
+    // 起動直後にも renderSelectionOverlay() → ここを通るので、送信先一覧と警告をここでも積む。
+    // 積まないと README「起動時に一覧が出ます」が実際には出ない（初期の組み立てを上書きするため）。
+    root.addChild(egressText);
+    if (warnings.length > 0) {
+      root.addChild(warningText);
+    }
     root.addChild(chatLog);
     root.addChild(errorText);
     root.addChild(workingIndicator);

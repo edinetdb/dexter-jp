@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
-import { config } from 'dotenv';
+import { loadEnv } from './utils/env.js';
 import { runCli } from './cli.js';
 
-// Load environment variables
-config({ quiet: true });
+// Load environment variables（env.example の仮の値 `your-...` は未設定として扱う）
+loadEnv();
 
 await runCli();
