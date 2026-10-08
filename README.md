@@ -41,7 +41,7 @@ bun run demo
 cp env.example .env
 ```
 
-`.env` の `EDINETDB_API_KEY=` の右に鍵を書きます。鍵は[こちら](https://edinetdb.jp/developers?utm_source=github&utm_medium=readme&utm_campaign=dexter-quickstart)から無料で取れます（会員登録が要ります）。ほかの行は `your-...` のままで構いません。`your-` で始まる値は、起動時に未設定として扱います。
+`.env` の `EDINETDB_API_KEY=` の右に鍵を書きます。鍵は[こちら](https://edinetdb.jp/developers?utm_source=github&utm_medium=readme&utm_campaign=dexter-quickstart)から無料で取れます（会員登録が要ります）。ほかの行は `your-...` のままで構いません。env.example に書いてある仮の値のままの行は、起動時に未設定として扱います。
 
 #### 3. LLM を選んで聞く
 
@@ -51,7 +51,7 @@ bun run start
 
 起動したら `/model` で LLM を選びます。
 
-- Claude Code にログインしているなら「Claude Agent SDK」を選ぶと、API キーを入れずに動きます。Claude のプランでの利用条件は[後述](#claude-agent-sdk-モード)のとおりです。`.env` や環境に `ANTHROPIC_API_KEY` があると従量課金の経路になるため、送る前に止まります（その経路で動かすときの設定も後述）
+- Claude Code にログインしているなら「Claude Agent SDK」を選ぶと、API キーを入れずに動きます。Claude のプランでの利用条件は[後述](#claude-agent-sdk-モード)のとおりです。`.env` や環境に `ANTHROPIC_API_KEY` があると従量課金の経路になるため、送る前に止まります（その経路で動かすときの設定も後述）。このモードでは `/check` はまだ使えません（[この版に入っていないもの](#この版に入っていないもの)）
 - OpenAI などの API キーで動かすときは、`.env` の該当行に鍵を書いてから選びます
 
 たとえば次のように聞きます。
@@ -64,7 +64,7 @@ bun run start
 
 ### Dexter を入れずに、手元の AI から直接つなぐ（MCP）
 
-EDINET DB は MCP サーバーとしても公開しています。Claude Code からは次の 1 行でつながります。
+EDINET DB は MCP サーバーとしても公開しています。Claude Code には次の 1 行で登録できます。初めて使うときに EDINET DB のアカウントでの認証を求められます。
 
 ```bash
 claude mcp add edinetdb https://edinetdb.jp/mcp --transport http

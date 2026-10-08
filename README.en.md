@@ -41,7 +41,7 @@ bun run demo
 cp env.example .env
 ```
 
-Put your key after `EDINETDB_API_KEY=` in `.env`. Keys are free [here](https://edinetdb.com/developers?utm_source=github&utm_medium=readme&utm_campaign=dexter-quickstart) (sign-up required). You can leave the other lines as `your-...`; values starting with `your-` are treated as unset at startup.
+Put your key after `EDINETDB_API_KEY=` in `.env`. Keys are free [here](https://edinetdb.com/developers?utm_source=github&utm_medium=readme&utm_campaign=dexter-quickstart) (sign-up required). You can leave the other lines as `your-...`; lines still holding the placeholder value from env.example are treated as unset at startup.
 
 #### 3. Pick an LLM and ask
 
@@ -51,7 +51,7 @@ bun run start
 
 Once it starts, choose an LLM with `/model`.
 
-- If you are logged in to Claude Code, choose "Claude Agent SDK" and it runs without an API key. See [Claude Agent SDK mode](#claude-agent-sdk-mode) for plan eligibility. If `ANTHROPIC_API_KEY` is set in `.env` or your environment, that is a usage-billed path, so Dexter stops before sending anything (the setting to proceed on that path is described there too)
+- If you are logged in to Claude Code, choose "Claude Agent SDK" and it runs without an API key. See [Claude Agent SDK mode](#claude-agent-sdk-mode) for plan eligibility. If `ANTHROPIC_API_KEY` is set in `.env` or your environment, that is a usage-billed path, so Dexter stops before sending anything (the setting to proceed on that path is described there too). `/check` is not available in this mode yet (see [Not in this release](#not-in-this-release))
 - To use OpenAI or another API key, put the key on the matching line in `.env` first, then choose it
 
 For example:
@@ -64,7 +64,7 @@ The first screen lists what leaves your machine in this session. Check it togeth
 
 ### Connect your own AI directly, without Dexter (MCP)
 
-EDINET DB is also available as an MCP server. From Claude Code it is one line:
+EDINET DB is also available as an MCP server. You can register it in Claude Code with one line; the first time you use it, you will be asked to sign in with your EDINET DB account.
 
 ```bash
 claude mcp add edinetdb https://edinetdb.jp/mcp --transport http
