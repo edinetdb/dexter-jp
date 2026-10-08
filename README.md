@@ -175,7 +175,7 @@ TypeSafe（Jev）について、「保存しない」とは書きません。同
 
 よくある金融ツールは「スクリーニングできます」「財務データ見れます」で終わる。Dexter JPは違う。
 
-**「ソニーと任天堂、投資先としてどちらが優れているか分析して」** と聞くと:
+**「ソニーと任天堂のROEと自己資本比率を有報の値で並べて、事業等のリスクの記載も比較して」** と聞くと:
 
 1. まず計画を立てる — 比較に必要な指標（収益性、成長性、財務健全性、リスク）を自分で決める
 2. 複数のツールを自律的に呼び出す — 両社の財務データ、有報のリスク要因、決算短信を並列取得
@@ -245,11 +245,11 @@ bun run start
 ```
 トヨタの競争力を総合分析して。財務データ、有報のリスク要因、最新決算を踏まえてレポートにまとめて
 
-ソニーと任天堂、投資先としてどちらが優れているか。財務健全性・収益性・成長性・リスクを比較して結論を出して
+ソニーと任天堂のROE・自己資本比率・営業利益率を有報の値で並べて、事業等のリスクの記載を比較して
 
-高ROE・高配当の割安銘柄を探して、トップ3の財務健全性と事業リスクを深掘り分析して
+ROE15%以上、配当利回り4%以上の企業を証券コード順に3社まで表示して、各社の自己資本比率と有報の事業等のリスクの記載を確かめて
 
-キーエンスのDCFバリュエーションをして。現在の株価水準が割高か割安か判断して
+キーエンスの直近5年の売上と営業利益の推移を有報で確かめて、会社が挙げている事業上のリスクを3つ出して
 ```
 
 ### シンプルな質問もOK
@@ -269,7 +269,7 @@ ROE15%以上、自己資本比率50%以上の企業をスクリーニングし�
 ```
 Analyze Toyota's competitiveness. Cover financials, risk factors from the annual report, and latest earnings.
 
-Compare Sony vs Nintendo as investment targets with a final recommendation.
+Compare Sony and Nintendo on ROE and equity ratio using the values in their annual reports, and list the risks each one discloses.
 ```
 
 ## アーキテクチャ
