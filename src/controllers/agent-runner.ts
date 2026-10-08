@@ -9,17 +9,14 @@ import type {
   DoneEvent,
 } from '../agent/index.js';
 import type { Question, UserAnswers } from '../tools/ask-user-question/types.js';
-import type { PermissionDecision } from '../permissions/types.js';
+import {
+  createOperationApprovalRequest,
+  normalizeToolOperation,
+  type OperationApprovalRequest,
+} from '../approval/operation-policy.js';
 
-/** A pending approval request surfaced to the CLI overlay. */
-export interface PendingApproval {
-  tool: string;
-  args: Record<string, unknown>;
-  /** For bash: the command being approved (shown instead of args.path). */
-  command?: string;
-  /** The engine's decision (reason, classification, etc.). */
-  decision?: PermissionDecision;
-}
+/** A pending exact-operation approval request surfaced to the CLI overlay. */
+export type PendingApproval = OperationApprovalRequest;
 import type { DisplayEvent, StreamMode } from '../agent/types.js';
 import type { HistoryItem, HistoryItemStatus, WorkingState } from '../types.js';
 
@@ -57,7 +54,7 @@ export class AgentRunnerController {
   private abortController: AbortController | null = null;
   private approvalResolve: ((decision: ApprovalDecision) => void) | null = null;
   private questionResolve: ((answers: UserAnswers) => void) | null = null;
-  private sessionApprovedTools = new Set<string>();
+  private sessionApprovedOperations = new Set<string>();
 
   constructor(
     agentConfig: AgentConfig,
@@ -169,11 +166,8 @@ export class AgentRunnerController {
     this.abortController = new AbortController();
     let finalAnswer: string | undefined;
 
-    // bash `allow-session` grants are scoped to a single query: prune them at the
-    // start of each new query while leaving write/edit (file:write) grants intact.
-    for (const key of this.sessionApprovedTools) {
-      if (key.startsWith('bash:')) this.sessionApprovedTools.delete(key);
-    }
+    // Bash allow-session grants are owned by the per-query AgentToolExecutor,
+    // while non-bash approvals remain exact-fingerprint session grants.
 
     const startTime = Date.now();
     const item: HistoryItem = {
@@ -266,6 +260,9 @@ export class AgentRunnerController {
         maxBudgetUsd,
         allowMetered,
         requestUserInput: this.requestSdkTextInput,
+        requestToolApproval: this.requestToolApproval,
+        sessionApprovedOperations: this.sessionApprovedOperations,
+        userQuery: query,
       });
       return agent.run(query);
     }
@@ -275,8 +272,9 @@ export class AgentRunnerController {
       signal,
       requestToolApproval: this.requestToolApproval,
       requestUserInput: this.requestUserInput,
-      sessionApprovedTools: this.sessionApprovedTools,
+      sessionApprovedOperations: this.sessionApprovedOperations,
       messageQueue: defaultQueue,
+      userQuery: query,
     });
     return agent.run(query, this.inMemoryChatHistory);
   }
@@ -288,7 +286,10 @@ export class AgentRunnerController {
    * run does not hang). Rare in SDK mode — finance Q&A seldom asks back.
    */
   private requestSdkTextInput = async (prompt: string): Promise<string | null> => {
-    const decision = await this.requestToolApproval({ tool: 'ask_user', args: { question: prompt } });
+    const operation = normalizeToolOperation('sdk_user_input', { question: prompt });
+    const decision = await this.requestToolApproval(
+      createOperationApprovalRequest(operation),
+    );
     return decision === 'deny' ? null : 'yes';
   };
 

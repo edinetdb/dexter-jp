@@ -2,11 +2,13 @@
  * Context compaction module — LLM summarization.
  *
  * Instead of dropping old tool results (losing information permanently),
- * this module asks a fast LLM to summarize all accumulated tool results
- * into a structured summary. The summary replaces the raw results in
+ * this module asks a fast LLM to summarize sanitized conversation state
+ * and tool evidence. The summary replaces the raw results in
  * subsequent iteration prompts while preserving key information.
  */
 
+import { AIMessage, HumanMessage, SystemMessage, type BaseMessage } from '@langchain/core/messages';
+import { z } from 'zod';
 import { callLlm } from '../model/llm.js';
 import { resolveProvider } from '../providers.js';
 import type { TokenUsage } from './types.js';
@@ -25,98 +27,129 @@ export const MIN_TOOL_RESULTS_FOR_COMPACTION = 3;
 // Compaction prompt
 // ---------------------------------------------------------------------------
 
-const NO_TOOLS_PREAMBLE = `CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.
+const COMPACTION_SYSTEM_PROMPT = [
+  'You compact transient conversation state for an agent runtime.',
+  'Return only the requested structured summary.',
+  'Do not include chain-of-thought, hidden reasoning, drafts, or an analysis transcript.',
+  'Preserve evidence, conclusions, unresolved questions, and concrete next steps.',
+].join('\n');
 
-- Do NOT use any tool calls. You already have all the context you need below.
-- Tool calls will be REJECTED and will waste your only turn — you will fail the task.
-- Your entire response must be plain text: an <analysis> block followed by a <summary> block.
+const BASE_COMPACT_PROMPT = [
+  'Create a self-contained continuation summary of the research session below.',
+  'The summary must preserve the context required to continue the current conversation.',
+  '',
+  'Include:',
+  '1. Original query and user intent.',
+  '2. Verified evidence and important numerical data from tool results.',
+  '3. Final conclusions already reached.',
+  '4. Errors or data gaps that still matter.',
+  '5. Pending work and concrete next steps.',
+  '',
+  'Do not include private chain-of-thought, hidden reasoning, exploratory drafts, or failed hypotheses.',
+  'Do not turn this summary into long-term memory. It remains transient conversation state.',
+].join('\n');
 
-`;
+export const compactionSummarySchema = z.object({
+  summary: z.string().min(1).describe('Continuation context only; no hidden reasoning or analysis transcript.'),
+}).strict();
 
-const ANALYSIS_INSTRUCTION = `Before providing your final summary, wrap your analysis in <analysis> tags to organize your thoughts and ensure you've covered all necessary points. In your analysis process:
+export function parseCompactionSummaryPayload(payload: unknown): string {
+  return compactionSummarySchema.parse(payload).summary.trim();
+}
 
-1. Chronologically review each tool call and its results. For each, thoroughly identify:
-   - What data was requested and why
-   - Key data points, numbers, and findings returned
-   - Any errors, empty results, or unexpected responses
-   - How this data relates to the user's original query
-2. Double-check for numerical accuracy and completeness, addressing each required element thoroughly.`;
+function extractVisibleText(message: BaseMessage): string {
+  if (typeof message.content === 'string') {
+    return message.content.trim();
+  }
+  if (!Array.isArray(message.content)) {
+    return '';
+  }
 
-const BASE_COMPACT_PROMPT = `Your task is to create a detailed summary of the research session below. This summary must preserve all important data, findings, and numerical results so that work can continue without losing context.
+  return message.content
+    .flatMap((part) => {
+      if (!part || typeof part !== 'object') {
+        return [];
+      }
+      const typed = part as { type?: string; text?: string };
+      return typed.type === 'text' && typeof typed.text === 'string'
+        ? [typed.text]
+        : [];
+    })
+    .join('\n')
+    .trim();
+}
 
-${ANALYSIS_INSTRUCTION}
+/**
+ * Build compaction input from user-visible conversation state plus tool evidence.
+ * System messages and text attached to tool-calling AI messages are excluded so
+ * durable prompt context and intermediate model reasoning cannot enter summaries.
+ */
+export function buildCompactionSource(
+  messages: BaseMessage[],
+  toolResults: string,
+): string {
+  const sections: string[] = [];
 
-Your summary should include the following sections:
+  for (const message of messages) {
+    if (message instanceof HumanMessage) {
+      const text = extractVisibleText(message);
+      if (text) {
+        sections.push('User message:\n' + text);
+      }
+      continue;
+    }
 
-1. Original Query and Intent: The user's exact request and what they are trying to learn or accomplish.
-2. Key Concepts: Important tickers, companies, sectors, financial metrics, or technical concepts involved.
-3. Data Retrieved: For each tool call, summarize the tool name, arguments, and key results. Preserve important data points.
-4. Errors and Retries: Any tool failures, empty results, or retried calls and their outcomes.
-5. Analysis Progress: What has been analyzed so far, what conclusions or comparisons have been reached.
-6. Numerical Data: ALL key numbers retrieved — prices, revenue figures, margins, ratios, growth rates, estimates, dates. This section is critical; do not omit any numbers that were returned by tools.
-7. Pending Data Needs: What data has NOT yet been retrieved that would be needed to fully answer the query.
-8. Current Work State: What was being worked on when this summary was requested.
-9. Recommended Next Steps: What tool calls or analysis should happen next to complete the answer.
+    if (message instanceof AIMessage && !(message.tool_calls?.length)) {
+      const text = extractVisibleText(message);
+      if (text) {
+        sections.push('Assistant final answer:\n' + text);
+      }
+    }
+  }
 
-Here's an example of how your output should be structured:
+  const evidence = toolResults.trim();
+  if (evidence) {
+    sections.push('Tool evidence:\n' + evidence);
+  }
 
-<example>
-<analysis>
-[Your thought process, ensuring all numerical data and findings are captured accurately]
-</analysis>
+  return sections.join('\n\n');
+}
 
-<summary>
-1. Original Query and Intent:
-   [Detailed description of what the user asked]
+/**
+ * Rebuild the trusted prompt after full compaction.
+ * Active Skill instructions stay outside the generated summary and remain run-local.
+ */
+export function rebuildMessagesAfterCompaction(
+  baseSystemPrompt: string,
+  summary: string,
+  query: string,
+  activeSkillContracts: string,
+): BaseMessage[] {
+  const rebuiltSystem = activeSkillContracts.trim()
+    ? new SystemMessage(`${baseSystemPrompt}
 
-2. Key Concepts:
-   - [Ticker/concept 1]
-   - [Ticker/concept 2]
+${activeSkillContracts.trim()}`)
+    : new SystemMessage(baseSystemPrompt);
 
-3. Data Retrieved:
-   - [tool_name(args)]: [Key findings and data points]
-   - [tool_name(args)]: [Key findings and data points]
+  return [
+    rebuiltSystem,
+    new HumanMessage(`${query}
 
-4. Errors and Retries:
-   - [Error description and resolution, or "None"]
-
-5. Analysis Progress:
-   [What has been analyzed, comparisons made, conclusions reached]
-
-6. Numerical Data:
-   - [Ticker/metric]: [value] ([date/period])
-   - [Ticker/metric]: [value] ([date/period])
-
-7. Pending Data Needs:
-   - [Data still needed]
-
-8. Current Work State:
-   [What was being worked on]
-
-9. Recommended Next Steps:
-   [Next actions to take]
-
-</summary>
-</example>
-
-Please provide your summary based on the research session below, following this structure and ensuring precision and thoroughness — especially for numerical data.`;
-
-const NO_TOOLS_TRAILER =
-  '\n\nREMINDER: Do NOT call any tools. Respond with plain text only — ' +
-  'an <analysis> block followed by a <summary> block. ' +
-  'Tool calls will be rejected and you will fail the task.';
+${summary}`),
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Prompt builders
 // ---------------------------------------------------------------------------
 
-export function buildCompactionPrompt(query: string, toolResults: string): string {
-  return `${NO_TOOLS_PREAMBLE}${BASE_COMPACT_PROMPT}
-
-Original query: ${query}
-
-Data retrieved from tool calls:
-${toolResults}${NO_TOOLS_TRAILER}`;
+export function buildCompactionPrompt(conversationState: string): string {
+  return [
+    BASE_COMPACT_PROMPT,
+    '',
+    'Conversation state to compact:',
+    conversationState,
+  ].join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -124,28 +157,10 @@ ${toolResults}${NO_TOOLS_TRAILER}`;
 // ---------------------------------------------------------------------------
 
 /**
- * Strip the <analysis> drafting scratchpad and format the <summary> section.
+ * Normalize the structured summary before it enters conversation state.
  */
-export function formatCompactSummary(rawSummary: string): string {
-  let formatted = rawSummary;
-
-  // Strip analysis section — it improves summary quality but has no value once written.
-  formatted = formatted.replace(/<analysis>[\s\S]*?<\/analysis>/, '');
-
-  // Extract and format summary section
-  const summaryMatch = formatted.match(/<summary>([\s\S]*?)<\/summary>/);
-  if (summaryMatch) {
-    const content = summaryMatch[1] || '';
-    formatted = formatted.replace(
-      /<summary>[\s\S]*?<\/summary>/,
-      `Summary:\n${content.trim()}`,
-    );
-  }
-
-  // Clean up extra whitespace
-  formatted = formatted.replace(/\n\n+/g, '\n\n');
-
-  return formatted.trim();
+export function formatCompactSummary(summary: string): string {
+  return summary.trim();
 }
 
 /**
@@ -154,11 +169,14 @@ export function formatCompactSummary(rawSummary: string): string {
 export function buildCompactSummaryMessage(summary: string): string {
   const formatted = formatCompactSummary(summary);
 
-  return `This session is being continued from a previous research session that ran out of context. The summary below covers the data retrieved and analysis performed so far.
-
-${formatted}
-
-Continue working toward answering the query without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening. Pick up the research as if the break never happened.`;
+  return [
+    'This session is continuing from compacted conversation state.',
+    'The summary contains only the evidence, conclusions, and pending work needed to continue.',
+    '',
+    formatted,
+    '',
+    'Continue working toward the original query without recapping the compaction event.',
+  ].join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -168,12 +186,8 @@ Continue working toward answering the query without asking the user any further 
 export interface CompactContextParams {
   /** Main model name (used to resolve provider and fast model). */
   model: string;
-  /** System prompt for the compaction call. */
-  systemPrompt: string;
-  /** Original user query. */
-  query: string;
-  /** Full formatted tool results from the scratchpad. */
-  toolResults: string;
+  /** Sanitized user-visible conversation state and tool evidence. */
+  conversationState: string;
   /** Abort signal for cancellation. */
   signal?: AbortSignal;
 }
@@ -181,8 +195,6 @@ export interface CompactContextParams {
 export interface CompactResult {
   /** Formatted summary ready for injection into the iteration prompt. */
   summary: string;
-  /** Raw LLM response (for debugging / scratchpad logging). */
-  rawSummary: string;
   /** Token usage of the compaction LLM call. */
   usage?: TokenUsage;
 }
@@ -192,36 +204,26 @@ export interface CompactResult {
  * Throws on failure — caller is responsible for fallback to clearing.
  */
 export async function compactContext(params: CompactContextParams): Promise<CompactResult> {
-  const { model, systemPrompt, query, toolResults, signal } = params;
+  const { model, conversationState, signal } = params;
 
-  // Resolve fast model for the current provider
   const provider = resolveProvider(model);
   const fastModel = provider.fastModel ?? model;
+  const prompt = buildCompactionPrompt(conversationState);
 
-  // Build the compaction prompt
-  const prompt = buildCompactionPrompt(query, toolResults);
-
-  // Call LLM with no tools bound — callLlm returns string in this case
   const result = await callLlm(prompt, {
     model: fastModel,
-    systemPrompt,
+    systemPrompt: COMPACTION_SYSTEM_PROMPT,
+    outputSchema: compactionSummarySchema,
     signal,
   });
 
-  const rawSummary = typeof result.response === 'string'
-    ? result.response
-    : String(result.response);
-
-  if (!rawSummary.trim()) {
-    throw new Error('Compaction returned empty response');
+  const compactedSummary = parseCompactionSummaryPayload(result.response);
+  if (!compactedSummary) {
+    throw new Error('Compaction returned an empty summary');
   }
 
-  // Build the framed summary message
-  const summary = buildCompactSummaryMessage(rawSummary);
-
   return {
-    summary,
-    rawSummary,
+    summary: buildCompactSummaryMessage(compactedSummary),
     usage: result.usage,
   };
 }

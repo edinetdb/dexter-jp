@@ -1,6 +1,8 @@
 import { describe, test, expect } from 'bun:test';
 import { runShell } from './shell-runner.js';
 
+const describePosix = process.platform === 'win32' ? describe.skip : describe;
+
 const alive = (pid: number): boolean => {
   try {
     process.kill(pid, 0);
@@ -19,7 +21,7 @@ const waitForDeath = async (pid: number, timeoutMs = 3000): Promise<boolean> => 
   return !alive(pid);
 };
 
-describe('runShell — basic capture', () => {
+describePosix('runShell — basic capture', () => {
   test('captures stdout and exit code 0', async () => {
     const r = await runShell('echo hello');
     expect(r.stdout.trim()).toBe('hello');
@@ -34,7 +36,7 @@ describe('runShell — basic capture', () => {
   });
 });
 
-describe('runShell — timeout', () => {
+describePosix('runShell — timeout', () => {
   test('an over-long command is killed and flagged timedOut', async () => {
     const r = await runShell('sleep 5', { timeoutMs: 200 });
     expect(r.timedOut).toBe(true);
@@ -43,7 +45,7 @@ describe('runShell — timeout', () => {
   });
 });
 
-describe('runShell — abort', () => {
+describePosix('runShell — abort', () => {
   test('an external AbortSignal kills the command', async () => {
     const ac = new AbortController();
     setTimeout(() => ac.abort(), 100);
@@ -58,7 +60,7 @@ describe('runShell — abort', () => {
   });
 });
 
-describe('runShell — process-group tree-kill (the critical guarantee)', () => {
+describePosix('runShell — process-group tree-kill (the critical guarantee)', () => {
   test('a backgrounded grandchild is reaped when the command is killed', async () => {
     // Background a long sleep, print its PID, then block. Timeout kills the GROUP.
     const r = await runShell('sleep 30 & echo $!; wait', { timeoutMs: 300 });
@@ -70,7 +72,7 @@ describe('runShell — process-group tree-kill (the critical guarantee)', () => 
   });
 });
 
-describe('runShell — spawn failure is reported, never rejected', () => {
+describePosix('runShell — spawn failure is reported, never rejected', () => {
   test('a non-existent cwd resolves with an error result (no throw)', async () => {
     const r = await runShell('echo hi', { cwd: '/no/such/dir/xyz-does-not-exist' });
     expect(r.exitCode).toBe(null);
@@ -78,7 +80,7 @@ describe('runShell — spawn failure is reported, never rejected', () => {
   });
 });
 
-describe('runShell — output cap', () => {
+describePosix('runShell — output cap', () => {
   test('output exceeding the byte cap is truncated and the command is killed', async () => {
     const r = await runShell('cat /dev/zero', { maxOutputBytes: 4096, timeoutMs: 5000 });
     expect(r.truncated).toBe(true);

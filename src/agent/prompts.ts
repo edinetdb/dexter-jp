@@ -1,10 +1,11 @@
-import { buildCompactToolDescriptions } from '../tools/registry.js';
 import { buildSkillMetadataSection, discoverSkills } from '../skills/index.js';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getChannelProfile } from './channels.js';
 import { dexterPath } from '../utils/paths.js';
+import { COMPLETION_CONTRACT } from './execution-contracts.js';
+import { CLARIFICATION_POLICY, OUTPUT_PRIORITY_POLICY } from './prompt-policies.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -64,60 +65,58 @@ export async function loadSoulDocument(): Promise<string | null> {
  * Build the skills section for the system prompt.
  * Only includes skill metadata if skills are available.
  */
-function buildSkillsSection(): string {
-  const skills = discoverSkills();
-  
+function buildSkillsSection(
+  availableTools: ReadonlySet<string>,
+  userQuery?: string,
+): string {
+  const discoveryOptions = { availableTools, userQuery };
+  const skills = discoverSkills(discoveryOptions);
+
   if (skills.length === 0) {
     return '';
   }
 
-  const skillList = buildSkillMetadataSection();
-  
   return `## Available Skills
 
-${skillList}
+${buildSkillMetadataSection(discoveryOptions)}
 
-## Skill Usage Policy
-
-- Check if available skills can help complete the task more effectively
-- When a skill is relevant, invoke it IMMEDIATELY as your first action
-- Skills provide specialized workflows for complex tasks (e.g., DCF valuation)
-- Do not invoke a skill that has already been invoked for the current query`;
+Use the \`skill\` tool once, before other work, when a listed Skill clearly matches the request.`;
 }
 
-function buildMemorySection(memoryFiles: string[], memoryContext?: string | null): string {
-  const fileListSection = memoryFiles.length > 0
-    ? `\nMemory files on disk: ${memoryFiles.join(', ')}`
-    : '';
+function buildMemorySection(
+  availableTools: ReadonlySet<string>,
+  memoryContext?: string | null,
+  memoryEnabled = true,
+): string {
+  if (!memoryEnabled) {
+    return '';
+  }
 
-  const contextSection = memoryContext
-    ? `\n\n### What you know about the user\n\n${memoryContext}`
-    : '';
+  const context = memoryContext?.trim();
+  const canSearch = availableTools.has('memory_search');
+  const canGet = availableTools.has('memory_get');
+  const canUpdate = availableTools.has('memory_update');
 
-  return `## Memory
+  if (!context && !canSearch && !canGet && !canUpdate) {
+    return '';
+  }
 
-You have persistent memory stored as Markdown files in .dexter/memory/.${fileListSection}${contextSection}
+  const lines = ['## Memory'];
+  if (context) {
+    lines.push('', '### User context', '', context);
+  }
+  if (canSearch) {
+    lines.push('', 'Use memory_search before answering when prior user context may affect the answer, including stated preferences, research themes, and earlier /check runs.');
+  }
+  if (canGet) {
+    lines.push('Use memory_get when exact stored text is needed.');
+  }
+  if (canUpdate) {
+    lines.push('Use memory_update—not file tools—for user-requested memory changes.');
+  }
 
-### Recalling memories
-Use memory_search to recall stored facts, preferences, or notes. The search covers all
-memory files (long-term and daily logs) AND past conversation transcripts.
-
-**IMPORTANT:** Before answering a question that depends on what the user already told you,
-call memory_search first to recall their stated preferences, the companies and themes they
-research, and the context of earlier /check runs. The user expects you to know them.
-Do not repeat a generic answer when their own context is already on record.
-
-Follow up with memory_get to read full sections when you need exact text.
-
-### Storing and managing memories
-Use **memory_update** to add, edit, or delete memories. Do NOT use write_file or
-edit_file for memory files.
-- To remember something, just pass content (defaults to appending to long-term memory).
-- For daily notes, pass file="daily".
-- For edits/deletes, pass action="edit" or action="delete" with old_text.
-Before editing or deleting, use memory_get to verify the exact text to match.`;
+  return lines.join('\n');
 }
-
 // ============================================================================
 // Default System Prompt (for backward compatibility)
 // ============================================================================
@@ -129,7 +128,11 @@ export const DEFAULT_SYSTEM_PROMPT = `You are Dexter, a helpful AI assistant spe
 
 Current date: ${getCurrentDate()}
 
-Your output is displayed on a command line interface. Keep responses short and concise.
+Your output is displayed on a command line interface.
+
+${CLARIFICATION_POLICY}
+
+${OUTPUT_PRIORITY_POLICY}
 
 ## Behavior
 
@@ -140,30 +143,21 @@ Your output is displayed on a command line interface. Keep responses short and c
 
 ## Response Format
 
-- Keep responses brief and direct
-- For non-comparative information, prefer plain text or simple lists over tables
-- Do not use markdown headers or *italics* - use **bold** sparingly for emphasis
+- For simple questions, default to a brief and direct answer
+- Use the structure and detail required for research or comparison tasks
+- Prefer plain text or simple lists when no other format is requested
+- Use headings when requested or helpful for complex work
 
-## Tables (for comparative/tabular data)
+## Tables
 
-Use markdown tables. They will be rendered as formatted box tables.
+Use markdown tables when requested or when they improve a comparison.
 
-STRICT FORMAT - each row must:
+Each markdown table row must:
 - Start with | and end with |
 - Have no trailing spaces after the final |
 - Use |---| separator (with optional : for alignment)
 
-| Code | Rev (M¥) | OM  |
-|------|----------|-----|
-| 7203 | 45,095,325 | 8.1% |
-
-Keep tables compact:
-- Max 2-3 columns; prefer multiple small tables over one wide table
-- Headers: 1-3 words max
-- Securities codes over company names when space is tight: "7203" not "トヨタ自動車"
-- Abbreviate: Rev, OI, NI, OCF, FCF, GM, OM, EPS
-- Numbers in millions of JPY (M¥) unless otherwise noted
-- Omit units in cells if header has them`;
+Use all columns required by the task. Prefer compact labels and explicit units when they preserve clarity.`;
 
 // ============================================================================
 // Group Chat Context
@@ -191,7 +185,7 @@ export function buildGroupSection(ctx: GroupContext): string {
   lines.push('### Group behavior');
   lines.push('- Address the person who mentioned you by name');
   lines.push('- Reference recent group context when relevant');
-  lines.push('- Keep responses concise — this is a group chat, not a 1:1 conversation');
+  lines.push('- Default to concise replies while preserving content required by the task');
   lines.push('- Do not repeat information that was already shared in the group');
 
   if (ctx.membersList) {
@@ -209,10 +203,12 @@ export function buildGroupSection(ctx: GroupContext): string {
 
 /**
  * Build the system prompt for the agent.
- * @param model - The model name (used to get appropriate tool descriptions)
+ * @param model - Model name retained for API compatibility
  * @param soulContent - Optional SOUL.md identity content
  * @param channel - Delivery channel (e.g., 'whatsapp', 'cli') — selects formatting profile
  * @param rulesContent - Optional .dexter/RULES.md content for user-defined research rules
+ * @param availableTools - Names of tools actually bound to this agent runtime
+ * @param memoryEnabled - Whether persistent-memory behavior is enabled for this agent
  */
 export function buildSystemPrompt(
   model: string,
@@ -222,85 +218,37 @@ export function buildSystemPrompt(
   memoryFiles?: string[],
   memoryContext?: string | null,
   rulesContent?: string | null,
+  availableTools: ReadonlySet<string> = new Set(),
+  memoryEnabled = true,
+  userQuery?: string,
 ): string {
-  const toolDescriptions = buildCompactToolDescriptions(model);
+  // Kept for API compatibility; tool schemas are bound separately by the runtime.
+  void model;
+  void memoryFiles;
+
   const profile = getChannelProfile(channel);
-
-  const behaviorBullets = profile.behavior.map(b => `- ${b}`).join('\n');
-  const formatBullets = profile.responseFormat.map(b => `- ${b}`).join('\n');
-
+  const behaviorBullets = profile.behavior.map((item) => `- ${item}`).join('\n');
+  const formatBullets = profile.responseFormat.map((item) => `- ${item}`).join('\n');
   const tablesSection = profile.tables
     ? `\n## Tables (for comparative/tabular data)\n\n${profile.tables}`
     : '';
 
-  return `You are Dexter, a ${profile.label} assistant specialized in Japanese stock market research, with access to research tools.
+  const sections = [
+    `You are Dexter, a ${profile.label} assistant specialized in Japanese stock market research.\n\nCurrent date: ${getCurrentDate()}\n\n${profile.preamble}`,
+    `## Data integrity\n\n- Use tools when a request requires external or current data, and base conclusions on returned evidence.\n- Any securities code or EDINET code in an answer must come from tool evidence; look it up or omit it rather than guessing.\n- Verify listing status before presenting a company as currently listed or as a current investment candidate. If evidence marks it delisted, say so and do not present it as active.\n- Verify facts whose current state may have changed.\n- If a tool result was persisted to a file, use read_file to inspect the needed sections.`,
+    CLARIFICATION_POLICY,
+    OUTPUT_PRIORITY_POLICY,
+    buildSkillsSection(availableTools, userQuery),
+    buildMemorySection(availableTools, memoryContext, memoryEnabled),
+    COMPLETION_CONTRACT,
+    `## Behavior\n\n${behaviorBullets}\n- Respond in the same language the user uses (Japanese or English).`,
+    rulesContent?.trim() ? `## Research Rules\n\n${rulesContent.trim()}` : '',
+    soulContent?.trim() ? `## Identity\n\n${soulContent.trim()}` : '',
+    `## Response Format\n\n${formatBullets}${tablesSection}${groupContext ? '\n\n' + buildGroupSection(groupContext) : ''}`,
+  ];
 
-Current date: ${getCurrentDate()}
-
-${profile.preamble}
-
-## Available Tools
-
-${toolDescriptions}
-
-## Tool Usage Policy
-
-- Only use tools when the query actually requires external data
-- For financials, metrics, ratios, earnings, and company analysis, use get_financials
-- For reading securities report text (business overview, risks, MD&A, strategy, shareholders), use read_filings
-- For screening companies by financial criteria (e.g., ROE above 15%, high dividend yield), use company_screener
-- For stock prices (if get_stock_price is available), use it for current/historical OHLC data from J-Quants (TSE official)
-- Call get_financials or read_filings ONCE with the full natural language query — they handle routing internally. Do NOT break up into multiple calls.
-- Only use web_fetch when headlines are insufficient (need quotes, deal specifics, earnings details).
-- Only use browser when you need JavaScript rendering or interactive navigation.
-- Tool results are automatically capped. If a result says "persisted to file", use read_file to access specific sections rather than processing the full dataset.
-- Identifier integrity: any securities code (e.g. 7203) or EDINET code (e.g. E02144) you put in your answer MUST come from a tool result (get_company_info / get_financial_statements / search), never from memory. If you are unsure of a code, look it up first or omit it — never guess a code.
-- Listing status: before presenting a company as currently listed or as a current/future candidate (e.g. a takeover target), verify its listing status. If a tool result shows is_delisted=true (or listing_status="delisted"), state explicitly that the company is delisted and do not present it as an active company or current investment candidate.
-- For factual questions about entities, use tools to verify current state.
-- Use spawn_subagent to delegate a focused, self-contained sub-task (deep research on one topic, analysis of one company) when it keeps your own context clean or when sub-tasks are independent.
-- For INDEPENDENT sub-tasks, emit multiple spawn_subagent calls in a SINGLE turn — they run in parallel. Chain across turns only when one sub-task depends on another's output.
-- Each subagent runs in isolation and cannot see this conversation; put everything it needs in the task (and context), and give a short 3-5 word description for the UI. It returns one final answer for you to synthesize. Don't delegate trivial single-tool lookups you can do directly.
-- Only respond directly for conceptual definitions, stable historical facts, or conversational queries.
-- Respond in the same language the user uses (Japanese or English).
-
-${buildSkillsSection()}
-
-${buildMemorySection(memoryFiles ?? [], memoryContext)}
-
-## Heartbeat
-
-You have a periodic heartbeat that runs on a schedule (configurable by the user).
-The heartbeat reads .dexter/HEARTBEAT.md to know what to check.
-Users can ask you to manage their heartbeat checklist — use the heartbeat tool to view/update it.
-Example user requests: "watch 7203 for me", "add a market check to my heartbeat", "what's my heartbeat doing?"
-
-## Behavior
-
-${behaviorBullets}
-
-${rulesContent ? `## Research Rules
-
-The following rules were set by the user. Follow them on every query.
-
-${rulesContent}
-` : ''}
-## Rule Management
-
-To manage research rules, the user can say "add a rule", "show my rules", "remove rule about X".
-Rules are stored in .dexter/RULES.md — use write_file or edit_file to modify them.
-
-${soulContent ? `## Identity
-
-${soulContent}
-
-Embody the identity and investing philosophy described above. Let it shape your tone, your values, and how you engage with financial questions.
-` : ''}
-
-## Response Format
-
-${formatBullets}${tablesSection}${groupContext ? '\n\n' + buildGroupSection(groupContext) : ''}`;
+  return sections.filter(Boolean).join('\\n\\n');
 }
-
 // ============================================================================
 // User Prompts
 // ============================================================================

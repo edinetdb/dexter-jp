@@ -24,13 +24,26 @@ import {
   getTextBlocks,
   getStockPrice,
   isJQuantsAvailable,
+  calculateDcfTool,
   createReadFilings,
 } from '../tools/finance/index.js';
 import { createRawScreener } from '../tools/finance/raw-screener.js';
 import { buildWebSearchToolForSdk } from '../tools/search/index.js';
+import { createWriteMemoTool } from '../tools/memo/write-memo.js';
+import { createSkillTool } from '../tools/skill.js';
+import { hasExplicitMemoIntent } from '../skills/memo-intent.js';
 
 /** Server name → tool names are exposed to the model as `mcp__dexter__<name>`. */
 export const DEXTER_MCP_SERVER_NAME = 'dexter';
+
+export type SdkToolExecutionAuthorizer = (
+  toolName: string,
+  args: Record<string, unknown>,
+) => Record<string, unknown>;
+
+export interface DexterSdkToolOptions {
+  userQuery?: string;
+}
 
 /**
  * Extract a plain zod raw shape (`{ field: ZodType }`) from a LangChain tool's
@@ -78,7 +91,11 @@ function stringifyToolResult(raw: unknown): string {
  * errors to `isError: true` so the SDK agent loop keeps going (per SDK docs:
  * an uncaught throw ends the whole query()).
  */
-function adaptLangChainTool(lcTool: StructuredToolInterface, readOnly: boolean) {
+function adaptLangChainTool(
+  lcTool: StructuredToolInterface,
+  readOnly: boolean,
+  authorizeExecution?: SdkToolExecutionAuthorizer,
+) {
   const shape = extractRawShape(lcTool.schema);
   return tool(
     lcTool.name,
@@ -86,7 +103,10 @@ function adaptLangChainTool(lcTool: StructuredToolInterface, readOnly: boolean) 
     shape,
     async (args: Record<string, unknown>) => {
       try {
-        const raw = await lcTool.invoke(args as never);
+        const executionArgs = authorizeExecution
+          ? authorizeExecution(lcTool.name, args)
+          : args;
+        const raw = await lcTool.invoke(executionArgs as never);
         return { content: [{ type: 'text' as const, text: stringifyToolResult(raw) }] };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -104,7 +124,10 @@ function adaptLangChainTool(lcTool: StructuredToolInterface, readOnly: boolean) 
  * The raw, no-internal-LLM tools we expose in SDK mode. All are read-only
  * (financial data reads), so the SDK may batch them in parallel.
  */
-export function buildDexterSdkTools(): ReturnType<typeof adaptLangChainTool>[] {
+export function buildDexterSdkTools(
+  authorizeExecution?: SdkToolExecutionAuthorizer,
+  options: DexterSdkToolOptions = {},
+): ReturnType<typeof adaptLangChainTool>[] {
   const rawTools: StructuredToolInterface[] = [
     // Leaf finance tools — hit EDINET DB directly, no internal LLM.
     getKeyRatios,
@@ -114,6 +137,7 @@ export function buildDexterSdkTools(): ReturnType<typeof adaptLangChainTool>[] {
     getEarnings,
     getShareholders,
     getTextBlocks,
+    calculateDcfTool,
     // read_filings ignores its `model` arg (no internal LLM), safe as-is.
     createReadFilings(''),
     // Structured screener — main model supplies conditions directly (no NL→LLM step).
@@ -129,22 +153,43 @@ export function buildDexterSdkTools(): ReturnType<typeof adaptLangChainTool>[] {
     rawTools.push(webSearch);
   }
 
-  return rawTools.map((t) => adaptLangChainTool(t, /* readOnly */ true));
+  const adapted = rawTools.map((tool) =>
+    adaptLangChainTool(tool, /* readOnly */ true, authorizeExecution),
+  );
+
+  if (hasExplicitMemoIntent(options.userQuery)) {
+    const writeMemo = createWriteMemoTool();
+    const availableTools = new Set([
+      ...rawTools.map((tool) => tool.name),
+      writeMemo.name,
+    ]);
+    const skill = createSkillTool(availableTools, { userQuery: options.userQuery });
+    adapted.push(adaptLangChainTool(writeMemo, /* readOnly */ false, authorizeExecution));
+    adapted.push(adaptLangChainTool(skill, /* readOnly */ true, authorizeExecution));
+  }
+
+  return adapted;
 }
 
-/** The fully-qualified tool names the SDK should auto-approve (allowlist). */
-export function dexterAllowedToolNames(tools: { name: string }[]): string[] {
-  // The `tool()` helper stores the tool name; the SDK namespaces it as
-  // mcp__<server>__<name>. A wildcard covers all tools on the server.
-  return [`mcp__${DEXTER_MCP_SERVER_NAME}__*`, ...tools.map((t) => `mcp__${DEXTER_MCP_SERVER_NAME}__${t.name}`)];
+/** Fully-qualified names for diagnostics only; these are not an approval allowlist. */
+export function dexterMcpToolNames(tools: { name: string }[]): string[] {
+  return tools.map((item) =>
+    'mcp__' + DEXTER_MCP_SERVER_NAME + '__' + item.name,
+  );
 }
 
 /** Build the in-process MCP server holding the raw Dexter tools. */
-export function buildDexterMcpServer(): {
+export function buildDexterMcpServer(options: {
+  authorizeExecution?: SdkToolExecutionAuthorizer;
+  userQuery?: string;
+} = {}): {
   server: McpSdkServerConfigWithInstance;
   toolNames: string[];
 } {
-  const tools = buildDexterSdkTools();
+  const tools = buildDexterSdkTools(
+    options.authorizeExecution,
+    { userQuery: options.userQuery },
+  );
   const server = createSdkMcpServer({
     name: DEXTER_MCP_SERVER_NAME,
     version: '1.0.0',

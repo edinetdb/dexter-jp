@@ -10,6 +10,23 @@ let page: Page | null = null;
 // Store refs from the last snapshot for action resolution
 let currentRefs: Map<string, { role: string; name?: string; nth?: number }> = new Map();
 
+/**
+ * Snapshot the browser target used by the approval fingerprint. Re-resolving
+ * this immediately before execution detects page or ref substitution.
+ */
+export function getBrowserOperationTarget(ref?: string, key?: string): string {
+  const url = page?.url() ?? 'no-active-page';
+  if (ref) {
+    const refData = currentRefs.get(ref);
+    const identity = refData
+      ? [refData.role, refData.name ?? '', refData.nth ?? 0].join(':')
+      : 'unresolved';
+    return url + '#ref=' + ref + ':' + identity;
+  }
+  if (key) return url + '#key=' + key;
+  return url;
+}
+
 // Type for Playwright's _snapshotForAI result
 interface SnapshotForAIResult {
   full?: string;

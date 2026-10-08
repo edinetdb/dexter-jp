@@ -14,6 +14,12 @@ import type { TokenUsage } from '@/agent/types';
 import { logger } from '@/utils';
 import { classifyError, isNonRetryableError } from '@/utils/errors';
 import { resolveProvider, getProviderById } from '@/providers';
+import {
+  normalizeAstraServiceTier,
+  usesOpenAIResponsesApi,
+  validateOpenAIRuntimeOptions,
+  type OpenAIRuntimeOptions,
+} from './openai-runtime.js';
 
 export const DEFAULT_PROVIDER = 'openai';
 export const DEFAULT_MODEL = 'gpt-5.6-sol';
@@ -54,7 +60,11 @@ interface ModelOpts {
   streaming: boolean;
 }
 
-type ModelFactory = (name: string, opts: ModelOpts) => BaseChatModel;
+type ModelFactory = (
+  name: string,
+  opts: ModelOpts,
+  runtimeOptions?: OpenAIRuntimeOptions,
+) => BaseChatModel;
 
 function getApiKey(envVar: string): string {
   const apiKey = process.env[envVar];
@@ -182,23 +192,37 @@ const MODEL_FACTORIES: Record<string, ModelFactory> = {
   },
 };
 
-const DEFAULT_FACTORY: ModelFactory = (name, opts) =>
-  new ChatOpenAI({
+const DEFAULT_FACTORY: ModelFactory = (name, opts, runtimeOptions) => {
+  const validated = validateOpenAIRuntimeOptions(name, runtimeOptions);
+  return new ChatOpenAI({
     model: name,
     ...opts,
     apiKey: getApiKey('OPENAI_API_KEY'),
-    // GPT-5.6 requires the Responses API when reasoning and function tools are combined.
-    useResponsesApi: name.startsWith('gpt-5.6-'),
+    // GPT-5.6 and Astra use Responses for Dexter's function-tool path.
+    useResponsesApi: usesOpenAIResponsesApi(name),
+    // @langchain/openai 1.3.1 recognizes GPT-5 reasoning IDs but predates
+    // GPT-6 Astra. Responses modelKwargs preserves the official payload shape.
+    ...(validated.reasoningEffort !== undefined
+      ? { modelKwargs: { reasoning: { effort: validated.reasoningEffort } } }
+      : {}),
+    ...(validated.serviceTier !== undefined
+      ? { service_tier: normalizeAstraServiceTier(validated.serviceTier) }
+      : {}),
+    ...(validated.maxOutputTokens !== undefined
+      ? { maxTokens: validated.maxOutputTokens }
+      : {}),
   });
+};
 
 export function getChatModel(
   modelName: string = DEFAULT_MODEL,
-  streaming: boolean = false
+  streaming: boolean = false,
+  runtimeOptions?: OpenAIRuntimeOptions,
 ): BaseChatModel {
   const opts: ModelOpts = { streaming };
   const provider = resolveProvider(modelName);
   const factory = MODEL_FACTORIES[provider.id] ?? DEFAULT_FACTORY;
-  return factory(modelName, opts);
+  return factory(modelName, opts, runtimeOptions);
 }
 
 /**
@@ -279,6 +303,7 @@ interface CallLlmOptions {
   outputSchema?: z.ZodType<unknown>;
   tools?: StructuredToolInterface[];
   signal?: AbortSignal;
+  runtimeOptions?: OpenAIRuntimeOptions;
 }
 
 export interface LlmResult {
@@ -335,10 +360,10 @@ function buildAnthropicMessages(systemPrompt: string, userPrompt: string) {
 }
 
 export async function callLlm(prompt: string, options: CallLlmOptions = {}): Promise<LlmResult> {
-  const { model = DEFAULT_MODEL, systemPrompt, outputSchema, tools, signal } = options;
+  const { model = DEFAULT_MODEL, systemPrompt, outputSchema, tools, signal, runtimeOptions } = options;
   const finalSystemPrompt = systemPrompt || DEFAULT_SYSTEM_PROMPT;
 
-  const llm = getChatModel(model, false);
+  const llm = getChatModel(model, false, runtimeOptions);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let runnable: Runnable<any, any> = llm;

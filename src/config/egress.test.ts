@@ -171,7 +171,7 @@ describe('README の表', () => {
 
   test('★ README.md の表は台帳から生成した表と一字一句同じ（review T9 M3。台帳を直したら README も直す）', async () => {
     const readme = await Bun.file(new URL('../../README.md', import.meta.url)).text();
-    const lines = readme.split('\n');
+    const lines = readme.split(/\r?\n/);
     const start = lines.findIndex(l => l.startsWith('| 送信先 | 何が送られるか |'));
     expect(start).toBeGreaterThanOrEqual(0);
     let end = start;

@@ -3,22 +3,25 @@
  *
  * Caps the total tool result content per turn. When parallel tool calls
  * return large results that exceed the budget, the largest results are
- * persisted to disk first.
+ * offloaded to the run-scoped transient store first.
  */
 
 import { ToolMessage } from '@langchain/core/messages';
-import { persistLargeResult, buildPersistedContent } from './tool-result-storage.js';
+import { buildPersistedContent, type TransientToolResultStore } from './tool-result-storage.js';
 
 /** Maximum total characters across all tool results in a single turn. */
 export const MAX_TURN_RESULT_CHARS = 200_000;
 
 /**
- * Enforce per-turn budget on tool results. Persists the largest results
+ * Enforce per-turn budget on tool results. Offloads the largest results
  * to disk until the total fits under the budget.
  *
  * Returns the original array if already under budget.
  */
-export function enforceResultBudget(toolMessages: ToolMessage[]): ToolMessage[] {
+export function enforceResultBudget(
+  toolMessages: ToolMessage[],
+  transientStore: TransientToolResultStore,
+): ToolMessage[] {
   const totalChars = toolMessages.reduce((sum, tm) => {
     const content = typeof tm.content === 'string' ? tm.content : JSON.stringify(tm.content);
     return sum + content.length;
@@ -53,7 +56,7 @@ export function enforceResultBudget(toolMessages: ToolMessage[]): ToolMessage[] 
     if (!toPersist.has(i)) return tm;
 
     const content = typeof tm.content === 'string' ? tm.content : JSON.stringify(tm.content);
-    const { preview, filePath } = persistLargeResult(
+    const { preview, filePath } = transientStore.persist(
       tm.name ?? 'unknown',
       tm.tool_call_id,
       content,

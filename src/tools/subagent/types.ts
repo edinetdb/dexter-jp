@@ -8,6 +8,8 @@
  * and returns a single answer.
  */
 
+import { buildWorkerSystemPrompt } from '../../agent/execution-contracts.js';
+
 /** Configuration for one subagent type. */
 export interface SubagentTypeConfig {
   /** Help text shown to the leader so it knows when to pick this type. */
@@ -45,30 +47,28 @@ const READ_ONLY_TOOLS = [
   'memory_get',
 ];
 
-const WORKER_PREAMBLE =
-  'You are a subagent working on a single sub-task assigned by an orchestrator. ' +
-  'You run in isolation: you cannot see the main conversation and you cannot ' +
-  'delegate to other subagents. Complete only the assigned task. Your final ' +
-  'message is returned verbatim to the orchestrator, so make it a complete, ' +
-  'self-contained answer — state your findings and conclusions directly, not a ' +
-  'description of what you did.';
-
 export const SUBAGENT_TYPES: Record<string, SubagentTypeConfig> = {
   'general-purpose': {
     whenToUse: 'Multi-step research or analysis on one focused sub-task.',
-    systemPrompt: `${WORKER_PREAMBLE}\n\nYou are a general-purpose research worker. Use the available tools to gather and analyze whatever the task requires, then report your findings.`,
+    systemPrompt: buildWorkerSystemPrompt(
+      'You are a general-purpose research worker. Use available tools to gather and analyze what the task requires, then report the findings.',
+    ),
     tools: READ_ONLY_TOOLS,
     maxIterations: 8,
   },
   research: {
     whenToUse: 'Gather and synthesize external information on a single topic.',
-    systemPrompt: `${WORKER_PREAMBLE}\n\nYou are a research worker. Gather information from the web, news, and filings, cross-check sources, and synthesize a clear, sourced summary of what you found.`,
+    systemPrompt: buildWorkerSystemPrompt(
+      'You are a research worker. Gather information from the web, news, and filings, cross-check sources, and return a clear, sourced summary.',
+    ),
     tools: ['web_search', 'x_search', 'web_fetch', 'read_filings', 'get_stock_price'],
     maxIterations: 8,
   },
   analysis: {
     whenToUse: 'Quantitative financial analysis on specific companies.',
-    systemPrompt: `${WORKER_PREAMBLE}\n\nYou are a financial analysis worker. Pull the relevant financials, metrics, and market data, then deliver a focused quantitative analysis with the numbers that support it.`,
+    systemPrompt: buildWorkerSystemPrompt(
+      'You are a financial analysis worker. Gather relevant financials, metrics, and market data, then return a focused quantitative analysis supported by evidence.',
+    ),
     tools: ['get_financials', 'get_stock_price', 'company_screener', 'read_filings'],
     maxIterations: 8,
   },
@@ -79,8 +79,20 @@ export const DEFAULT_SUBAGENT_TYPE = 'general-purpose';
 /** The subagent types the leader may choose from. */
 export const SUBAGENT_TYPE_NAMES = Object.keys(SUBAGENT_TYPES) as [string, ...string[]];
 
-/** Resolve a type's tool allow-list with disallowed tools stripped defensively. */
-export function resolveSubagentTools(typeKey: string): string[] {
+/** Detect explicit X/Twitter research intent without treating a bare variable "x" as intent. */
+export function hasExplicitXResearchIntent(task: string): boolean {
+  return /\b(?:twitter|tweets?)\b/i.test(task)
+    || /(?:^|[\s、。「」『』【】])X(?:上|で|の|を|から|について|検索|調査|投稿|ポスト|ツイート)/i.test(task)
+    || /\bX\b\s+(?:posts?|search|research|reactions?|sentiment|social)/i.test(task)
+    || /(?:search|research)\s+(?:on\s+)?\bX\b/i.test(task)
+    || /X\s*\/\s*Twitter/i.test(task);
+}
+
+/** Resolve a type's tool allow-list with safety and task-intent boundaries applied. */
+export function resolveSubagentTools(typeKey: string, task = ''): string[] {
   const cfg = SUBAGENT_TYPES[typeKey] ?? SUBAGENT_TYPES[DEFAULT_SUBAGENT_TYPE];
-  return cfg.tools.filter(t => !SUBAGENT_DISALLOWED_TOOLS.has(t));
+  const allowX = hasExplicitXResearchIntent(task);
+  return cfg.tools.filter(t =>
+    !SUBAGENT_DISALLOWED_TOOLS.has(t) && (t !== 'x_search' || allowX),
+  );
 }

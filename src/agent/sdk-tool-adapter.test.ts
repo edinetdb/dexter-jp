@@ -1,8 +1,9 @@
+import { isKnownToolOperation, OperationApprovalGate } from '../approval/operation-policy.js';
 import { describe, expect, test } from 'bun:test';
 import {
   buildDexterSdkTools,
   buildDexterMcpServer,
-  dexterAllowedToolNames,
+  dexterMcpToolNames,
   DEXTER_MCP_SERVER_NAME,
 } from './sdk-tool-adapter.js';
 
@@ -17,6 +18,7 @@ const CORE_TOOL_NAMES = [
   'get_text_blocks',
   'read_filings',
   'screen_companies',
+  'calculate_dcf',
 ];
 
 /** Meta-tools that route via an internal LLM — must NOT be exposed raw. */
@@ -30,6 +32,19 @@ describe('buildDexterSdkTools', () => {
     for (const name of CORE_TOOL_NAMES) {
       expect(names).toContain(name);
     }
+  });
+
+  test('exposes write_memo and Skill only for explicit memo intent', () => {
+    const ordinaryNames = buildDexterSdkTools(undefined, { userQuery: '覚えておいて' })
+      .map((tool) => (tool as { name?: string }).name ?? '');
+    const memoNames = buildDexterSdkTools(undefined, { userQuery: 'これをメモにして' })
+      .map((tool) => (tool as { name?: string }).name ?? '');
+
+    expect(ordinaryNames).not.toContain('write_memo');
+    expect(ordinaryNames).not.toContain('skill');
+    expect(memoNames).toContain('write_memo');
+    expect(memoNames).toContain('skill');
+    expect(memoNames.filter((name) => !isKnownToolOperation(name))).toEqual([]);
   });
 
   test('does not expose internal-LLM meta-tools or SDK-builtin overlaps', () => {
@@ -51,6 +66,59 @@ describe('buildDexterSdkTools', () => {
     }
   });
 
+  test('every SDK tool has a deterministic operation classification', () => {
+    expect(names.filter((name) => !isKnownToolOperation(name))).toEqual([]);
+  });
+  test('the MCP handler executes the exact operation claimed by the shared gate', async () => {
+    const gate = new OperationApprovalGate();
+    const guarded = buildDexterSdkTools(
+      (toolName, args) =>
+        gate.claim(toolName, args).arguments as Record<string, unknown>,
+    );
+    const dcf = guarded.find((item) =>
+      (item as { name?: string }).name === 'calculate_dcf'
+    ) as unknown as {
+      handler(args: Record<string, unknown>): Promise<{
+        isError?: boolean;
+        content: Array<{ type: string; text: string }>;
+      }>;
+    };
+    const args = {
+      forecastFreeCashFlows: [
+        { period: 'FY2027', value: 100 },
+        { period: 'FY2028', value: 110 },
+      ],
+      wacc: 0.1,
+      terminalGrowthRate: 0.02,
+      netDebt: 50,
+      dilutedSharesOutstanding: 10000000,
+      unit: 'JPY_million',
+    };
+    const authorization = await gate.authorize('calculate_dcf', args);
+    const result = await dcf.handler(
+      authorization.operation.arguments as Record<string, unknown>,
+    );
+
+    expect(authorization.allowed).toBe(true);
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('intrinsicValuePerShare');
+  });
+  test('the MCP handler fails closed when the exact execution claim is missing', async () => {
+    const guarded = buildDexterSdkTools(() => {
+      throw new Error('exact operation claim missing');
+    });
+    const first = guarded[0] as unknown as {
+      handler(args: Record<string, unknown>): Promise<{
+        isError?: boolean;
+        content: Array<{ type: string; text: string }>;
+      }>;
+    };
+
+    const result = await first.handler({ ticker: '7203' });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('exact operation claim missing');
+  });
   test('tool names are unique', () => {
     expect(new Set(names).size).toBe(names.length);
   });
@@ -67,13 +135,22 @@ describe('buildDexterMcpServer', () => {
       expect(toolNames).toContain(name);
     }
   });
+
+  test('scopes the memo MCP tools to an explicit memo turn', () => {
+    const hidden = buildDexterMcpServer({ userQuery: '要約して' }).toolNames;
+    const visible = buildDexterMcpServer({ userQuery: 'Save this as a memo' }).toolNames;
+
+    expect(hidden).not.toContain('write_memo');
+    expect(visible).toContain('write_memo');
+    expect(visible).toContain('skill');
+  });
 });
 
-describe('dexterAllowedToolNames', () => {
-  test('produces the wildcard plus fully-qualified names', () => {
-    const allowed = dexterAllowedToolNames([{ name: 'get_key_ratios' }, { name: 'read_filings' }]);
-    expect(allowed).toContain(`mcp__${DEXTER_MCP_SERVER_NAME}__*`);
-    expect(allowed).toContain(`mcp__${DEXTER_MCP_SERVER_NAME}__get_key_ratios`);
-    expect(allowed).toContain(`mcp__${DEXTER_MCP_SERVER_NAME}__read_filings`);
+describe('dexterMcpToolNames', () => {
+  test('produces exact diagnostic names without an approval wildcard', () => {
+    const names = dexterMcpToolNames([{ name: 'get_key_ratios' }, { name: 'read_filings' }]);
+    expect(names).toContain(`mcp__${DEXTER_MCP_SERVER_NAME}__get_key_ratios`);
+    expect(names).toContain(`mcp__${DEXTER_MCP_SERVER_NAME}__read_filings`);
+    expect(names.some((name) => name.endsWith('__*'))).toBe(false);
   });
 });
