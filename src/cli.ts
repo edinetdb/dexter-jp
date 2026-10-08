@@ -318,21 +318,23 @@ export async function runCli() {
   const intro = new IntroComponent(modelSelection.model);
 
   // Startup warnings for missing API keys (JP-specific)
-  const warnings: string[] = [];
-  if (!process.env.EDINETDB_API_KEY) {
-    warnings.push('EDINETDB_API_KEY not set — financial data tools will not work. Get a key at edinetdb.jp');
-  }
-  const hasLlmKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY ||
-    process.env.GOOGLE_API_KEY || process.env.XAI_API_KEY || process.env.OPENROUTER_API_KEY;
-  if (!hasLlmKey && !process.env.OLLAMA_BASE_URL) {
-    warnings.push('No LLM API key set — set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_API_KEY in .env');
-  }
-  const warningText = new Text(
-    warnings.length > 0
-      ? theme.warning(warnings.map(w => `\u26a0 ${w}`).join('\n'))
-      : '',
-    0, 0,
-  );
+  // 画面を作り直すたびに今の環境から作り直す（/model や /search で鍵を保存した後に古い表示を残さない）。
+  const computeWarnings = (): string[] => {
+    const out: string[] = [];
+    if (!process.env.EDINETDB_API_KEY) {
+      out.push('EDINETDB_API_KEY not set — financial data tools will not work. Get a key at edinetdb.jp');
+    }
+    const hasLlmKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY ||
+      process.env.GOOGLE_API_KEY || process.env.XAI_API_KEY || process.env.OPENROUTER_API_KEY;
+    if (!hasLlmKey && !process.env.OLLAMA_BASE_URL) {
+      out.push('No LLM API key set — set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_API_KEY in .env');
+    }
+    return out;
+  };
+  const renderWarnings = (list: string[]): string =>
+    list.length > 0 ? theme.warning(list.map(w => `\u26a0 ${w}`).join('\n')) : '';
+  const warnings = computeWarnings();
+  const warningText = new Text(renderWarnings(warnings), 0, 0);
 
   // 起動時に、このセッションで実際に外へ出る先を 1 画面で出す（go-decision G-D2 / review T9 H4）。
   // 以前は renderEgressScreen が誰からも呼ばれず、README「起動時に一覧が出ます」と食い違っていた。
@@ -614,6 +616,16 @@ export async function runCli() {
   const restoreMainView = () => {
     root.clear();
     root.addChild(intro);
+    // 起動直後にも renderSelectionOverlay() → ここを通るので、送信先一覧と警告をここでも積む。
+    // 積まないと README「起動時に一覧が出ます」が実際には出ない（初期の組み立てを上書きするため）。
+    // 中身は今の環境から作り直す（/model・/search で鍵を保存すると送信先が増えるため）。
+    egressText.setText(theme.muted(renderEgressScreen(process.env).join('\n')));
+    const currentWarnings = computeWarnings();
+    warningText.setText(renderWarnings(currentWarnings));
+    root.addChild(egressText);
+    if (currentWarnings.length > 0) {
+      root.addChild(warningText);
+    }
     root.addChild(chatLog);
     root.addChild(errorText);
     root.addChild(workingIndicator);

@@ -22,6 +22,56 @@
 
 本ソフトウェアを利用することにより、学習・情報提供の目的のみに使用することに同意し、利用に伴う一切のリスクを受け入れたものとします。
 
+## 10 分で動かす
+
+新しい環境で、次の 3 段で動きます。[Bun](https://bun.sh/) が無ければ先に入れてください。
+
+#### 1. 録画を再生する（鍵なし・外部への通信なし）
+
+```bash
+git clone https://github.com/edinetdb/dexter-jp.git
+cd dexter-jp
+DEXTER_SKIP_BROWSER=1 bun install
+bun run demo
+```
+
+#### 2. EDINET DB の鍵を入れる
+
+```bash
+cp env.example .env
+```
+
+`.env` の `EDINETDB_API_KEY=` の右に鍵を書きます。鍵は[こちら](https://edinetdb.jp/developers?utm_source=github&utm_medium=readme&utm_campaign=dexter-quickstart)から無料で取れます（会員登録が要ります）。ほかの行は `your-...` のままで構いません。env.example に書いてある仮の値のままの行は、起動時に未設定として扱います。
+
+#### 3. LLM を選んで聞く
+
+```bash
+bun run start
+```
+
+起動したら `/model` で LLM を選びます。
+
+- Claude Code にログインしているなら「Claude Agent SDK」を選ぶと、API キーを入れずに動きます。Claude のプランでの利用条件は[後述](#claude-agent-sdk-モード)のとおりです。`.env` や環境に `ANTHROPIC_API_KEY` があると従量課金の経路になるため、送る前に止まります（その経路で動かすときの設定も後述）。このモードでは `/check` はまだ使えません（[この版に入っていないもの](#この版に入っていないもの)）
+- OpenAI などの API キーで動かすときは、`.env` の該当行に鍵を書いてから選びます
+
+たとえば次のように聞きます。
+
+```
+トヨタの直近5年の財務推移を見せて
+```
+
+起動直後の画面に「このセッションで外に出るもの」が出ます。どこへ何が送られるかは、そこと[データがどこへ行くか](#データがどこへ行くか)の表で確かめてください。
+
+### Dexter を入れずに、手元の AI から直接つなぐ（MCP）
+
+EDINET DB は MCP サーバーとしても公開しています。Claude Code には次の 1 行で登録できます。使うには認証が要ります。認証の画面が出たら EDINET DB のアカウントでログインしてください。画面が出ないときは、下の MCP ガイドにある API キーでの設定を使ってください。
+
+```bash
+claude mcp add edinetdb https://edinetdb.jp/mcp --transport http
+```
+
+Claude.ai・Claude Desktop・ChatGPT・Cursor・Codex CLI での手順は [edinet-db-mcp の README](https://github.com/edinetdb/edinet-db-mcp) と [MCP ガイド](https://edinetdb.jp/docs/mcp-guide) にあります。つないだ後にそのまま貼れる問いの例は[プロンプトテンプレート集](https://edinetdb.jp/docs/prompt-templates)にまとめています。
+
 ## 答え合わせ（v1.1.0-jp）
 
 自分の仮説を、その会社の有価証券報告書の段落に 1 本ずつ当てて、「裏付ける」「食い違う」「無関係」を出典つきで返します。会社自身が何と書いたかを並べるだけで、売買の判断はしません。

@@ -22,6 +22,56 @@ This project is for **educational, entertainment, and informational purposes onl
 
 By using this software, you agree to use it solely for learning and informational purposes and accept all risks associated with its use.
 
+## Run it in 10 minutes
+
+On a fresh machine it takes three steps. Install [Bun](https://bun.sh/) first if you don't have it.
+
+#### 1. Replay a recording (no keys, no network)
+
+```bash
+git clone https://github.com/edinetdb/dexter-jp.git
+cd dexter-jp
+DEXTER_SKIP_BROWSER=1 bun install
+bun run demo
+```
+
+#### 2. Add your EDINET DB key
+
+```bash
+cp env.example .env
+```
+
+Put your key after `EDINETDB_API_KEY=` in `.env`. Keys are free [here](https://edinetdb.com/developers?utm_source=github&utm_medium=readme&utm_campaign=dexter-quickstart) (sign-up required). You can leave the other lines as `your-...`; lines still holding the placeholder value from env.example are treated as unset at startup.
+
+#### 3. Pick an LLM and ask
+
+```bash
+bun run start
+```
+
+Once it starts, choose an LLM with `/model`.
+
+- If you are logged in to Claude Code, choose "Claude Agent SDK" and it runs without an API key. See [Claude Agent SDK mode](#claude-agent-sdk-mode) for plan eligibility. If `ANTHROPIC_API_KEY` is set in `.env` or your environment, that is a usage-billed path, so Dexter stops before sending anything (the setting to proceed on that path is described there too). `/check` is not available in this mode yet (see [Not in this release](#not-in-this-release))
+- To use OpenAI or another API key, put the key on the matching line in `.env` first, then choose it
+
+For example:
+
+```
+Show me Toyota's financials over the last five years
+```
+
+The first screen lists what leaves your machine in this session. Check it together with the [Where your data goes](#where-your-data-goes) table.
+
+### Connect your own AI directly, without Dexter (MCP)
+
+EDINET DB is also available as an MCP server. You can register it in Claude Code with one line. Authentication is required: sign in with your EDINET DB account when prompted, and if no sign-in prompt appears, use the API-key setup in the MCP guide below.
+
+```bash
+claude mcp add edinetdb https://edinetdb.jp/mcp --transport http
+```
+
+Steps for Claude.ai, Claude Desktop, ChatGPT, Cursor and Codex CLI are in the [edinet-db-mcp README](https://github.com/edinetdb/edinet-db-mcp) and the [MCP guide](https://edinetdb.com/docs/mcp-guide). Ready-to-paste questions are in the [prompt templates](https://edinetdb.com/docs/prompt-templates).
+
 ## Answer-checking (v1.1.0-jp)
 
 Bring your own hypothesis about a company. Dexter JP puts it against the paragraphs of that company's annual securities report (有価証券報告書), one claim at a time, and tells you which paragraphs support it, which contradict it, and which are about something else — with the source for each. It shows you what the company itself wrote. It does not tell you what to do about it.
